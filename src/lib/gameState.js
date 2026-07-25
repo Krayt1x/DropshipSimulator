@@ -1,12 +1,15 @@
 import { publish } from './syncBus.js';
+import { emptyDiceTotals } from './tokens.js';
 
 export const DEFAULT_TURN = { number: 1, active: 'p1' };
+export const DEFAULT_BANKED_DICE = emptyDiceTotals();
 
 const RESET_VALUES = {
   'dropshipsimulator:battle:tokens': [],
   'dropshipsimulator:battle:deploymentPhase': false,
   'dropshipsimulator:battle:turn': DEFAULT_TURN,
   'dropshipsimulator:battle:log': [],
+  'dropshipsimulator:battle:bankedDice': DEFAULT_BANKED_DICE,
 };
 
 // Clears the active game's shared (synced) state. Any mounted

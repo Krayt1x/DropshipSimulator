@@ -1,6 +1,23 @@
 import { OWNERS, ownerColor } from '../lib/tokens.js';
+import { DICE_COLORS } from '../lib/dice.js';
 
-function TurnTracker({ turn, onEndTurn }) {
+function DiceSummary({ dice }) {
+  const shown = DICE_COLORS.filter((color) => dice?.[color] > 0);
+  if (shown.length === 0) return null;
+
+  return (
+    <span className="turn-dice-summary">
+      {shown.map((color) => (
+        <span className="turn-dice-chip" key={color}>
+          <span className={`die-icon ${color}`} />
+          {dice[color]}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function TurnTracker({ turn, onEndTurn, playerDice }) {
   const [top, bottom] = OWNERS;
 
   function segmentStyle(owner) {
@@ -18,6 +35,7 @@ function TurnTracker({ turn, onEndTurn }) {
         >
           {turn.active === top.id ? '▲ ' : ''}
           {top.label}
+          <DiceSummary dice={playerDice?.[top.id]} />
         </span>
         <span className="turn-mid">
           Turn {turn.number}
@@ -30,6 +48,7 @@ function TurnTracker({ turn, onEndTurn }) {
           style={segmentStyle(bottom)}
         >
           {bottom.label}
+          <DiceSummary dice={playerDice?.[bottom.id]} />
           {turn.active === bottom.id ? ' ▼' : ''}
         </span>
       </div>

@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { groupEquipmentByType, parseHeatRating } from '../lib/tokens.js';
+import { DICE_COLORS } from '../lib/dice.js';
 import HpBoxes from './HpBoxes.jsx';
 import UnitCardHeader from './UnitCardHeader.jsx';
 
@@ -17,6 +19,9 @@ function TokenCard({
   onReturnToReserve,
   onDeselect,
 }) {
+  const [confirmingDestroy, setConfirmingDestroy] = useState(false);
+  const [pickedDieColor, setPickedDieColor] = useState(null);
+
   if (!unit) return null;
 
   const equippedItems = token.equippedIds
@@ -25,6 +30,29 @@ function TokenCard({
   const grouped = groupEquipmentByType(equippedItems);
   const weapons = grouped.Weapon ?? [];
   const augments = grouped.Augment ?? [];
+  const availableDiceColors = DICE_COLORS.filter(
+    (color) => Number(unit[`dice_${color}`]) > 0,
+  );
+
+  function startDestroy() {
+    if (availableDiceColors.length === 0) {
+      onDestroy(null);
+      return;
+    }
+    setPickedDieColor(availableDiceColors[0]);
+    setConfirmingDestroy(true);
+  }
+
+  function confirmDestroy() {
+    onDestroy(pickedDieColor);
+    setConfirmingDestroy(false);
+    setPickedDieColor(null);
+  }
+
+  function cancelDestroy() {
+    setConfirmingDestroy(false);
+    setPickedDieColor(null);
+  }
 
   return (
     <div className="card token-card">
@@ -184,13 +212,40 @@ function TokenCard({
         >
           Return to reserve
         </button>
+      ) : confirmingDestroy ? (
+        <div className="token-card-section destroy-dice-picker">
+          <p className="unit-meta" style={{ marginBottom: 8 }}>
+            Keep which die in this player's pool?
+          </p>
+          <div className="token-owner-row" style={{ marginBottom: 10 }}>
+            {availableDiceColors.map((color) => (
+              <button
+                type="button"
+                key={color}
+                className={`die-pick-btn ${pickedDieColor === color ? 'selected' : ''}`}
+                onClick={() => setPickedDieColor(color)}
+              >
+                <span className={`die-icon ${color}`} />
+                {color.charAt(0).toUpperCase() + color.slice(1)}
+              </button>
+            ))}
+          </div>
+          <div className="token-stat-row">
+            <button type="button" className="danger" onClick={confirmDestroy}>
+              Confirm Destroy
+            </button>
+            <button type="button" className="ghost" onClick={cancelDestroy}>
+              Cancel
+            </button>
+          </div>
+        </div>
       ) : (
         <div className="token-stat-row">
           <button
             type="button"
             className="danger"
             disabled={!canControl}
-            onClick={onDestroy}
+            onClick={startDestroy}
           >
             Model Destroyed
           </button>

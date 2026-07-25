@@ -1,8 +1,17 @@
 import { useState } from 'react';
 import { useLocalStorageState, makeKey } from '../lib/storage.js';
 import { backgroundContainerStyle } from '../lib/mapBackground.js';
-import { createToken, OWNERS } from '../lib/tokens.js';
-import { resetActiveGame, DEFAULT_TURN } from '../lib/gameState.js';
+import {
+  createToken,
+  OWNERS,
+  deployedDiceByOwner,
+  sumDiceTotals,
+} from '../lib/tokens.js';
+import {
+  resetActiveGame,
+  DEFAULT_TURN,
+  DEFAULT_BANKED_DICE,
+} from '../lib/gameState.js';
 import BattleBoard from '../components/BattleBoard.jsx';
 import TokenForm from '../components/TokenForm.jsx';
 import TokenCard from '../components/TokenCard.jsx';
@@ -70,6 +79,10 @@ function BattlePage() {
     'dropshipsimulator:battle:log',
     [],
   );
+  const [bankedDice, setBankedDice] = useLocalStorageState(
+    'dropshipsimulator:battle:bankedDice',
+    DEFAULT_BANKED_DICE,
+  );
 
   function appendLog(message) {
     setLogEntries((current) =>
@@ -124,6 +137,10 @@ function BattlePage() {
     : null;
   const reserveTokens = tokens.filter((t) => !t.position && !t.destroyed);
   const destroyedTokens = tokens.filter((t) => t.destroyed);
+  const playerDice = sumDiceTotals(
+    deployedDiceByOwner(tokens, units),
+    bankedDice,
+  );
 
   function canControl(token) {
     return !myPlayer || token.owner === myPlayer;
@@ -260,11 +277,22 @@ function BattlePage() {
     }));
   }
 
-  function destroySelected() {
+  function destroySelected(keptDiceColor) {
     if (selectedToken) {
       appendLog(
-        `${ownerLabel(selectedToken.owner)}'s ${unitName(selectedToken)} was destroyed`,
+        `${ownerLabel(selectedToken.owner)}'s ${unitName(selectedToken)} was destroyed` +
+          (keptDiceColor ? ` (kept a ${keptDiceColor} die)` : ''),
       );
+      if (keptDiceColor) {
+        const owner = selectedToken.owner;
+        setBankedDice((current) => ({
+          ...current,
+          [owner]: {
+            ...current[owner],
+            [keptDiceColor]: (current[owner]?.[keptDiceColor] ?? 0) + 1,
+          },
+        }));
+      }
     }
     updateSelected(() => ({ destroyed: true, position: null }));
     setMovingTokenId(null);
@@ -309,7 +337,7 @@ function BattlePage() {
             and your opponent to know and apply the rules.
           </p>
         </div>
-        <TurnTracker turn={turn} onEndTurn={endTurn} />
+        <TurnTracker turn={turn} onEndTurn={endTurn} playerDice={playerDice} />
       </div>
 
       <div className="deployment-controls">
@@ -338,6 +366,7 @@ function BattlePage() {
               }}
             >
               <TokenCard
+                key={selectedToken.id}
                 token={selectedToken}
                 unit={selectedUnit}
                 equipment={equipment}

@@ -264,6 +264,7 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
     fireEvent.click(screen.getByRole('button', { name: 'Model Destroyed' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Destroy' }));
 
     expect(screen.getByText('Destroyed Models (1)')).toBeDefined();
     expect(
@@ -278,6 +279,7 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
     fireEvent.click(screen.getByRole('button', { name: 'Model Destroyed' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Destroy' }));
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Return to reserve' }));

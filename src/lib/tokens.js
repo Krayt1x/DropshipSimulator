@@ -1,4 +1,5 @@
 import { makeKey } from './storage.js';
+import { DICE_COLORS } from './dice.js';
 
 export const OWNERS = [
   { id: 'p1', label: 'Player 1', color: '#2563eb' },
@@ -46,6 +47,46 @@ export function healthBarColor(fraction) {
   if (fraction <= 0.25) return '#dc2626';
   if (fraction <= 0.5) return '#f59e0b';
   return '#22c55e';
+}
+
+// Only models currently deployed on the board contribute to a player's dice
+// count — reserve and destroyed models don't count.
+export function deployedDiceByOwner(tokens, units) {
+  const totals = emptyDiceTotals();
+  tokens.forEach((token) => {
+    if (!token.position || token.destroyed) return;
+    const bucket = totals[token.owner];
+    if (!bucket) return;
+    const unit = units.find((u) => Number(u.id) === Number(token.unitId));
+    if (!unit) return;
+    DICE_COLORS.forEach((color) => {
+      bucket[color] += Number(unit[`dice_${color}`]) || 0;
+    });
+  });
+  return totals;
+}
+
+export function emptyDiceTotals() {
+  return Object.fromEntries(
+    OWNERS.map((o) => [
+      o.id,
+      Object.fromEntries(DICE_COLORS.map((c) => [c, 0])),
+    ]),
+  );
+}
+
+// Combines multiple per-owner dice totals (e.g. dice from deployed models
+// plus dice banked from destroyed ones) into a single set of totals.
+export function sumDiceTotals(...totalsList) {
+  const sum = emptyDiceTotals();
+  totalsList.forEach((totals) => {
+    OWNERS.forEach((o) => {
+      DICE_COLORS.forEach((c) => {
+        sum[o.id][c] += totals?.[o.id]?.[c] ?? 0;
+      });
+    });
+  });
+  return sum;
 }
 
 export function groupEquipmentByType(items) {

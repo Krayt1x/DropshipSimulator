@@ -1,3 +1,5 @@
+export const DICE_COLORS = ['blue', 'red', 'green'];
+
 export const DIE_TYPES = [
   { id: 'd4', label: 'D4', sides: 4 },
   { id: 'd6', label: 'D6', sides: 6 },

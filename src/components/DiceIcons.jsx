@@ -1,4 +1,4 @@
-const DICE_COLORS = ['blue', 'red', 'green'];
+import { DICE_COLORS } from '../lib/dice.js';
 
 function DiceIcons({ unit }) {
   const dice = DICE_COLORS.flatMap((color) => {

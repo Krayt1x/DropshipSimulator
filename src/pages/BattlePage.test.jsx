@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import BattlePage from './BattlePage.jsx';
 
@@ -357,5 +357,56 @@ describe('BattlePage', () => {
 
     expect(screen.queryByText('Reserve (1)')).toBeNull();
     expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
+  });
+
+  it('logs deployments, moves, and turn changes to the game log', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    fireEvent.change(screen.getByLabelText('Mech'), {
+      target: { value: '1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+
+    expect(screen.getByText(/deployed A10 at \(0, 0\)/)).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Move token' }));
+    fireEvent.click(screen.getByTestId('hex-3,3'));
+    expect(screen.getByText(/moved A10 to \(3, 3\)/)).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+    expect(screen.getByText(/Player 1 ended their turn/)).toBeDefined();
+  });
+
+  it('rolls a dice pool and logs the result', () => {
+    render(<BattlePage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add D6 to pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add D6 to pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll (2)' }));
+
+    expect(screen.getAllByText(/D6:/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Rolled: D6/)).toBeDefined();
+  });
+
+  it('deletes the game after confirming End Game', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    fireEvent.change(screen.getByLabelText('Mech'), {
+      target: { value: '1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'End Game' }));
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(screen.queryByText('A10', { selector: 'p.unit-name' })).toBeNull();
+    expect(screen.getByText('No actions yet.')).toBeDefined();
+
+    confirmSpy.mockRestore();
   });
 });

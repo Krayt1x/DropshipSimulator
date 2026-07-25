@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useLocalStorageState } from '../lib/storage.js';
+import { useLocalStorageState, makeKey } from '../lib/storage.js';
 import { backgroundContainerStyle } from '../lib/mapBackground.js';
-import { createToken } from '../lib/tokens.js';
+import { createToken, OWNERS } from '../lib/tokens.js';
 import BattleBoard from '../components/BattleBoard.jsx';
 import TokenForm from '../components/TokenForm.jsx';
 import TokenCard from '../components/TokenCard.jsx';
@@ -9,6 +9,8 @@ import RosterImport from '../components/RosterImport.jsx';
 import ReserveList from '../components/ReserveList.jsx';
 import DestroyedList from '../components/DestroyedList.jsx';
 import TurnTracker from '../components/TurnTracker.jsx';
+import DiceRoller from '../components/DiceRoller.jsx';
+import GameLog from '../components/GameLog.jsx';
 import manufacturers from '../data/manufacturers.json';
 import units from '../data/units.json';
 import equipment from '../data/equipment.json';
@@ -58,13 +60,59 @@ function BattlePage() {
     'dropshipsimulator:battle:turn',
     DEFAULT_TURN,
   );
+  const [logEntries, setLogEntries] = useLocalStorageState(
+    'dropshipsimulator:battle:log',
+    [],
+  );
+
+  function appendLog(message) {
+    setLogEntries((current) =>
+      [{ id: makeKey('log'), message }, ...current].slice(0, 200),
+    );
+  }
+
+  function unitName(token) {
+    return (
+      units.find((u) => Number(u.id) === Number(token.unitId))?.name ?? 'Unit'
+    );
+  }
+
+  function ownerLabel(ownerId) {
+    return OWNERS.find((o) => o.id === ownerId)?.label ?? ownerId;
+  }
 
   function endTurn() {
-    setTurn((current) =>
-      current.active === 'p1'
-        ? { number: current.number, active: 'p2' }
-        : { number: current.number + 1, active: 'p1' },
-    );
+    setTurn((current) => {
+      const next =
+        current.active === 'p1'
+          ? { number: current.number, active: 'p2' }
+          : { number: current.number + 1, active: 'p1' };
+      appendLog(`${ownerLabel(current.active)} ended their turn`);
+      return next;
+    });
+  }
+
+  function endGame() {
+    if (
+      !window.confirm(
+        'End this game? This will delete all deployed units and reset the board.',
+      )
+    ) {
+      return;
+    }
+    setTokens([]);
+    setDeploymentPhase(false);
+    setTurn(DEFAULT_TURN);
+    setLogEntries([]);
+    setSelectedTokenId(null);
+    setDraft(null);
+    setMovingTokenId(null);
+    setLastMove(null);
+  }
+
+  function handleDiceRoll(rolled) {
+    const summary = rolled.map((r) => `${r.label} ${r.value}`).join(', ');
+    appendLog(`Rolled: ${summary}`);
   }
 
   const selectedToken = tokens.find((t) => t.id === selectedTokenId) ?? null;
@@ -115,6 +163,13 @@ function BattlePage() {
   function moveTokenTo(token, col, row) {
     if (token.position) {
       setLastMove({ tokenId: token.id, position: token.position });
+      appendLog(
+        `${ownerLabel(token.owner)} moved ${unitName(token)} to (${col}, ${row})`,
+      );
+    } else {
+      appendLog(
+        `${ownerLabel(token.owner)} deployed ${unitName(token)} at (${col}, ${row})`,
+      );
     }
     placeTokenAt(token.id, col, row);
   }
@@ -136,6 +191,9 @@ function BattlePage() {
       if (tokenAt(key) || !canControl({ owner: draft.owner })) return;
       const token = createToken({ ...draft, position: { col, row } });
       setTokens((current) => [...current, token]);
+      appendLog(
+        `${ownerLabel(draft.owner)} deployed ${draft.unit.name} at (${col}, ${row})`,
+      );
       setDraft(null);
       setSelectedTokenId(token.id);
       return;
@@ -200,16 +258,26 @@ function BattlePage() {
   }
 
   function destroySelected() {
+    if (selectedToken) {
+      appendLog(
+        `${ownerLabel(selectedToken.owner)}'s ${unitName(selectedToken)} was destroyed`,
+      );
+    }
     updateSelected(() => ({ destroyed: true, position: null }));
     setMovingTokenId(null);
   }
 
   function returnSelectedToReserve() {
+    if (selectedToken) {
+      appendLog(`${unitName(selectedToken)} returned to reserve`);
+    }
     updateSelected(() => ({ destroyed: false, position: null }));
     setMovingTokenId(null);
   }
 
   function returnDestroyedToReserve(tokenId) {
+    const token = tokens.find((t) => t.id === tokenId);
+    if (token) appendLog(`${unitName(token)} returned to reserve`);
     setTokens((current) =>
       current.map((t) =>
         t.id === tokenId ? { ...t, destroyed: false, position: null } : t,
@@ -222,6 +290,9 @@ function BattlePage() {
       createToken({ unit, equippedIds, owner, position: null }),
     );
     setTokens((current) => [...current, ...imported]);
+    appendLog(
+      `${ownerLabel(owner)} imported ${imported.length} unit${imported.length === 1 ? '' : 's'} to reserve`,
+    );
   }
 
   return (
@@ -259,6 +330,14 @@ function BattlePage() {
           onClick={undoLastMove}
         >
           Undo last move
+        </button>
+        <button
+          type="button"
+          className="danger"
+          disabled={tokens.length === 0}
+          onClick={endGame}
+        >
+          End Game
         </button>
       </div>
 
@@ -400,6 +479,8 @@ function BattlePage() {
             onSelect={setSelectedTokenId}
             onReturnToReserve={returnDestroyedToReserve}
           />
+          <DiceRoller onRoll={handleDiceRoll} />
+          <GameLog entries={logEntries} />
         </div>
       </div>
     </div>

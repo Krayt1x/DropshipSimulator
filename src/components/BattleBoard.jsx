@@ -89,6 +89,7 @@ function BattleBoard({
   selectedTokenId,
   rangeOrigin,
   deploymentZones,
+  hasBackground,
   onHexClick,
   onDropToken,
 }) {
@@ -128,7 +129,7 @@ function BattleBoard({
               data-testid={`hex-${key}`}
               points={hexPointsAttr(x, y, size)}
               className={`hex-tile ${fill ? '' : 'hex-tile-empty'}`}
-              style={fill ? { fill } : undefined}
+              style={fill ? { fill } : hasBackground ? { fill: 'transparent' } : undefined}
               onClick={() => onHexClick(key)}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useLocalStorageState, makeKey } from '../lib/storage.js';
+import { backgroundContainerStyle } from '../lib/mapBackground.js';
 import HexGrid from '../components/HexGrid.jsx';
 import TilePalette from '../components/TilePalette.jsx';
+import BackgroundPicker from '../components/BackgroundPicker.jsx';
 
 const DEFAULT_TILE_TYPES = [{ id: 'plain', name: 'Plain', color: '#78716c' }];
 const DEFAULT_DIMENSIONS = { cols: 14, rows: 10 };
@@ -26,6 +28,10 @@ function MapEditorPage() {
   const [tiles, setTiles] = useLocalStorageState(
     'dropshipsimulator:mapEditor:tiles',
     {},
+  );
+  const [background, setBackground] = useLocalStorageState(
+    'dropshipsimulator:mapEditor:background',
+    null,
   );
   const [selectedTool, setSelectedTool] = useState(
     tileTypes[0]?.id ?? 'eraser',
@@ -125,22 +131,29 @@ function MapEditorPage() {
       </form>
 
       <div className="map-editor-layout">
-        <div className="map-editor-board">
+        <div
+          className="map-editor-board"
+          style={backgroundContainerStyle(background)}
+        >
           <HexGrid
             cols={dimensions.cols}
             rows={dimensions.rows}
             tiles={tiles}
             tileTypes={tileTypes}
+            hasBackground={Boolean(background)}
             onHexClick={handleHexClick}
           />
         </div>
-        <TilePalette
-          tileTypes={tileTypes}
-          selectedTool={selectedTool}
-          onSelectTool={setSelectedTool}
-          onAddTileType={addTileType}
-          onRemoveTileType={removeTileType}
-        />
+        <div>
+          <TilePalette
+            tileTypes={tileTypes}
+            selectedTool={selectedTool}
+            onSelectTool={setSelectedTool}
+            onAddTileType={addTileType}
+            onRemoveTileType={removeTileType}
+          />
+          <BackgroundPicker background={background} onChange={setBackground} />
+        </div>
       </div>
     </div>
   );

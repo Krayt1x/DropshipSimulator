@@ -6,7 +6,7 @@ import {
   hexToPixel,
 } from '../lib/hex.js';
 
-function HexGrid({ cols, rows, tiles, tileTypes, onHexClick }) {
+function HexGrid({ cols, rows, tiles, tileTypes, hasBackground, onHexClick }) {
   const size = hexSize();
   const { width, height } = boardPixelSize(cols, rows, size);
   const hexes = generateGrid(cols, rows);
@@ -35,7 +35,7 @@ function HexGrid({ cols, rows, tiles, tileTypes, onHexClick }) {
             data-testid={`hex-${key}`}
             points={hexPointsAttr(x, y, size)}
             className={`hex-tile ${fill ? '' : 'hex-tile-empty'}`}
-            style={fill ? { fill } : undefined}
+            style={fill ? { fill } : hasBackground ? { fill: 'transparent' } : undefined}
             onClick={() => onHexClick(key)}
           >
             <title>{`${col}, ${row}`}</title>

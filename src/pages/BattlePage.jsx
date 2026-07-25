@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocalStorageState } from '../lib/storage.js';
+import { backgroundContainerStyle } from '../lib/mapBackground.js';
 import { createToken } from '../lib/tokens.js';
 import BattleBoard from '../components/BattleBoard.jsx';
 import TokenForm from '../components/TokenForm.jsx';
@@ -24,6 +25,10 @@ function BattlePage() {
     DEFAULT_DIMENSIONS,
   );
   const [tiles] = useLocalStorageState('dropshipsimulator:mapEditor:tiles', {});
+  const [background] = useLocalStorageState(
+    'dropshipsimulator:mapEditor:background',
+    null,
+  );
   const [tokens, setTokens] = useLocalStorageState(
     'dropshipsimulator:battle:tokens',
     [],
@@ -190,7 +195,10 @@ function BattlePage() {
       </div>
 
       <div className="map-editor-layout">
-        <div className="map-editor-board">
+        <div
+          className="map-editor-board"
+          style={backgroundContainerStyle(background)}
+        >
           <BattleBoard
             cols={dimensions.cols}
             rows={dimensions.rows}
@@ -201,6 +209,7 @@ function BattlePage() {
             selectedTokenId={selectedTokenId}
             rangeOrigin={selectedToken?.position ?? null}
             deploymentZones={deploymentZones}
+            hasBackground={Boolean(background)}
             onHexClick={handleHexClick}
             onDropToken={handleDropToken}
           />

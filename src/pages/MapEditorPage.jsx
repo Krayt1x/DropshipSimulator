@@ -14,7 +14,9 @@ const DEFAULT_TILE_TYPES = [
 const DEFAULT_DIMENSIONS = { cols: 14, rows: 10 };
 const MIN_DIMENSION = 1;
 const MAX_DIMENSION = 40;
-const BOARD_WIDTH = 820;
+// Must match the width override for .map-editor-layout .battle-board-viewport
+// in index.css.
+const BOARD_WIDTH = 1000;
 // .battle-board-viewport's own padding (1rem each side) + border (1px each
 // side) — subtracted so the board fits inside it without an unwanted
 // horizontal scrollbar at 100% zoom.

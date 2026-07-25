@@ -362,6 +362,13 @@ button.danger:hover {
   overflow: auto;
 }
 
+/* The map editor's layout has more room to spare than the 3-column battle
+   layout, so its board can be wider — must match MapEditorPage's BOARD_WIDTH. */
+.map-editor-layout .battle-board-column,
+.map-editor-layout .battle-board-viewport {
+  width: 1000px;
+}
+
 .battle-board-viewport .hex-grid {
   max-width: none;
 }

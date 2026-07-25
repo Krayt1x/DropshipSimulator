@@ -8,18 +8,57 @@ import {
 } from '../lib/hex.js';
 import { healthBarColor, ownerColor } from '../lib/tokens.js';
 
-function TokenMarker({ token, unit, size, selected }) {
+function TokenMarker({
+  token,
+  unit,
+  size,
+  selected,
+  draggable,
+  onSelect,
+  onDrop,
+}) {
   const { x, y } = hexToPixel(token.position.col, token.position.row, size);
   const radius = size * 0.62;
-  const angle = token.facing * 60 - 90;
+  // facing 0 = North; the flat-top grid's neighbor directions sit every 60°
+  // from there, so no extra offset is needed (see tokens.js).
+  const angle = token.facing * 60;
   const initials = (unit?.name ?? '?').slice(0, 4);
   const maxHp = Number(unit?.hp) || 1;
   const hpFraction = Math.max(0, Math.min(1, token.currentHp / maxHp));
   const barWidth = radius * 1.8;
   const barY = y + radius + 3;
 
+  // SVG elements don't support native HTML5 drag-and-drop, so movement is
+  // driven by pointer capture + hit-testing the release point instead.
+  function handlePointerDown(e) {
+    if (!draggable) return;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  }
+
+  function handlePointerUp(e) {
+    if (!draggable) return;
+    const target = document.elementFromPoint(e.clientX, e.clientY);
+    const hexEl = target?.closest?.('[data-testid^="hex-"]');
+    if (!hexEl) return;
+    const [col, row] = hexEl
+      .getAttribute('data-testid')
+      .slice(4)
+      .split(',')
+      .map(Number);
+    onDrop?.(col, row);
+  }
+
   return (
-    <g style={{ pointerEvents: 'none' }}>
+    <g
+      data-testid={`token-${token.id}`}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onClick={onSelect}
+      style={{
+        cursor: draggable ? 'grab' : 'default',
+        touchAction: 'none',
+      }}
+    >
       <circle
         cx={x}
         cy={y}
@@ -84,10 +123,12 @@ function BattleBoard({
   rangeOrigin,
   deploymentZones,
   hasBackground,
+  size: sizeProp,
+  canControl,
   onHexClick,
   onDropToken,
 }) {
-  const size = hexSize();
+  const size = sizeProp ?? hexSize();
   const { width, height } = boardPixelSize(cols, rows, size);
   const hexes = generateGrid(cols, rows);
 
@@ -173,6 +214,11 @@ function BattleBoard({
             unit={units.find((u) => Number(u.id) === Number(token.unitId))}
             size={size}
             selected={token.id === selectedTokenId}
+            draggable={canControl ? canControl(token) : true}
+            onSelect={() =>
+              onHexClick(`${token.position.col},${token.position.row}`)
+            }
+            onDrop={(col, row) => onDropToken?.(token.id, col, row)}
           />
         ))}
     </svg>

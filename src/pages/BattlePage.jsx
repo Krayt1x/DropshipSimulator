@@ -14,6 +14,10 @@ import equipment from '../data/equipment.json';
 
 const DEFAULT_TILE_TYPES = [{ id: 'plain', name: 'Plain', color: '#78716c' }];
 const DEFAULT_DIMENSIONS = { cols: 14, rows: 10 };
+const BOARD_WIDTH = 820;
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 2;
+const ZOOM_STEP = 0.25;
 
 function BattlePage() {
   const [tileTypes] = useLocalStorageState(
@@ -42,6 +46,8 @@ function BattlePage() {
   const [draft, setDraft] = useState(null);
   const [movingTokenId, setMovingTokenId] = useState(null);
   const [sidebarTab, setSidebarTab] = useState('add');
+  const [lastMove, setLastMove] = useState(null);
+  const [zoom, setZoom] = useState(1);
 
   const selectedToken = tokens.find((t) => t.id === selectedTokenId) ?? null;
   const selectedUnit = selectedToken
@@ -52,6 +58,18 @@ function BattlePage() {
 
   function canControl(token) {
     return !myPlayer || token.owner === myPlayer;
+  }
+
+  const fitSize = BOARD_WIDTH / (1.5 * (dimensions.cols + 1));
+  const boardSize = fitSize * zoom;
+
+  function adjustZoom(delta) {
+    setZoom((current) =>
+      Math.min(
+        ZOOM_MAX,
+        Math.max(ZOOM_MIN, Number((current + delta).toFixed(2))),
+      ),
+    );
   }
 
   const topBoundaryRow = 2;
@@ -76,6 +94,23 @@ function BattlePage() {
     );
   }
 
+  function moveTokenTo(token, col, row) {
+    if (token.position) {
+      setLastMove({ tokenId: token.id, position: token.position });
+    }
+    placeTokenAt(token.id, col, row);
+  }
+
+  function undoLastMove() {
+    if (!lastMove) return;
+    const { tokenId, position } = lastMove;
+    const occupant = tokenAt(`${position.col},${position.row}`);
+    if (!occupant || occupant.id === tokenId) {
+      placeTokenAt(tokenId, position.col, position.row);
+    }
+    setLastMove(null);
+  }
+
   function handleHexClick(key) {
     const [col, row] = key.split(',').map(Number);
 
@@ -91,7 +126,7 @@ function BattlePage() {
     if (movingTokenId) {
       const movingToken = tokens.find((t) => t.id === movingTokenId);
       if (movingToken && canControl(movingToken)) {
-        placeTokenAt(movingTokenId, col, row);
+        moveTokenTo(movingToken, col, row);
       }
       setMovingTokenId(null);
       return;
@@ -105,7 +140,7 @@ function BattlePage() {
     if (tokenAt(`${col},${row}`)) return;
     const token = tokens.find((t) => t.id === tokenId);
     if (!token || !canControl(token)) return;
-    placeTokenAt(tokenId, col, row);
+    moveTokenTo(token, col, row);
     setSelectedTokenId(tokenId);
   }
 
@@ -194,27 +229,60 @@ function BattlePage() {
             Board needs at least 7 rows for deployment zones.
           </span>
         )}
+        <button
+          type="button"
+          className="ghost"
+          disabled={!lastMove}
+          onClick={undoLastMove}
+        >
+          Undo last move
+        </button>
       </div>
 
       <div className="map-editor-layout">
-        <div
-          className="map-editor-board"
-          style={backgroundContainerStyle(background)}
-        >
-          <BattleBoard
-            cols={dimensions.cols}
-            rows={dimensions.rows}
-            tiles={tiles}
-            tileTypes={tileTypes}
-            tokens={tokens}
-            units={units}
-            selectedTokenId={selectedTokenId}
-            rangeOrigin={selectedToken?.position ?? null}
-            deploymentZones={deploymentZones}
-            hasBackground={Boolean(background)}
-            onHexClick={handleHexClick}
-            onDropToken={handleDropToken}
-          />
+        <div className="battle-board-frame">
+          <div
+            className="battle-board-viewport"
+            style={backgroundContainerStyle(background)}
+          >
+            <BattleBoard
+              cols={dimensions.cols}
+              rows={dimensions.rows}
+              tiles={tiles}
+              tileTypes={tileTypes}
+              tokens={tokens}
+              units={units}
+              selectedTokenId={selectedTokenId}
+              rangeOrigin={selectedToken?.position ?? null}
+              deploymentZones={deploymentZones}
+              hasBackground={Boolean(background)}
+              size={boardSize}
+              canControl={canControl}
+              onHexClick={handleHexClick}
+              onDropToken={handleDropToken}
+            />
+          </div>
+          <div className="zoom-controls">
+            <button
+              type="button"
+              className="ghost"
+              aria-label="Zoom in"
+              disabled={zoom >= ZOOM_MAX}
+              onClick={() => adjustZoom(ZOOM_STEP)}
+            >
+              +
+            </button>
+            <span className="zoom-level">{Math.round(zoom * 100)}%</span>
+            <button
+              type="button"
+              className="ghost"
+              aria-label="Zoom out"
+              disabled={zoom <= ZOOM_MIN}
+              onClick={() => adjustZoom(-ZOOM_STEP)}
+            >
+              −
+            </button>
+          </div>
         </div>
         <div>
           <ReserveList

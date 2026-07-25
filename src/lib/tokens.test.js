@@ -17,11 +17,30 @@ describe('tokens', () => {
 
     expect(token.currentHp).toBe(20);
     expect(token.position).toEqual({ col: 2, row: 3 });
-    expect(token.facing).toBe(0);
+    expect(token.facing).toBe(3);
     expect(token.weaponState).toEqual({
       5: { heat: 0, broken: false },
       6: { heat: 0, broken: false },
     });
+  });
+
+  it('defaults facing toward the opposing side for each owner', () => {
+    const unit = { id: 1, hp: 20 };
+    const p1Token = createToken({
+      unit,
+      equippedIds: [],
+      owner: 'p1',
+      position: null,
+    });
+    const p2Token = createToken({
+      unit,
+      equippedIds: [],
+      owner: 'p2',
+      position: null,
+    });
+
+    expect(p1Token.facing).toBe(3);
+    expect(p2Token.facing).toBe(0);
   });
 
   it('groups equipment by type', () => {

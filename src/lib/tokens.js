@@ -19,6 +19,10 @@ export function parseHeatRating(heatRating) {
   };
 }
 
+// Facing 0-5 steps clockwise from North (0=N, 1=NE, 2=SE, 3=S, 4=SW, 5=NW),
+// matching the flat-top hex grid's six true neighbor directions.
+const DEFAULT_FACING_BY_OWNER = { p1: 3, p2: 0 };
+
 export function createToken({ unit, equippedIds, owner, position }) {
   const weaponState = {};
   equippedIds.forEach((id) => {
@@ -30,7 +34,7 @@ export function createToken({ unit, equippedIds, owner, position }) {
     manufacturer: unit.manufacturer,
     owner,
     position,
-    facing: 0,
+    facing: DEFAULT_FACING_BY_OWNER[owner] ?? 0,
     currentHp: Number(unit.hp) || 0,
     equippedIds,
     weaponState,

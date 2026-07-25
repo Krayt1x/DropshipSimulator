@@ -66,6 +66,63 @@ describe('BattlePage', () => {
     expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
   });
 
+  it('moves an on-board token by dragging it to a new hex', () => {
+    const { container } = render(<BattlePage />);
+    startDeploymentPhase();
+
+    fireEvent.change(screen.getByLabelText('Mech'), {
+      target: { value: '1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+
+    const tokenMarker = container.querySelector('[data-testid^="token-"]');
+    const targetHex = screen.getByTestId('hex-4,4');
+    const originalElementFromPoint = document.elementFromPoint;
+    document.elementFromPoint = () => targetHex;
+
+    fireEvent.pointerDown(tokenMarker, { pointerId: 1 });
+    fireEvent.pointerUp(tokenMarker, { pointerId: 1 });
+
+    document.elementFromPoint = originalElementFromPoint;
+
+    expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+    expect(screen.queryByText('A10', { selector: 'p.unit-name' })).toBeNull();
+  });
+
+  it('undoes the last move back to the previous hex', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    fireEvent.change(screen.getByLabelText('Mech'), {
+      target: { value: '1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+
+    expect(
+      screen.getByRole('button', { name: 'Undo last move' }).disabled,
+    ).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Move token' }));
+    fireEvent.click(screen.getByTestId('hex-3,3'));
+
+    expect(
+      screen.getByRole('button', { name: 'Undo last move' }).disabled,
+    ).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo last move' }));
+
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+    expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
+    expect(
+      screen.getByRole('button', { name: 'Undo last move' }).disabled,
+    ).toBe(true);
+  });
+
   it('imports a roster export into reserve and places a unit from it', () => {
     render(<BattlePage />);
     startDeploymentPhase();

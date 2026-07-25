@@ -5,6 +5,9 @@ import {
   hexToPixel,
   boardPixelSize,
   hexDistance,
+  neighborHex,
+  hexDirection,
+  weaponArcDirections,
 } from './hex.js';
 
 describe('hex', () => {
@@ -55,5 +58,27 @@ describe('hex', () => {
     const a = { col: 1, row: 1 };
     const b = { col: 5, row: 4 };
     expect(hexDistance(a, b)).toBe(hexDistance(b, a));
+  });
+
+  it('finds true north/south neighbors directly above/below', () => {
+    expect(neighborHex(4, 4, 0)).toEqual({ col: 4, row: 3 }); // N
+    expect(neighborHex(4, 4, 3)).toEqual({ col: 4, row: 5 }); // S
+  });
+
+  it('buckets a hex into the direction it actually sits in', () => {
+    const origin = { col: 4, row: 4 };
+    for (let dir = 0; dir < 6; dir++) {
+      const target = neighborHex(origin.col, origin.row, dir);
+      expect(hexDirection(origin, target)).toBe(dir);
+    }
+  });
+
+  it('gives right-mounted weapons the facing + next two clockwise directions', () => {
+    expect(weaponArcDirections(0, 'right')).toEqual([0, 1, 2]);
+    expect(weaponArcDirections(1, 'right')).toEqual([1, 2, 3]);
+  });
+
+  it('gives left-mounted weapons the facing + previous two directions, mirrored', () => {
+    expect(weaponArcDirections(0, 'left')).toEqual([4, 5, 0]);
   });
 });

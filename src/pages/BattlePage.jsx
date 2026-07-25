@@ -227,7 +227,12 @@ function BattlePage() {
       ? parseWeaponRange(rangeWeapon.range)
       : null;
   const weaponRange = activeRangeSpec
-    ? { origin: selectedToken.position, ...activeRangeSpec }
+    ? {
+        origin: selectedToken.position,
+        ...activeRangeSpec,
+        facing: selectedToken.facing,
+        side: selectedToken.weaponState[rangeWeapon.instanceIndex]?.side,
+      }
     : null;
 
   function movementForToken(token) {
@@ -472,8 +477,8 @@ function BattlePage() {
   }
 
   function importRoster({ entries, owner }) {
-    const imported = entries.map(({ unit, equippedIds }) =>
-      createToken({ unit, equippedIds, owner, position: null }),
+    const imported = entries.map(({ unit, equippedIds, equippedSides }) =>
+      createToken({ unit, equippedIds, equippedSides, owner, position: null }),
     );
     setTokens((current) => [...current, ...imported]);
     appendLog(

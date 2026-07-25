@@ -33,8 +33,26 @@ describe('parseRosterExport', () => {
     expect(result.entries).toHaveLength(2);
     expect(result.entries[0].unit.name).toBe('A10');
     expect(result.entries[0].equippedIds).toEqual([5, 6]);
+    expect(result.entries[0].equippedSides).toEqual(['left', undefined]);
     expect(result.entries[1].unit.name).toBe('A20');
     expect(result.entries[1].equippedIds).toEqual([6]);
+    expect(result.entries[1].equippedSides).toEqual([undefined]);
+  });
+
+  it("captures Left/Right slot labels as each weapon's mounted side", () => {
+    const text = [
+      'Test List (Corp A)',
+      'Weight: 6t / 100t',
+      '',
+      'A10 - 6t',
+      '  Left: Long Range Bolt',
+      '  Right: Long Range Bolt',
+    ].join('\n');
+
+    const result = parseRosterExport(text, { units, manufacturers, equipment });
+
+    expect(result.entries[0].equippedIds).toEqual([5, 5]);
+    expect(result.entries[0].equippedSides).toEqual(['left', 'right']);
   });
 
   it('warns on an unrecognized manufacturer and unknown names, without crashing', () => {

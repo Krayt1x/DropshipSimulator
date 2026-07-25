@@ -39,6 +39,20 @@ describe('tokens', () => {
     });
   });
 
+  it("carries each weapon's mounted side (from a roster import) into weaponState", () => {
+    const unit = { id: 1, hp: 20 };
+    const token = createToken({
+      unit,
+      equippedIds: [5, 6],
+      equippedSides: ['left', 'right'],
+      owner: 'p1',
+      position: null,
+    });
+
+    expect(token.weaponState[0].side).toBe('left');
+    expect(token.weaponState[1].side).toBe('right');
+  });
+
   it('defaults facing toward the opposing side for each owner', () => {
     const unit = { id: 1, hp: 20 };
     const p1Token = createToken({

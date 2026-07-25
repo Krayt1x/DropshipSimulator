@@ -101,7 +101,13 @@ function TokenCard({
           )}
           <span className="unit-meta">
             {' '}
-            · Slot {slotForType(item.type)} ·{' '}
+            · Slot{' '}
+            {showRange && state.side
+              ? state.side === 'left'
+                ? 'Left'
+                : 'Right'
+              : slotForType(item.type)}{' '}
+            ·{' '}
             {showRange
               ? `Range ${item.range || '—'}`
               : `Move ${item.movement ?? '—'}`}{' '}

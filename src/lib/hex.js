@@ -70,3 +70,61 @@ export function hexDistance(a, b) {
     2
   );
 }
+
+// Neighbor offsets for the flat-top "odd-q" grid, indexed 0=N,1=NE,2=SE,
+// 3=S,4=SW,5=NW clockwise from North — matching the facing convention used
+// throughout (see tokens.js's DEFAULT_FACING_BY_OWNER comment).
+const ODD_Q_NEIGHBORS = [
+  [0, -1],
+  [1, 0],
+  [1, 1],
+  [0, 1],
+  [-1, 1],
+  [-1, 0],
+];
+const EVEN_Q_NEIGHBORS = [
+  [0, -1],
+  [1, -1],
+  [1, 0],
+  [0, 1],
+  [-1, 0],
+  [-1, -1],
+];
+
+export function neighborHex(col, row, dir) {
+  const table = col & 1 ? ODD_Q_NEIGHBORS : EVEN_Q_NEIGHBORS;
+  const [dc, dr] = table[((dir % 6) + 6) % 6];
+  return { col: col + dc, row: row + dr };
+}
+
+// Buckets `target` into one of the 6 neighbor directions from `origin` by
+// snapping the pixel-space angle between them to whichever neighbor cell's
+// own angle is closest — used to restrict a weapon's range indicator to its
+// mounted side's arc (#92).
+export function hexDirection(origin, target, size = hexSize()) {
+  const o = hexToPixel(origin.col, origin.row, size);
+  const t = hexToPixel(target.col, target.row, size);
+  const angle = Math.atan2(t.y - o.y, t.x - o.x);
+  let best = 0;
+  let bestDiff = Infinity;
+  for (let dir = 0; dir < 6; dir++) {
+    const n = neighborHex(origin.col, origin.row, dir);
+    const np = hexToPixel(n.col, n.row, size);
+    const nAngle = Math.atan2(np.y - o.y, np.x - o.x);
+    let diff = Math.abs(nAngle - angle);
+    if (diff > Math.PI) diff = 2 * Math.PI - diff;
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      best = dir;
+    }
+  }
+  return best;
+}
+
+// A right-mounted weapon covers the facing direction plus the next two
+// clockwise (facing, +1, +2); a left-mounted one covers the facing direction
+// plus the previous two (facing, -1, -2) — both share the forward direction.
+export function weaponArcDirections(facing, side) {
+  const offsets = side === 'right' ? [0, 1, 2] : [4, 5, 0];
+  return offsets.map((o) => (facing + o) % 6);
+}

@@ -1,10 +1,12 @@
 import {
   boardPixelSize,
   generateGrid,
+  hexDirection,
   hexDistance,
   hexPointsAttr,
   hexSize,
   hexToPixel,
+  weaponArcDirections,
 } from '../lib/hex.js';
 import { healthBarColor, ownerColor } from '../lib/tokens.js';
 
@@ -165,7 +167,15 @@ function BattleBoard({
           weaponRange &&
           (() => {
             const d = hexDistance(weaponRange.origin, { col, row });
-            return d >= weaponRange.min && d <= weaponRange.max;
+            if (d < weaponRange.min || d > weaponRange.max) return false;
+            // Unknown weapon side (e.g. added via the manual Add unit form
+            // rather than a roster import) falls back to the full ring.
+            if (!weaponRange.side || d === 0) return true;
+            const dir = hexDirection(weaponRange.origin, { col, row });
+            return weaponArcDirections(
+              weaponRange.facing,
+              weaponRange.side,
+            ).includes(dir);
           })();
         const inMoveRange =
           moveRange &&

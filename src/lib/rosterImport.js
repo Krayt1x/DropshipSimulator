@@ -1,6 +1,6 @@
 const HEADER_RE = /^(.+?)\s+\(([^)]+)\)\s*$/;
 const UNIT_LINE_RE = /^(.+?) - \d+t$/;
-const ITEM_LINE_RE = /^[^:]+:\s*(.+)$/;
+const ITEM_LINE_RE = /^([^:]+):\s*(.+)$/;
 
 export function parseRosterExport(text, { units, manufacturers, equipment }) {
   const lines = String(text ?? '')
@@ -58,10 +58,14 @@ export function parseRosterExport(text, { units, manufacturers, equipment }) {
       if (!current) continue;
       const itemMatch = trimmed.match(ITEM_LINE_RE);
       if (!itemMatch) continue;
-      const itemName = itemMatch[1].trim();
+      const slotLabel = itemMatch[1].trim().toLowerCase();
+      const itemName = itemMatch[2].trim();
       const item = manufacturerEquipment.find((e) => e.name === itemName);
       if (item) {
         current.equippedIds.push(item.id);
+        current.equippedSides.push(
+          slotLabel === 'left' || slotLabel === 'right' ? slotLabel : undefined,
+        );
       } else {
         warnings.push(
           `Unknown equipment "${itemName}" on ${current.unit.name} — skipped.`,
@@ -81,7 +85,7 @@ export function parseRosterExport(text, { units, manufacturers, equipment }) {
       warnings.push(`Unknown unit "${name}" — skipped.`);
       continue;
     }
-    current = { unit, equippedIds: [] };
+    current = { unit, equippedIds: [], equippedSides: [] };
   }
   flush();
 

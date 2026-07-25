@@ -130,23 +130,13 @@ describe('BattlePage', () => {
     ).toBe(true);
   });
 
-  it('toggles the deployment phase and renders zigzag boundary lines by default', () => {
+  it('toggles the deployment phase and tints the top/bottom 3 rows of tiles', () => {
     const { container } = render(<BattlePage />);
 
-    expect(container.querySelectorAll('polyline')).toHaveLength(0);
+    expect(container.querySelectorAll('polygon[fill^="rgba(37"]')).toHaveLength(0);
+    expect(container.querySelectorAll('polygon[fill^="rgba(220"]')).toHaveLength(0);
+
     fireEvent.click(screen.getByRole('button', { name: 'Deployment Phase' }));
-    expect(container.querySelectorAll('polyline')).toHaveLength(2);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Line' }));
-    expect(container.querySelectorAll('polyline')).toHaveLength(0);
-    expect(container.querySelectorAll('line')).toHaveLength(2);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Shaded zones' }));
-    expect(container.querySelectorAll('line')).toHaveLength(0);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Tinted tiles' }));
-    expect(container.querySelectorAll('line')).toHaveLength(0);
-    expect(container.querySelectorAll('rect[fill^="rgba(37"]')).toHaveLength(0);
     // default board is 14 cols x 10 rows: 3 tinted rows per zone x 14 cols
     expect(
       container.querySelectorAll('polygon[fill^="rgba(37"]'),
@@ -154,6 +144,10 @@ describe('BattlePage', () => {
     expect(
       container.querySelectorAll('polygon[fill^="rgba(220"]'),
     ).toHaveLength(42);
+
+    fireEvent.click(screen.getByRole('button', { name: 'End deployment phase' }));
+    expect(container.querySelectorAll('polygon[fill^="rgba(37"]')).toHaveLength(0);
+    expect(container.querySelectorAll('polygon[fill^="rgba(220"]')).toHaveLength(0);
   });
 
   it('deploys a reserve unit onto the board via drag and drop', () => {

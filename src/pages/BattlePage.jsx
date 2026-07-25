@@ -12,12 +12,6 @@ import equipment from '../data/equipment.json';
 
 const DEFAULT_TILE_TYPES = [{ id: 'plain', name: 'Plain', color: '#78716c' }];
 const DEFAULT_DIMENSIONS = { cols: 14, rows: 10 };
-const DEPLOYMENT_STYLES = [
-  { id: 'line', label: 'Line' },
-  { id: 'zigzag', label: 'Zigzag' },
-  { id: 'shaded', label: 'Shaded zones' },
-  { id: 'tiles', label: 'Tinted tiles' },
-];
 
 function BattlePage() {
   const [tileTypes] = useLocalStorageState(
@@ -36,10 +30,6 @@ function BattlePage() {
   const [deploymentPhase, setDeploymentPhase] = useLocalStorageState(
     'dropshipsimulator:battle:deploymentPhase',
     false,
-  );
-  const [deploymentStyle, setDeploymentStyle] = useLocalStorageState(
-    'dropshipsimulator:battle:deploymentStyle',
-    'zigzag',
   );
   const [myPlayer] = useLocalStorageState('dropshipsimulator:myPlayer', null);
   const [selectedTokenId, setSelectedTokenId] = useState(null);
@@ -62,7 +52,7 @@ function BattlePage() {
   const deploymentZonesValid = bottomBoundaryRow > topBoundaryRow;
   const deploymentZones =
     deploymentPhase && deploymentZonesValid
-      ? { topBoundaryRow, bottomBoundaryRow, style: deploymentStyle }
+      ? { topBoundaryRow, bottomBoundaryRow }
       : null;
 
   function tokenAt(key) {
@@ -181,20 +171,6 @@ function BattlePage() {
         >
           {deploymentPhase ? 'End deployment phase' : 'Deployment Phase'}
         </button>
-        {deploymentPhase && (
-          <div className="deployment-style-row">
-            {DEPLOYMENT_STYLES.map((s) => (
-              <button
-                type="button"
-                key={s.id}
-                className={`workspace-tab ${deploymentStyle === s.id ? 'active' : ''}`}
-                onClick={() => setDeploymentStyle(s.id)}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-        )}
         {!deploymentZonesValid && (
           <span className="unit-meta">Board needs at least 7 rows for deployment zones.</span>
         )}

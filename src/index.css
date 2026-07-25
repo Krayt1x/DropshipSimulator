@@ -508,8 +508,3 @@ button.danger:hover {
   flex-wrap: wrap;
   margin-bottom: 12px;
 }
-
-.deployment-style-row {
-  display: flex;
-  gap: 4px;
-}

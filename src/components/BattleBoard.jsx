@@ -5,8 +5,6 @@ import {
   hexPointsAttr,
   hexSize,
   hexToPixel,
-  rowBoundaryPolyline,
-  rowBoundaryY,
 } from '../lib/hex.js';
 import { ownerColor } from '../lib/tokens.js';
 
@@ -81,80 +79,6 @@ function TokenMarker({ token, unit, size, selected }) {
   );
 }
 
-function DeploymentZones({ cols, width, height, deploymentZones, size }) {
-  if (!deploymentZones) return null;
-  const { topBoundaryRow, bottomBoundaryRow, style } = deploymentZones;
-
-  // 'tiles' tints the hex polygons themselves, rendered inline in the main
-  // hex loop above (where per-tile row info is already available).
-  if (style === 'tiles') return null;
-
-  if (style === 'shaded') {
-    const topY = rowBoundaryY(topBoundaryRow, size);
-    const bottomY = rowBoundaryY(bottomBoundaryRow, size);
-    return (
-      <g style={{ pointerEvents: 'none' }}>
-        <rect x={0} y={0} width={width} height={topY} fill="rgba(37,99,235,0.12)" />
-        <rect
-          x={0}
-          y={bottomY}
-          width={width}
-          height={Math.max(0, height - bottomY)}
-          fill="rgba(220,38,38,0.12)"
-        />
-      </g>
-    );
-  }
-
-  if (style === 'zigzag') {
-    const topPoints = rowBoundaryPolyline(cols, topBoundaryRow, size);
-    const bottomPoints = rowBoundaryPolyline(cols, bottomBoundaryRow, size);
-    const toAttr = (pts) => pts.map(([x, y]) => `${x},${y}`).join(' ');
-    return (
-      <g style={{ pointerEvents: 'none' }}>
-        <polyline
-          points={toAttr(topPoints)}
-          fill="none"
-          stroke="#2563eb"
-          strokeWidth={2}
-        />
-        <polyline
-          points={toAttr(bottomPoints)}
-          fill="none"
-          stroke="#dc2626"
-          strokeWidth={2}
-        />
-      </g>
-    );
-  }
-
-  // 'line' (default): straight dashed line approximation
-  const topY = rowBoundaryY(topBoundaryRow, size);
-  const bottomY = rowBoundaryY(bottomBoundaryRow, size);
-  return (
-    <g style={{ pointerEvents: 'none' }}>
-      <line
-        x1={0}
-        y1={topY}
-        x2={width}
-        y2={topY}
-        stroke="#2563eb"
-        strokeWidth={2}
-        strokeDasharray="8 6"
-      />
-      <line
-        x1={0}
-        y1={bottomY}
-        x2={width}
-        y2={bottomY}
-        stroke="#dc2626"
-        strokeWidth={2}
-        strokeDasharray="8 6"
-      />
-    </g>
-  );
-}
-
 function BattleBoard({
   cols,
   rows,
@@ -191,14 +115,13 @@ function BattleBoard({
         const { x, y } = hexToPixel(col, row, size);
         const fill = colorFor(key);
         const distance = rangeOrigin ? hexDistance(rangeOrigin, { col, row }) : null;
-        const tileTint =
-          deploymentZones?.style === 'tiles'
-            ? row <= deploymentZones.topBoundaryRow
-              ? 'rgba(37,99,235,0.35)'
-              : row > deploymentZones.bottomBoundaryRow
-                ? 'rgba(220,38,38,0.35)'
-                : null
-            : null;
+        const tileTint = deploymentZones
+          ? row <= deploymentZones.topBoundaryRow
+            ? 'rgba(37,99,235,0.35)'
+            : row > deploymentZones.bottomBoundaryRow
+              ? 'rgba(220,38,38,0.35)'
+              : null
+          : null;
         return (
           <g key={key}>
             <polygon
@@ -238,13 +161,6 @@ function BattleBoard({
           </g>
         );
       })}
-      <DeploymentZones
-        cols={cols}
-        width={width}
-        height={height + 16}
-        deploymentZones={deploymentZones}
-        size={size}
-      />
       {tokens
         .filter((token) => token.position)
         .map((token) => (

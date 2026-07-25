@@ -20,7 +20,6 @@ const SYNCED_KEYS = [
   'dropshipsimulator:mapEditor:tiles',
   'dropshipsimulator:battle:tokens',
   'dropshipsimulator:battle:deploymentPhase',
-  'dropshipsimulator:battle:deploymentStyle',
 ];
 
 const MultiplayerContext = createContext(null);

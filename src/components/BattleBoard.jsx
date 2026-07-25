@@ -122,6 +122,7 @@ function BattleBoard({
   selectedTokenId,
   rangeOrigin,
   weaponRange,
+  moveRange,
   deploymentZones,
   hasBackground,
   size: sizeProp,
@@ -166,6 +167,9 @@ function BattleBoard({
             const d = hexDistance(weaponRange.origin, { col, row });
             return d >= weaponRange.min && d <= weaponRange.max;
           })();
+        const inMoveRange =
+          moveRange &&
+          hexDistance(moveRange.origin, { col, row }) <= moveRange.max;
         return (
           <g key={key}>
             <polygon
@@ -193,6 +197,13 @@ function BattleBoard({
               <polygon
                 points={hexPointsAttr(x, y, size)}
                 fill={tileTint}
+                style={{ pointerEvents: 'none' }}
+              />
+            )}
+            {inMoveRange && (
+              <polygon
+                points={hexPointsAttr(x, y, size)}
+                fill="rgba(34,197,94,0.18)"
                 style={{ pointerEvents: 'none' }}
               />
             )}

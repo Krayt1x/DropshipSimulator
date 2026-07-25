@@ -39,6 +39,7 @@ function TokenCard({
     .filter(Boolean);
   const grouped = groupEquipmentByType(equippedItems);
   const weapons = grouped.Weapon ?? [];
+  const movementItems = grouped.Movement ?? [];
   const augments = grouped.Augment ?? [];
   const availableDiceColors = DICE_COLORS.filter(
     (color) => Number(unit[`dice_${color}`]) > 0,
@@ -62,6 +63,119 @@ function TokenCard({
   function cancelDestroy() {
     setConfirmingDestroy(false);
     setPickedDieColor(null);
+  }
+
+  function renderGearRow(item, { showRange }) {
+    const { max } = parseHeatRating(item.heat_rating);
+    const state = token.weaponState[item.instanceIndex] ?? {
+      heat: 0,
+      broken: false,
+    };
+    const rangeActive = showRange && activeRangeIndex === item.instanceIndex;
+    const maxHp = Number(item.hp) || 0;
+    const hp = state.hp ?? maxHp;
+    return (
+      <div className="token-weapon-row" key={item.instanceIndex}>
+        <div>
+          {showRange ? (
+            <button
+              type="button"
+              className={`weapon-name-btn ${rangeActive ? 'active' : ''}`}
+              title="Show this weapon's range on the board"
+              onClick={() => onToggleRange(item.instanceIndex, item.range)}
+            >
+              {item.name}
+            </button>
+          ) : (
+            <b>{item.name}</b>
+          )}
+          <span className="unit-meta">
+            {' '}
+            · Slot {slotForType(item.type)} ·{' '}
+            {showRange
+              ? `Range ${item.range || '—'}`
+              : `Move ${item.movement ?? '—'}`}{' '}
+            · Heat {item.heat_rating || '—'}
+            {showRange ? ` · ${item.hit_dice || '—'}` : ''}
+          </span>
+        </div>
+        <div className="token-stat-row">
+          <button
+            type="button"
+            className="ghost"
+            onClick={() =>
+              onSetHeat(item.instanceIndex, Math.max(0, state.heat - 1))
+            }
+          >
+            −
+          </button>
+          <span
+            style={
+              max && state.heat > max
+                ? { color: '#dc2626', fontWeight: 700 }
+                : undefined
+            }
+          >
+            Heat {state.heat}
+            {max ? ` / ${max}` : ''}
+          </span>
+          <button
+            type="button"
+            className="ghost"
+            onClick={() => onSetHeat(item.instanceIndex, state.heat + 1)}
+          >
+            +
+          </button>
+          <label className="token-broken-toggle">
+            <input
+              type="checkbox"
+              checked={state.broken}
+              onChange={() => onToggleBroken(item.instanceIndex)}
+            />
+            Broken
+          </label>
+        </div>
+        {maxHp > 0 && (
+          <>
+            <div className="token-stat-row">
+              <button
+                type="button"
+                className="ghost"
+                onClick={() =>
+                  onSetWeaponHp(item.instanceIndex, Math.max(0, hp - 1))
+                }
+              >
+                −
+              </button>
+              <span className={hp <= 0 ? 'token-hp-zero' : ''}>
+                {`HP ${hp} / ${maxHp}`}
+              </span>
+              <button
+                type="button"
+                className="ghost"
+                onClick={() =>
+                  onSetWeaponHp(item.instanceIndex, Math.min(maxHp, hp + 1))
+                }
+              >
+                +
+              </button>
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => onSetWeaponHp(item.instanceIndex, maxHp)}
+              >
+                Reset
+              </button>
+            </div>
+            <HpBoxes
+              currentHp={hp}
+              maxHp={maxHp}
+              onSetHp={(target) => onSetWeaponHp(item.instanceIndex, target)}
+            />
+          </>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -146,131 +260,25 @@ function TokenCard({
         </div>
       )}
 
-      {weapons.length > 0 && (
+      {(weapons.length > 0 || movementItems.length > 0) && (
         <div className="token-card-section">
-          <label>Weapons</label>
-          {weapons.map((weapon) => {
-            const { max } = parseHeatRating(weapon.heat_rating);
-            const state = token.weaponState[weapon.instanceIndex] ?? {
-              heat: 0,
-              broken: false,
-            };
-            const rangeActive = activeRangeIndex === weapon.instanceIndex;
-            const weaponMaxHp = Number(weapon.hp) || 0;
-            const weaponHp = state.hp ?? weaponMaxHp;
-            return (
-              <div className="token-weapon-row" key={weapon.instanceIndex}>
-                <div>
-                  <button
-                    type="button"
-                    className={`weapon-name-btn ${rangeActive ? 'active' : ''}`}
-                    title="Show this weapon's range on the board"
-                    onClick={() =>
-                      onToggleRange(weapon.instanceIndex, weapon.range)
-                    }
-                  >
-                    {weapon.name}
-                  </button>
-                  <span className="unit-meta">
-                    {' '}
-                    · Slot {slotForType(weapon.type)} · Range{' '}
-                    {weapon.range || '—'} · Heat {weapon.heat_rating || '—'} ·{' '}
-                    {weapon.hit_dice || '—'}
-                  </span>
-                </div>
-                <div className="token-stat-row">
-                  <button
-                    type="button"
-                    className="ghost"
-                    onClick={() =>
-                      onSetHeat(
-                        weapon.instanceIndex,
-                        Math.max(0, state.heat - 1),
-                      )
-                    }
-                  >
-                    −
-                  </button>
-                  <span
-                    style={
-                      max && state.heat > max
-                        ? { color: '#dc2626', fontWeight: 700 }
-                        : undefined
-                    }
-                  >
-                    Heat {state.heat}
-                    {max ? ` / ${max}` : ''}
-                  </span>
-                  <button
-                    type="button"
-                    className="ghost"
-                    onClick={() =>
-                      onSetHeat(weapon.instanceIndex, state.heat + 1)
-                    }
-                  >
-                    +
-                  </button>
-                  <label className="token-broken-toggle">
-                    <input
-                      type="checkbox"
-                      checked={state.broken}
-                      onChange={() => onToggleBroken(weapon.instanceIndex)}
-                    />
-                    Broken
-                  </label>
-                </div>
-                {weaponMaxHp > 0 && (
-                  <>
-                    <div className="token-stat-row">
-                      <button
-                        type="button"
-                        className="ghost"
-                        onClick={() =>
-                          onSetWeaponHp(
-                            weapon.instanceIndex,
-                            Math.max(0, weaponHp - 1),
-                          )
-                        }
-                      >
-                        −
-                      </button>
-                      <span className={weaponHp <= 0 ? 'token-hp-zero' : ''}>
-                        {`HP ${weaponHp} / ${weaponMaxHp}`}
-                      </span>
-                      <button
-                        type="button"
-                        className="ghost"
-                        onClick={() =>
-                          onSetWeaponHp(
-                            weapon.instanceIndex,
-                            Math.min(weaponMaxHp, weaponHp + 1),
-                          )
-                        }
-                      >
-                        +
-                      </button>
-                      <button
-                        type="button"
-                        className="ghost"
-                        onClick={() =>
-                          onSetWeaponHp(weapon.instanceIndex, weaponMaxHp)
-                        }
-                      >
-                        Reset
-                      </button>
-                    </div>
-                    <HpBoxes
-                      currentHp={weaponHp}
-                      maxHp={weaponMaxHp}
-                      onSetHp={(target) =>
-                        onSetWeaponHp(weapon.instanceIndex, target)
-                      }
-                    />
-                  </>
-                )}
-              </div>
-            );
-          })}
+          <label>Equipment</label>
+          {weapons.length > 0 && (
+            <>
+              <p className="equipment-subheader">Weapon</p>
+              {weapons.map((weapon) =>
+                renderGearRow(weapon, { showRange: true }),
+              )}
+            </>
+          )}
+          {movementItems.length > 0 && (
+            <>
+              <p className="equipment-subheader">Movement</p>
+              {movementItems.map((item) =>
+                renderGearRow(item, { showRange: false }),
+              )}
+            </>
+          )}
         </div>
       )}
 

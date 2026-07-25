@@ -231,6 +231,22 @@ function BattlePage() {
     ? { origin: selectedToken.position, ...activeRangeSpec }
     : null;
 
+  function movementForToken(token) {
+    const movementItem = token.equippedIds
+      .map((id) => equipment.find((e) => Number(e.id) === Number(id)))
+      .find((item) => item?.type === 'Movement');
+    return Number(movementItem?.movement) || 0;
+  }
+
+  const selectedMovement =
+    selectedToken?.position && !selectedToken.destroyed
+      ? movementForToken(selectedToken)
+      : 0;
+  const moveRange =
+    selectedMovement > 0
+      ? { origin: selectedToken.position, max: selectedMovement }
+      : null;
+
   function canControl(token) {
     return !myPlayer || token.owner === myPlayer;
   }
@@ -624,6 +640,7 @@ function BattlePage() {
               selectedTokenId={selectedTokenId}
               rangeOrigin={selectedToken?.position ?? null}
               weaponRange={weaponRange}
+              moveRange={moveRange}
               deploymentZones={deploymentZones}
               hasBackground={Boolean(background)}
               size={boardSize}

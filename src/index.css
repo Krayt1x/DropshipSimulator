@@ -548,6 +548,19 @@ button.danger:hover {
   font-weight: 600;
 }
 
+.equipment-subheader {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 8px 0 2px;
+}
+
+.equipment-subheader:first-of-type {
+  margin-top: 2px;
+}
+
 .token-stat-row {
   display: flex;
   align-items: center;
@@ -732,6 +745,17 @@ button.danger:hover {
   gap: 3px;
   font-size: 11px;
   font-weight: 700;
+}
+
+/* Blue/Red dice icons match Player 1/2's own colors, so on an active
+   (colored) turn segment they'd otherwise vanish into the background —
+   use darker, muted shades here instead. */
+.turn-dice-chip .die-icon.blue {
+  background: #1e3a8a;
+}
+
+.turn-dice-chip .die-icon.red {
+  background: #7f1d1d;
 }
 
 .die-pick-btn {

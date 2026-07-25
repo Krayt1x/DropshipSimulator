@@ -1,15 +1,15 @@
 const TILES = [
   {
-    href: '#map',
-    icon: '🗺️',
-    title: 'Map editor',
-    description: 'Build a hex battlefield with your own tile types.',
-  },
-  {
     href: '#play',
     icon: '⚔️',
     title: 'Play',
     description: 'Deploy units, track HP and heat, solo or with a friend.',
+  },
+  {
+    href: '#map',
+    icon: '🗺️',
+    title: 'Map editor',
+    description: 'Build a hex battlefield with your own tile types.',
   },
 ];
 

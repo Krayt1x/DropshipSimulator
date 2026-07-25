@@ -79,6 +79,33 @@ export function MultiplayerProvider({ children }) {
     }
   }
 
+  function watchConnectionState(pc) {
+    let disconnectTimer = null;
+    pc.onconnectionstatechange = () => {
+      const state = pc.connectionState;
+      // 'disconnected' is often a brief, self-recovering blip (a NAT
+      // rebinding or momentary network hiccup) rather than a real failure —
+      // give it a grace period before tearing the connection down.
+      if (state === 'disconnected') {
+        disconnectTimer = setTimeout(() => {
+          if (pc.connectionState === 'disconnected') {
+            setError('Connection lost.');
+            reset();
+          }
+        }, 5000);
+        return;
+      }
+      if (disconnectTimer) {
+        clearTimeout(disconnectTimer);
+        disconnectTimer = null;
+      }
+      if (['failed', 'closed'].includes(state)) {
+        setError('Connection lost.');
+        reset();
+      }
+    };
+  }
+
   function wireChannel(channel, isHost) {
     channelRef.current = channel;
     channel.onopen = () => {
@@ -102,12 +129,7 @@ export function MultiplayerProvider({ children }) {
     try {
       const pc = createPeerConnection();
       pcRef.current = pc;
-      pc.onconnectionstatechange = () => {
-        if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
-          setError('Connection lost.');
-          reset();
-        }
-      };
+      watchConnectionState(pc);
       const { channel, code } = await createOfferCode(pc);
       wireChannel(channel, true);
       setOfferCode(code);
@@ -138,14 +160,7 @@ export function MultiplayerProvider({ children }) {
       try {
         const pc = createPeerConnection();
         pcRef.current = pc;
-        pc.onconnectionstatechange = () => {
-          if (
-            ['failed', 'disconnected', 'closed'].includes(pc.connectionState)
-          ) {
-            setError('Connection lost.');
-            reset();
-          }
-        };
+        watchConnectionState(pc);
         pc.ondatachannel = (event) => wireChannel(event.channel, false);
         const code = await createAnswerCode(pc, offerCode);
         setAnswerCode(code);

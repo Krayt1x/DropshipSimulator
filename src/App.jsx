@@ -102,9 +102,6 @@ function AppShell() {
           ☰
         </button>
         <div className={`topnav-links ${menuOpen ? 'open' : ''}`}>
-          <a href="#map" className={page === 'map' ? 'active' : ''}>
-            Map editor
-          </a>
           <a
             href="#play"
             className={
@@ -112,6 +109,9 @@ function AppShell() {
             }
           >
             Play
+          </a>
+          <a href="#map" className={page === 'map' ? 'active' : ''}>
+            Map editor
           </a>
           <a href={DROPSHIP_BUILDER_URL} target="_blank" rel="noreferrer">
             Dropship Builder ↗

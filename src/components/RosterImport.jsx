@@ -2,6 +2,42 @@ import { useEffect, useState } from 'react';
 import { parseRosterExport } from '../lib/rosterImport.js';
 import { OWNERS } from '../lib/tokens.js';
 
+const DEFAULT_ROSTERS = [
+  {
+    name: 'Default A Corp List',
+    text: [
+      'Default A Corp List (Corp A)',
+      'Weight: 99t / 100t',
+      '',
+      'A30 - 41t',
+      '  Head: Synchronized Firing Pattern',
+      '  Left: Artillery',
+      '  Right: Artillery',
+      '  Movement: Quad Legs',
+      '',
+      'A10 - 14t',
+      '  Left: Flame Thrower',
+      '  Right: Light Assault',
+      '  Movement: Chicken Legs',
+      '',
+      'A10 - 14t',
+      '  Left: Light Assault',
+      '  Right: Flame Thrower',
+      '  Movement: Chicken Legs',
+      '',
+      'A20 - 26t',
+      '  Head: Weapon Slot Recalibration',
+      '  Left: Light Assault',
+      '  Right: Long Range Bolt',
+      '  Movement: Legs',
+      '',
+      'Delivery Capsule - 2t',
+      '',
+      'Delivery Capsule - 2t',
+    ].join('\n'),
+  },
+];
+
 function RosterImport({ manufacturers, units, equipment, onImport, myPlayer }) {
   const [text, setText] = useState('');
   const [owner, setOwner] = useState(myPlayer ?? OWNERS[0].id);
@@ -18,6 +54,13 @@ function RosterImport({ manufacturers, units, equipment, onImport, myPlayer }) {
     setResult(parseRosterExport(text, { manufacturers, units, equipment }));
   }
 
+  function loadDefaultRoster(rosterText) {
+    setText(rosterText);
+    setResult(
+      parseRosterExport(rosterText, { manufacturers, units, equipment }),
+    );
+  }
+
   function importRoster() {
     if (!result || result.entries.length === 0) return;
     onImport({ entries: result.entries, owner });
@@ -32,6 +75,22 @@ function RosterImport({ manufacturers, units, equipment, onImport, myPlayer }) {
         Paste the text from DropshipBuilder's "Share" button on the list builder
         page.
       </p>
+
+      <div className="field">
+        <label>Default rosters</label>
+        <div className="token-owner-row">
+          {DEFAULT_ROSTERS.map((roster) => (
+            <button
+              type="button"
+              className="ghost"
+              key={roster.name}
+              onClick={() => loadDefaultRoster(roster.text)}
+            >
+              {roster.name}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="field">
         <label htmlFor="roster-import-text">Roster export</label>

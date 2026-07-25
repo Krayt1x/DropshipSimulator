@@ -1,0 +1,47 @@
+name: Sync data from DropshipBuilder
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+
+      - name: Fetch latest data from DropshipBuilder
+        run: |
+          set -euo pipefail
+          base_url="https://raw.githubusercontent.com/Krayt1x/DropshipBuilder/main/packages/client/src/data"
+          for file in equipment.json units.json manufacturers.json; do
+            curl -fsSL "$base_url/$file" -o "/tmp/$file"
+            jq empty "/tmp/$file"
+          done
+          cp /tmp/equipment.json src/data/equipment.json
+          cp /tmp/manufacturers.json src/data/manufacturers.json
+          # DropshipBuilder tracks armor as 4 separate fields; this repo's UI
+          # expects a single combined "armor" string (see the script for why).
+          node .github/scripts/transform-units.mjs /tmp/units.json src/data/units.json
+
+      - name: Format to match this repo's style
+        run: npx prettier --write src/data/equipment.json src/data/units.json src/data/manufacturers.json
+
+      - name: Commit and push if changed
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- src/data/equipment.json src/data/units.json src/data/manufacturers.json; then
+            echo "No changes to sync."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/data/equipment.json src/data/units.json src/data/manufacturers.json
+          git commit -m "Sync equipment/units/manufacturers data from DropshipBuilder"
+          git push

@@ -77,7 +77,11 @@ function TokenCard({
           className={moving ? '' : 'ghost'}
           onClick={onArmMove}
         >
-          {moving ? 'Click a hex to move' : 'Move token'}
+          {moving
+            ? 'Click a hex to place'
+            : token.position
+              ? 'Move token'
+              : 'Place on board'}
         </button>
       </div>
 

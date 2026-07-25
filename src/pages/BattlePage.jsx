@@ -4,6 +4,8 @@ import { createToken } from '../lib/tokens.js';
 import BattleBoard from '../components/BattleBoard.jsx';
 import TokenForm from '../components/TokenForm.jsx';
 import TokenCard from '../components/TokenCard.jsx';
+import RosterImport from '../components/RosterImport.jsx';
+import ReserveList from '../components/ReserveList.jsx';
 import manufacturers from '../data/manufacturers.json';
 import units from '../data/units.json';
 import equipment from '../data/equipment.json';
@@ -28,11 +30,13 @@ function BattlePage() {
   const [selectedTokenId, setSelectedTokenId] = useState(null);
   const [draft, setDraft] = useState(null);
   const [movingTokenId, setMovingTokenId] = useState(null);
+  const [sidebarTab, setSidebarTab] = useState('add');
 
   const selectedToken = tokens.find((t) => t.id === selectedTokenId) ?? null;
   const selectedUnit = selectedToken
     ? units.find((u) => Number(u.id) === Number(selectedToken.unitId))
     : null;
+  const reserveTokens = tokens.filter((t) => !t.position);
 
   function tokenAt(key) {
     return tokens.find(
@@ -110,6 +114,13 @@ function BattlePage() {
     setMovingTokenId(null);
   }
 
+  function importRoster({ entries, owner }) {
+    const imported = entries.map(({ unit, equippedIds }) =>
+      createToken({ unit, equippedIds, owner, position: null }),
+    );
+    setTokens((current) => [...current, ...imported]);
+  }
+
   return (
     <div className="container-wide">
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Battle board</h1>
@@ -133,6 +144,12 @@ function BattlePage() {
           />
         </div>
         <div>
+          <ReserveList
+            tokens={reserveTokens}
+            units={units}
+            selectedTokenId={selectedTokenId}
+            onSelect={setSelectedTokenId}
+          />
           {selectedToken ? (
             <TokenCard
               token={selectedToken}
@@ -152,15 +169,45 @@ function BattlePage() {
               onDeselect={() => setSelectedTokenId(null)}
             />
           ) : (
-            <TokenForm
-              manufacturers={manufacturers}
-              units={units}
-              equipment={equipment}
-              armed={Boolean(draft)}
-              onArm={(next) =>
-                setDraft((current) => (current ? null : next))
-              }
-            />
+            <>
+              <div className="workspace-tabs">
+                <button
+                  type="button"
+                  className={`workspace-tab ${sidebarTab === 'add' ? 'active' : ''}`}
+                  onClick={() => setSidebarTab('add')}
+                >
+                  Add unit
+                </button>
+                <button
+                  type="button"
+                  className={`workspace-tab ${sidebarTab === 'import' ? 'active' : ''}`}
+                  onClick={() => {
+                    setSidebarTab('import');
+                    setDraft(null);
+                  }}
+                >
+                  Import roster
+                </button>
+              </div>
+              {sidebarTab === 'import' ? (
+                <RosterImport
+                  manufacturers={manufacturers}
+                  units={units}
+                  equipment={equipment}
+                  onImport={importRoster}
+                />
+              ) : (
+                <TokenForm
+                  manufacturers={manufacturers}
+                  units={units}
+                  equipment={equipment}
+                  armed={Boolean(draft)}
+                  onArm={(next) =>
+                    setDraft((current) => (current ? null : next))
+                  }
+                />
+              )}
+            </>
           )}
         </div>
       </div>

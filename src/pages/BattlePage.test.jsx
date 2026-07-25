@@ -46,4 +46,32 @@ describe('BattlePage', () => {
 
     expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
   });
+
+  it('imports a roster export into reserve and places a unit from it', () => {
+    render(<BattlePage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Import roster' }));
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: [
+          'Test List (Corp A)',
+          'Weight: 6t / 100t',
+          '',
+          'A10 - 6t',
+        ].join('\n'),
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
+    );
+
+    expect(screen.getByText('Reserve (1)')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-1,1'));
+
+    expect(screen.queryByText('Reserve (1)')).toBeNull();
+    expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
+  });
 });

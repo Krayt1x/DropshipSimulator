@@ -332,10 +332,11 @@ button.danger:hover {
   height: auto;
 }
 
-.battle-board-frame {
+.battle-board-column {
   display: flex;
-  gap: 12px;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
 }
 
 .battle-board-viewport {
@@ -355,10 +356,9 @@ button.danger:hover {
 
 .zoom-controls {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   gap: 6px;
-  flex-shrink: 0;
 }
 
 .zoom-controls button {
@@ -763,6 +763,40 @@ button.danger:hover {
 }
 
 .home-tile-description {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.resume-game-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: var(--bg-card);
+  text-decoration: none;
+  color: var(--text-primary);
+}
+
+.resume-game-banner:hover {
+  background: var(--bg-track);
+}
+
+.resume-game-icon {
+  font-size: 24px;
+  color: var(--accent);
+}
+
+.resume-game-title {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.resume-game-description {
+  display: block;
   font-size: 13px;
   color: var(--text-secondary);
 }

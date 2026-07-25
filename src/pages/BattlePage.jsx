@@ -16,6 +16,10 @@ import equipment from '../data/equipment.json';
 const DEFAULT_TILE_TYPES = [{ id: 'plain', name: 'Plain', color: '#78716c' }];
 const DEFAULT_DIMENSIONS = { cols: 14, rows: 10 };
 const BOARD_WIDTH = 820;
+// .battle-board-viewport's own padding (1rem each side) + border (1px each
+// side) — subtracted so the board fits inside it without an unwanted
+// horizontal scrollbar at 100% zoom.
+const BOARD_PADDING = 34;
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2;
 const ZOOM_STEP = 0.25;
@@ -74,7 +78,7 @@ function BattlePage() {
     return !myPlayer || token.owner === myPlayer;
   }
 
-  const fitSize = BOARD_WIDTH / (1.5 * (dimensions.cols + 1));
+  const fitSize = (BOARD_WIDTH - BOARD_PADDING) / (1.5 * (dimensions.cols + 1));
   const boardSize = fitSize * zoom;
 
   function adjustZoom(delta) {
@@ -259,7 +263,28 @@ function BattlePage() {
       </div>
 
       <div className="map-editor-layout">
-        <div className="battle-board-frame">
+        <div className="battle-board-column">
+          <div className="zoom-controls">
+            <button
+              type="button"
+              className="ghost"
+              aria-label="Zoom out"
+              disabled={zoom <= ZOOM_MIN}
+              onClick={() => adjustZoom(-ZOOM_STEP)}
+            >
+              −
+            </button>
+            <span className="zoom-level">{Math.round(zoom * 100)}%</span>
+            <button
+              type="button"
+              className="ghost"
+              aria-label="Zoom in"
+              disabled={zoom >= ZOOM_MAX}
+              onClick={() => adjustZoom(ZOOM_STEP)}
+            >
+              +
+            </button>
+          </div>
           <div
             className="battle-board-viewport"
             style={backgroundContainerStyle(background)}
@@ -280,27 +305,6 @@ function BattlePage() {
               onHexClick={handleHexClick}
               onDropToken={handleDropToken}
             />
-          </div>
-          <div className="zoom-controls">
-            <button
-              type="button"
-              className="ghost"
-              aria-label="Zoom in"
-              disabled={zoom >= ZOOM_MAX}
-              onClick={() => adjustZoom(ZOOM_STEP)}
-            >
-              +
-            </button>
-            <span className="zoom-level">{Math.round(zoom * 100)}%</span>
-            <button
-              type="button"
-              className="ghost"
-              aria-label="Zoom out"
-              disabled={zoom <= ZOOM_MIN}
-              onClick={() => adjustZoom(-ZOOM_STEP)}
-            >
-              −
-            </button>
           </div>
         </div>
         <div>

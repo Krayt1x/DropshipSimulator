@@ -19,6 +19,7 @@ function TokenCard({
   onRotate,
   onArmMove,
   onSetHeat,
+  onSetWeaponHp,
   onToggleBroken,
   onToggleRange,
   onDestroy,
@@ -155,6 +156,8 @@ function TokenCard({
               broken: false,
             };
             const rangeActive = activeRangeIndex === weapon.instanceIndex;
+            const weaponMaxHp = Number(weapon.hp) || 0;
+            const weaponHp = state.hp ?? weaponMaxHp;
             return (
               <div className="token-weapon-row" key={weapon.instanceIndex}>
                 <div>
@@ -172,7 +175,7 @@ function TokenCard({
                     {' '}
                     · Slot {slotForType(weapon.type)} · Range{' '}
                     {weapon.range || '—'} · Heat {weapon.heat_rating || '—'} ·{' '}
-                    {weapon.hit_dice || '—'} · HP {weapon.hp ?? '—'}
+                    {weapon.hit_dice || '—'}
                   </span>
                 </div>
                 <div className="token-stat-row">
@@ -216,6 +219,55 @@ function TokenCard({
                     Broken
                   </label>
                 </div>
+                {weaponMaxHp > 0 && (
+                  <>
+                    <div className="token-stat-row">
+                      <button
+                        type="button"
+                        className="ghost"
+                        onClick={() =>
+                          onSetWeaponHp(
+                            weapon.instanceIndex,
+                            Math.max(0, weaponHp - 1),
+                          )
+                        }
+                      >
+                        −
+                      </button>
+                      <span className={weaponHp <= 0 ? 'token-hp-zero' : ''}>
+                        {`HP ${weaponHp} / ${weaponMaxHp}`}
+                      </span>
+                      <button
+                        type="button"
+                        className="ghost"
+                        onClick={() =>
+                          onSetWeaponHp(
+                            weapon.instanceIndex,
+                            Math.min(weaponMaxHp, weaponHp + 1),
+                          )
+                        }
+                      >
+                        +
+                      </button>
+                      <button
+                        type="button"
+                        className="ghost"
+                        onClick={() =>
+                          onSetWeaponHp(weapon.instanceIndex, weaponMaxHp)
+                        }
+                      >
+                        Reset
+                      </button>
+                    </div>
+                    <HpBoxes
+                      currentHp={weaponHp}
+                      maxHp={weaponMaxHp}
+                      onSetHp={(target) =>
+                        onSetWeaponHp(weapon.instanceIndex, target)
+                      }
+                    />
+                  </>
+                )}
               </div>
             );
           })}

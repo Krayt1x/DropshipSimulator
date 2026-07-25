@@ -353,6 +353,15 @@ function BattlePage() {
     }));
   }
 
+  function setWeaponHp(weaponId, hp) {
+    updateSelected((t) => ({
+      weaponState: {
+        ...t.weaponState,
+        [weaponId]: { ...t.weaponState[weaponId], hp },
+      },
+    }));
+  }
+
   function toggleBroken(weaponId) {
     updateSelected((t) => ({
       weaponState: {
@@ -500,6 +509,7 @@ function BattlePage() {
                   )
                 }
                 onSetHeat={setHeat}
+                onSetWeaponHp={setWeaponHp}
                 onToggleBroken={toggleBroken}
                 activeRangeIndex={
                   rangeWeapon?.tokenId === selectedToken.id

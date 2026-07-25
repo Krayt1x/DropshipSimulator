@@ -405,6 +405,12 @@ button.danger:hover {
   height: auto;
 }
 
+/* Lets a moving token glide smoothly between each hex it steps through
+   (#93) rather than snapping instantly to every intermediate position. */
+.token-marker {
+  transition: transform 0.15s ease;
+}
+
 .battle-board-column {
   display: flex;
   flex-direction: column;

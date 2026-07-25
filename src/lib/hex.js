@@ -60,6 +60,41 @@ export function offsetToAxial(col, row) {
   return { q, r };
 }
 
+export function axialToOffset(q, r) {
+  const col = q;
+  const row = r + (col - (col & 1)) / 2;
+  return { col, row };
+}
+
+function cubeRound(q, r) {
+  const s = -q - r;
+  let rq = Math.round(q);
+  let rr = Math.round(r);
+  const rs = Math.round(s);
+  const qDiff = Math.abs(rq - q);
+  const rDiff = Math.abs(rr - r);
+  const sDiff = Math.abs(rs - s);
+  if (qDiff > rDiff && qDiff > sDiff) rq = -rr - rs;
+  else if (rDiff > sDiff) rr = -rq - rs;
+  return { q: rq, r: rr };
+}
+
+// The sequence of hexes a token crosses moving from `a` to `b` in a straight
+// line, including both endpoints — used to step a moving token through each
+// hex it passes rather than jumping straight to the destination (#93).
+export function hexLine(a, b) {
+  const A = offsetToAxial(a.col, a.row);
+  const B = offsetToAxial(b.col, b.row);
+  const n = hexDistance(a, b);
+  const steps = [];
+  for (let i = 0; i <= n; i++) {
+    const t = n === 0 ? 0 : i / n;
+    const { q, r } = cubeRound(A.q + (B.q - A.q) * t, A.r + (B.r - A.r) * t);
+    steps.push(axialToOffset(q, r));
+  }
+  return steps;
+}
+
 export function hexDistance(a, b) {
   const A = offsetToAxial(a.col, a.row);
   const B = offsetToAxial(b.col, b.row);

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocalStorageState, makeKey } from '../lib/storage.js';
 import { backgroundContainerStyle } from '../lib/mapBackground.js';
 import { formatRollLogMessage, parseHitDice } from '../lib/dice.js';
+import { hexLine } from '../lib/hex.js';
 import {
   createToken,
   OWNERS,
@@ -83,6 +84,12 @@ function BattlePage() {
   const [zoom, setZoom] = useState(1);
   const diceRollerRef = useRef(null);
   const [diceTrayOpen, setDiceTrayOpen] = useState(false);
+  const [animatingToken, setAnimatingToken] = useState(null);
+  const moveTimeoutsRef = useRef([]);
+
+  useEffect(() => {
+    return () => moveTimeoutsRef.current.forEach(clearTimeout);
+  }, []);
   const [viewportHeight, setViewportHeight] = useState(
     () => window.innerHeight,
   );
@@ -333,6 +340,44 @@ function BattlePage() {
     placeTokenAt(token.id, col, row);
   }
 
+  // Steps a moving token through each hex between its old and new position
+  // (#93) instead of jumping straight there; the real position/log/undo
+  // update only happens once the animation reaches the destination.
+  const MOVE_STEP_MS = 160;
+  function animateMove(token, col, row) {
+    moveTimeoutsRef.current.forEach(clearTimeout);
+    moveTimeoutsRef.current = [];
+    if (!token.position) {
+      moveTokenTo(token, col, row);
+      return;
+    }
+    const path = hexLine(token.position, { col, row });
+    if (path.length <= 2) {
+      setAnimatingToken(null);
+      moveTokenTo(token, col, row);
+      return;
+    }
+    path.slice(1, -1).forEach((hex, i) => {
+      moveTimeoutsRef.current.push(
+        setTimeout(
+          () => {
+            setAnimatingToken({ tokenId: token.id, position: hex });
+          },
+          MOVE_STEP_MS * (i + 1),
+        ),
+      );
+    });
+    moveTimeoutsRef.current.push(
+      setTimeout(
+        () => {
+          setAnimatingToken(null);
+          moveTokenTo(token, col, row);
+        },
+        MOVE_STEP_MS * (path.length - 1),
+      ),
+    );
+  }
+
   function handleHexClick(key) {
     const [col, row] = key.split(',').map(Number);
 
@@ -351,7 +396,7 @@ function BattlePage() {
     if (movingTokenId) {
       const movingToken = tokens.find((t) => t.id === movingTokenId);
       if (movingToken && canControl(movingToken)) {
-        moveTokenTo(movingToken, col, row);
+        animateMove(movingToken, col, row);
       }
       setMovingTokenId(null);
       return;
@@ -365,7 +410,7 @@ function BattlePage() {
     if (tokenAt(`${col},${row}`)) return;
     const token = tokens.find((t) => t.id === tokenId);
     if (!token || !canControl(token)) return;
-    moveTokenTo(token, col, row);
+    animateMove(token, col, row);
     setSelectedTokenId(tokenId);
   }
 
@@ -675,6 +720,7 @@ function BattlePage() {
               tileTypes={tileTypes}
               tokens={tokens}
               units={units}
+              animatingToken={animatingToken}
               selectedTokenId={selectedTokenId}
               rangeOrigin={selectedToken?.position ?? null}
               weaponRange={weaponRange}

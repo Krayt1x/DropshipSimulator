@@ -28,7 +28,7 @@ function TokenMarker({
   const maxHp = Number(unit?.hp) || 1;
   const hpFraction = Math.max(0, Math.min(1, token.currentHp / maxHp));
   const barWidth = radius * 1.8;
-  const barY = y + radius + 3;
+  const barY = radius + 3;
 
   // SVG elements don't support native HTML5 drag-and-drop, so movement is
   // driven by pointer capture + hit-testing the release point instead.
@@ -53,6 +53,8 @@ function TokenMarker({
   return (
     <g
       data-testid={`token-${token.id}`}
+      className="token-marker"
+      transform={`translate(${x},${y})`}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onClick={onSelect}
@@ -62,8 +64,8 @@ function TokenMarker({
       }}
     >
       <circle
-        cx={x}
-        cy={y}
+        cx={0}
+        cy={0}
         r={radius}
         fill={ownerColor(token.owner)}
         stroke={selected ? '#fff' : 'rgba(0,0,0,0.35)'}
@@ -72,11 +74,11 @@ function TokenMarker({
       <polygon
         points="0,-8 6,4 -6,4"
         fill="#fff"
-        transform={`translate(${x},${y}) rotate(${angle}) translate(0,${-radius})`}
+        transform={`rotate(${angle}) translate(0,${-radius})`}
       />
       <text
-        x={x}
-        y={y + 2}
+        x={0}
+        y={2}
         textAnchor="middle"
         fontSize={size * 0.32}
         fontWeight="700"
@@ -85,7 +87,7 @@ function TokenMarker({
         {initials}
       </text>
       <rect
-        x={x - barWidth / 2}
+        x={-barWidth / 2}
         y={barY}
         width={barWidth}
         height={4}
@@ -93,7 +95,7 @@ function TokenMarker({
         fill="rgba(0,0,0,0.25)"
       />
       <rect
-        x={x - barWidth / 2}
+        x={-barWidth / 2}
         y={barY}
         width={barWidth * hpFraction}
         height={4}
@@ -101,8 +103,8 @@ function TokenMarker({
         fill={healthBarColor(hpFraction)}
       />
       <text
-        x={x}
-        y={y + radius + 20}
+        x={0}
+        y={radius + 20}
         textAnchor="middle"
         fontSize={size * 0.28}
         fontWeight="600"
@@ -121,6 +123,7 @@ function BattleBoard({
   tileTypes,
   tokens,
   units,
+  animatingToken,
   selectedTokenId,
   rangeOrigin,
   weaponRange,
@@ -241,20 +244,26 @@ function BattleBoard({
       })}
       {tokens
         .filter((token) => token.position)
-        .map((token) => (
-          <TokenMarker
-            key={token.id}
-            token={token}
-            unit={units.find((u) => Number(u.id) === Number(token.unitId))}
-            size={size}
-            selected={token.id === selectedTokenId}
-            draggable={canControl ? canControl(token) : true}
-            onSelect={() =>
-              onHexClick(`${token.position.col},${token.position.row}`)
-            }
-            onDrop={(col, row) => onDropToken?.(token.id, col, row)}
-          />
-        ))}
+        .map((token) => {
+          const renderToken =
+            animatingToken?.tokenId === token.id
+              ? { ...token, position: animatingToken.position }
+              : token;
+          return (
+            <TokenMarker
+              key={token.id}
+              token={renderToken}
+              unit={units.find((u) => Number(u.id) === Number(token.unitId))}
+              size={size}
+              selected={token.id === selectedTokenId}
+              draggable={canControl ? canControl(token) : true}
+              onSelect={() =>
+                onHexClick(`${token.position.col},${token.position.row}`)
+              }
+              onDrop={(col, row) => onDropToken?.(token.id, col, row)}
+            />
+          );
+        })}
     </svg>
   );
 }

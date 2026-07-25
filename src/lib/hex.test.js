@@ -8,6 +8,7 @@ import {
   neighborHex,
   hexDirection,
   weaponArcDirections,
+  hexLine,
 } from './hex.js';
 
 describe('hex', () => {
@@ -84,5 +85,24 @@ describe('hex', () => {
 
   it('unions both arcs for "both", covering every direction but directly behind', () => {
     expect(weaponArcDirections(0, 'both').sort()).toEqual([0, 1, 2, 4, 5]);
+  });
+
+  it('walks a straight hex-by-hex line between two points, including both ends', () => {
+    const path = hexLine({ col: 0, row: 0 }, { col: 3, row: 3 });
+    expect(path[0]).toEqual({ col: 0, row: 0 });
+    expect(path[path.length - 1]).toEqual({ col: 3, row: 3 });
+    expect(path.length).toBe(
+      hexDistance({ col: 0, row: 0 }, { col: 3, row: 3 }) + 1,
+    );
+    // each step lands on an adjacent hex
+    for (let i = 1; i < path.length; i++) {
+      expect(hexDistance(path[i - 1], path[i])).toBe(1);
+    }
+  });
+
+  it('returns a single hex for a zero-length line', () => {
+    expect(hexLine({ col: 2, row: 2 }, { col: 2, row: 2 })).toEqual([
+      { col: 2, row: 2 },
+    ]);
   });
 });

@@ -5,11 +5,15 @@ import {
   fireEvent,
   cleanup,
   within,
+  act,
 } from '@testing-library/react';
 import BattlePage from './BattlePage.jsx';
 
 beforeEach(() => window.localStorage.clear());
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 // Deployment phase now defaults to on (#75), so tests that used to need
 // this to arm the phase no longer do — kept as a no-op so every existing
@@ -20,6 +24,15 @@ function startDeploymentPhase() {}
 // (#87), so tests that need to interact with it must end the phase first.
 function endDeploymentPhase() {
   fireEvent.click(screen.getByRole('button', { name: 'End deployment phase' }));
+}
+
+// A move now steps the token through each hex it crosses (#93) instead of
+// jumping straight there, so tests that check the post-move state need to
+// fast-forward past that animation first.
+function finishMoveAnimation() {
+  act(() => {
+    vi.runAllTimers();
+  });
 }
 
 describe('BattlePage', () => {
@@ -68,6 +81,7 @@ describe('BattlePage', () => {
   });
 
   it('moves a selected token to a new hex', () => {
+    vi.useFakeTimers();
     render(<BattlePage />);
     startDeploymentPhase();
 
@@ -80,11 +94,13 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Move token' }));
     fireEvent.click(screen.getByTestId('hex-3,3'));
+    finishMoveAnimation();
 
     expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
   });
 
   it('moves an on-board token by dragging it to a new hex', () => {
+    vi.useFakeTimers();
     const { container } = render(<BattlePage />);
     startDeploymentPhase();
 
@@ -102,6 +118,7 @@ describe('BattlePage', () => {
 
     fireEvent.pointerDown(tokenMarker, { pointerId: 1 });
     fireEvent.pointerUp(tokenMarker, { pointerId: 1 });
+    finishMoveAnimation();
 
     document.elementFromPoint = originalElementFromPoint;
 
@@ -113,6 +130,7 @@ describe('BattlePage', () => {
   });
 
   it('undoes the last move back to the previous hex', () => {
+    vi.useFakeTimers();
     render(<BattlePage />);
     startDeploymentPhase();
 
@@ -129,6 +147,7 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Move token' }));
     fireEvent.click(screen.getByTestId('hex-3,3'));
+    finishMoveAnimation();
 
     expect(
       screen.getByRole('button', { name: 'Undo last move' }).disabled,
@@ -395,6 +414,7 @@ describe('BattlePage', () => {
   });
 
   it('logs deployments, moves, and turn changes to the game log', () => {
+    vi.useFakeTimers();
     render(<BattlePage />);
     startDeploymentPhase();
 
@@ -409,6 +429,7 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Move token' }));
     fireEvent.click(screen.getByTestId('hex-3,3'));
+    finishMoveAnimation();
     expect(screen.getByText(/moved A10 to \(3, 3\)/)).toBeDefined();
 
     fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));

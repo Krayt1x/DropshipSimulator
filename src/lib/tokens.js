@@ -38,6 +38,12 @@ export function createToken({ unit, equippedIds, owner, position }) {
   };
 }
 
+export function healthBarColor(fraction) {
+  if (fraction <= 0.25) return '#dc2626';
+  if (fraction <= 0.5) return '#f59e0b';
+  return '#22c55e';
+}
+
 export function groupEquipmentByType(items) {
   return items.reduce((groups, item) => {
     const type = item.type ?? 'Movement';

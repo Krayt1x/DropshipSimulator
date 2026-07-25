@@ -6,13 +6,7 @@ import {
   hexSize,
   hexToPixel,
 } from '../lib/hex.js';
-import { ownerColor } from '../lib/tokens.js';
-
-function healthBarColor(fraction) {
-  if (fraction <= 0.25) return '#dc2626';
-  if (fraction <= 0.5) return '#f59e0b';
-  return '#22c55e';
-}
+import { healthBarColor, ownerColor } from '../lib/tokens.js';
 
 function TokenMarker({ token, unit, size, selected }) {
   const { x, y } = hexToPixel(token.position.col, token.position.row, size);

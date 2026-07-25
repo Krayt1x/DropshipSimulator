@@ -1,11 +1,18 @@
 import { useState } from 'react';
 import { groupEquipmentByType, parseHeatRating } from '../lib/tokens.js';
 import HpBoxes from './HpBoxes.jsx';
+import UnitCardHeader from './UnitCardHeader.jsx';
 
 const HP_BOX_VARIANTS = [
   { id: 'pips', label: 'Pips' },
   { id: 'chunky', label: 'Chunky' },
   { id: 'numbered', label: 'Numbered' },
+];
+
+const CARD_STYLES = [
+  { id: 'compact', label: 'Compact' },
+  { id: 'detailed', label: 'Detailed' },
+  { id: 'minimal', label: 'Minimal' },
 ];
 
 function TokenCard({
@@ -24,6 +31,7 @@ function TokenCard({
   onDeselect,
 }) {
   const [hpBoxVariant, setHpBoxVariant] = useState('pips');
+  const [cardStyle, setCardStyle] = useState('compact');
   if (!unit) return null;
 
   const equippedItems = token.equippedIds
@@ -32,7 +40,6 @@ function TokenCard({
   const grouped = groupEquipmentByType(equippedItems);
   const weapons = grouped.Weapon ?? [];
   const augments = grouped.Augment ?? [];
-  const movementItem = (grouped.Movement ?? [])[0];
 
   return (
     <div className="card token-card">
@@ -45,10 +52,25 @@ function TokenCard({
           Close
         </button>
       </div>
-      <p className="unit-meta">
-        {unit.manufacturer} · {unit.size} · Armor {unit.armor || '—'}
-        {movementItem ? ` · ${movementItem.movement} move` : ''}
-      </p>
+
+      <div className="card-style-row">
+        {CARD_STYLES.map((s) => (
+          <button
+            type="button"
+            key={s.id}
+            className={`workspace-tab ${cardStyle === s.id ? 'active' : ''}`}
+            onClick={() => setCardStyle(s.id)}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+      <UnitCardHeader
+        variant={cardStyle}
+        unit={unit}
+        token={token}
+        equippedItems={equippedItems}
+      />
 
       <div className="token-card-section">
         <label>HP</label>

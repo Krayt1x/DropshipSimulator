@@ -210,6 +210,7 @@ function BattlePage() {
     deployedDiceByOwner(tokens, units),
     bankedDice,
   );
+  const activeOwnerDice = playerDice[myPlayer ?? turn.active];
 
   function toggleWeaponRange(instanceIndex, range) {
     setRangeWeapon((current) =>
@@ -381,24 +382,56 @@ function BattlePage() {
         }));
       }
     }
-    updateSelected(() => ({ destroyed: true, position: null }));
+    updateSelected(() => ({
+      destroyed: true,
+      position: null,
+      bankedDieColor: keptDiceColor ?? null,
+    }));
     setMovingTokenId(null);
+  }
+
+  // Reverses the die banked at destruction time (if any) so redeploying a
+  // returned model doesn't double-count its dice against the one already
+  // added to the player's pool.
+  function releaseBankedDie(token) {
+    if (!token.bankedDieColor) return;
+    const { owner, bankedDieColor } = token;
+    setBankedDice((current) => ({
+      ...current,
+      [owner]: {
+        ...current[owner],
+        [bankedDieColor]: Math.max(
+          0,
+          (current[owner]?.[bankedDieColor] ?? 0) - 1,
+        ),
+      },
+    }));
   }
 
   function returnSelectedToReserve() {
     if (selectedToken) {
       appendLog(`${unitName(selectedToken)} returned to reserve`);
+      releaseBankedDie(selectedToken);
     }
-    updateSelected(() => ({ destroyed: false, position: null }));
+    updateSelected(() => ({
+      destroyed: false,
+      position: null,
+      bankedDieColor: null,
+    }));
     setMovingTokenId(null);
   }
 
   function returnDestroyedToReserve(tokenId) {
     const token = tokens.find((t) => t.id === tokenId);
-    if (token) appendLog(`${unitName(token)} returned to reserve`);
+    if (token) {
+      appendLog(`${unitName(token)} returned to reserve`);
+      releaseBankedDie(token);
+    }
     setTokens((current) =>
       current.map((t) =>
-        t.id === tokenId ? { ...t, destroyed: false, position: null } : t,
+        t.id === tokenId
+          ? { ...t, destroyed: false, position: null, bankedDieColor: null }
+          : t,
       ),
     );
   }
@@ -597,6 +630,7 @@ function BattlePage() {
             actionPool={actionPool}
             onRollToActionPool={rollToActionPool}
             onUseActionPoolDie={useActionPoolDie}
+            activeOwnerDice={activeOwnerDice}
           />
           <div className="card">
             <button

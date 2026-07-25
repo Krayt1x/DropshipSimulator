@@ -12,6 +12,7 @@ function DiceRoller({
   actionPool,
   onRollToActionPool,
   onUseActionPoolDie,
+  activeOwnerDice,
 }) {
   const [pool, setPool] = useState({});
   const [results, setResults] = useState(null);
@@ -47,6 +48,17 @@ function DiceRoller({
     setPool({});
     setResults(null);
   }
+
+  function addPlayerDiceToPool() {
+    setPool((current) => ({
+      ...current,
+      blue: (current.blue ?? 0) + (activeOwnerDice?.blue ?? 0),
+      red: (current.red ?? 0) + (activeOwnerDice?.red ?? 0),
+    }));
+  }
+
+  const playerDiceTotal =
+    (activeOwnerDice?.blue ?? 0) + (activeOwnerDice?.red ?? 0);
 
   function useSelectedPoolDie() {
     if (!selectedPoolId) return;
@@ -89,6 +101,14 @@ function DiceRoller({
       <div className="token-owner-row" style={{ marginTop: 10 }}>
         <button type="button" disabled={poolTotal === 0} onClick={roll}>
           Roll{poolTotal > 0 ? ` (${poolTotal})` : ''}
+        </button>
+        <button
+          type="button"
+          className="ghost"
+          disabled={playerDiceTotal === 0}
+          onClick={addPlayerDiceToPool}
+        >
+          Add Action Pool
         </button>
         <button
           type="button"

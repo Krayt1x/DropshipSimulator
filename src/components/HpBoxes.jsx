@@ -13,11 +13,11 @@ function chunkIntoRows(maxHp) {
   return rows;
 }
 
-function HpBoxes({ currentHp, maxHp, variant = 'pips', onSetHp }) {
+function HpBoxes({ currentHp, maxHp, onSetHp }) {
   const rows = chunkIntoRows(Math.max(0, maxHp));
 
   return (
-    <div className={`hp-boxes hp-boxes-${variant}`}>
+    <div className="hp-boxes">
       {rows.map((row, rowIndex) => (
         <div className="hp-boxes-row" key={rowIndex}>
           {row.map((index) => {
@@ -30,9 +30,7 @@ function HpBoxes({ currentHp, maxHp, variant = 'pips', onSetHp }) {
                 className={`hp-box ${filled ? 'hp-box-filled' : 'hp-box-empty'}`}
                 title={`Set HP to ${target}`}
                 onClick={() => onSetHp(target)}
-              >
-                {variant === 'numbered' ? index + 1 : ''}
-              </button>
+              />
             );
           })}
         </div>

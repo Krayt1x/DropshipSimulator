@@ -1,19 +1,6 @@
-import { useState } from 'react';
 import { groupEquipmentByType, parseHeatRating } from '../lib/tokens.js';
 import HpBoxes from './HpBoxes.jsx';
 import UnitCardHeader from './UnitCardHeader.jsx';
-
-const HP_BOX_VARIANTS = [
-  { id: 'pips', label: 'Pips' },
-  { id: 'chunky', label: 'Chunky' },
-  { id: 'numbered', label: 'Numbered' },
-];
-
-const CARD_STYLES = [
-  { id: 'compact', label: 'Compact' },
-  { id: 'detailed', label: 'Detailed' },
-  { id: 'minimal', label: 'Minimal' },
-];
 
 function TokenCard({
   token,
@@ -30,8 +17,6 @@ function TokenCard({
   onReturnToReserve,
   onDeselect,
 }) {
-  const [hpBoxVariant, setHpBoxVariant] = useState('pips');
-  const [cardStyle, setCardStyle] = useState('compact');
   if (!unit) return null;
 
   const equippedItems = token.equippedIds
@@ -53,24 +38,7 @@ function TokenCard({
         </button>
       </div>
 
-      <div className="card-style-row">
-        {CARD_STYLES.map((s) => (
-          <button
-            type="button"
-            key={s.id}
-            className={`workspace-tab ${cardStyle === s.id ? 'active' : ''}`}
-            onClick={() => setCardStyle(s.id)}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
-      <UnitCardHeader
-        variant={cardStyle}
-        unit={unit}
-        token={token}
-        equippedItems={equippedItems}
-      />
+      <UnitCardHeader unit={unit} token={token} equippedItems={equippedItems} />
 
       <div className="token-card-section">
         <label>HP</label>
@@ -92,22 +60,9 @@ function TokenCard({
             Reset
           </button>
         </div>
-        <div className="hp-box-variant-row">
-          {HP_BOX_VARIANTS.map((v) => (
-            <button
-              type="button"
-              key={v.id}
-              className={`workspace-tab ${hpBoxVariant === v.id ? 'active' : ''}`}
-              onClick={() => setHpBoxVariant(v.id)}
-            >
-              {v.label}
-            </button>
-          ))}
-        </div>
         <HpBoxes
           currentHp={token.currentHp}
           maxHp={Number(unit.hp) || 0}
-          variant={hpBoxVariant}
           onSetHp={(target) => onAdjustHp(target - token.currentHp)}
         />
       </div>

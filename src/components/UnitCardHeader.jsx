@@ -1,17 +1,24 @@
 import DiceIcons from './DiceIcons.jsx';
-import { healthBarColor } from '../lib/tokens.js';
+import { healthBarColor, sizeNumber } from '../lib/tokens.js';
 
 function UnitCardHeader({ unit, token, equippedItems }) {
   const maxHp = Number(unit.hp) || 1;
   const fraction = Math.max(0, Math.min(1, token.currentHp / maxHp));
+  const size = sizeNumber(unit.size);
 
   return (
     <>
       <div className="card-badge-row">
         <span className="pill-badge">{unit.manufacturer}</span>
-        <span className="pill-badge">{unit.size}</span>
+        <span className="pill-badge">
+          {unit.size}
+          {size !== null ? ` (${size})` : ''}
+        </span>
         <span className="pill-badge">Armor {unit.armor || '—'}</span>
       </div>
+      <p className="unit-meta" style={{ margin: '4px 0' }}>
+        Size: {size ?? '—'} · Armor: {unit.armor || '—'}
+      </p>
       <p className="unit-stats" style={{ margin: '6px 0' }}>
         <DiceIcons unit={unit} />
       </p>

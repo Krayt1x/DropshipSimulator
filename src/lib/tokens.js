@@ -61,6 +61,19 @@ export function parseWeaponRange(range) {
   return { min: 0, max };
 }
 
+const SIZE_NUMBERS = {
+  'Drop Pod': 1,
+  Micro: 1,
+  Small: 2,
+  Medium: 3,
+  Large: 4,
+  Huge: 5,
+};
+
+export function sizeNumber(size) {
+  return SIZE_NUMBERS[size] ?? null;
+}
+
 export function healthBarColor(fraction) {
   if (fraction <= 0.25) return '#dc2626';
   if (fraction <= 0.5) return '#f59e0b';

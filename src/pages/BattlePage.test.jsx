@@ -39,7 +39,7 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
     expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
-    expect(screen.getByText('10 / 10')).toBeDefined();
+    expect(screen.getByText('5 / 5')).toBeDefined();
   });
 
   it('adjusts HP on the selected token', () => {
@@ -53,7 +53,7 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
     fireEvent.click(screen.getByRole('button', { name: '−' }));
-    expect(screen.getByText('9 / 10')).toBeDefined();
+    expect(screen.getByText('4 / 5')).toBeDefined();
   });
 
   it('moves a selected token to a new hex', () => {

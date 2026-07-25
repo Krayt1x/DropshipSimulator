@@ -1,5 +1,9 @@
 import { useState } from 'react';
-import { groupEquipmentByType, parseHeatRating } from '../lib/tokens.js';
+import {
+  groupEquipmentByType,
+  parseHeatRating,
+  slotForType,
+} from '../lib/tokens.js';
 import { DICE_COLORS } from '../lib/dice.js';
 import HpBoxes from './HpBoxes.jsx';
 import UnitCardHeader from './UnitCardHeader.jsx';
@@ -166,8 +170,9 @@ function TokenCard({
                   </button>
                   <span className="unit-meta">
                     {' '}
-                    · Range {weapon.range || '—'} · Heat{' '}
-                    {weapon.heat_rating || '—'} · {weapon.hit_dice || '—'}
+                    · Slot {slotForType(weapon.type)} · Range{' '}
+                    {weapon.range || '—'} · Heat {weapon.heat_rating || '—'} ·{' '}
+                    {weapon.hit_dice || '—'} · HP {weapon.hp ?? '—'}
                   </span>
                 </div>
                 <div className="token-stat-row">
@@ -222,7 +227,7 @@ function TokenCard({
           <label>Augments</label>
           {augments.map((item) => (
             <p key={item.instanceIndex} className="unit-meta">
-              <b>{item.name}</b>
+              <b>{item.name}</b> · Slot {slotForType(item.type)}
               {item.effects ? `: ${item.effects}` : ''}
             </p>
           ))}

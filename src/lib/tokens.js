@@ -128,3 +128,16 @@ export function groupEquipmentByType(items) {
     return groups;
   }, {});
 }
+
+// Which slot an item's type occupies on a unit — Weapons go in either a
+// Left or Right slot (not pinned to one at equip time), Augments go in the
+// Head slot, Movement gear goes in the fixed Movement slot.
+const SLOT_BY_TYPE = {
+  Weapon: 'Left/Right',
+  Augment: 'Head',
+  Movement: 'Movement',
+};
+
+export function slotForType(type) {
+  return SLOT_BY_TYPE[type] ?? '—';
+}

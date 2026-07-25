@@ -40,6 +40,7 @@ function UnitCardHeader({ unit, token, equippedItems }) {
               {item.hit_dice ? ` · Hit ${item.hit_dice}` : ''}
               {item.heat_rating ? ` · Heat ${item.heat_rating}` : ''}
               {item.movement ? ` · ${item.movement} move` : ''}
+              {item.hp ? ` · HP ${item.hp}` : ''}
             </li>
           ))}
         </ul>

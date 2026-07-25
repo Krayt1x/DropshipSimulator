@@ -132,28 +132,30 @@ export function neighborHex(col, row, dir) {
   return { col: col + dc, row: row + dr };
 }
 
-// Buckets `target` into one of the 6 neighbor directions from `origin` by
-// snapping the pixel-space angle between them to whichever neighbor cell's
-// own angle is closest — used to restrict a weapon's range indicator to its
-// mounted side's arc (#92).
+// Buckets `target` into one of the 6 neighbor directions from `origin`,
+// measuring the pixel-space angle as a multiple of 60° from direction 0's
+// own angle and rounding to the nearest whole direction — used to restrict
+// a weapon's range indicator to its mounted side's arc (#92).
+//
+// Rounding this way (rather than looping over all 6 neighbors and keeping
+// whichever has the smallest angle difference) matters: a hex sitting
+// exactly on the boundary between two directions is an unavoidable tie, and
+// looping in a fixed 0..5 order always resolved those ties toward whichever
+// direction came first, silently making direction 0's sector — and any arc
+// that includes it — one hex wider than its neighbors on every ring (#98).
+// Rounding a single continuous angle instead breaks every boundary tie the
+// same (clockwise) way, so each direction wins exactly one boundary and
+// loses the other, and every direction's sector ends up the same size.
 export function hexDirection(origin, target, size = hexSize()) {
   const o = hexToPixel(origin.col, origin.row, size);
   const t = hexToPixel(target.col, target.row, size);
-  const angle = Math.atan2(t.y - o.y, t.x - o.x);
-  let best = 0;
-  let bestDiff = Infinity;
-  for (let dir = 0; dir < 6; dir++) {
-    const n = neighborHex(origin.col, origin.row, dir);
-    const np = hexToPixel(n.col, n.row, size);
-    const nAngle = Math.atan2(np.y - o.y, np.x - o.x);
-    let diff = Math.abs(nAngle - angle);
-    if (diff > Math.PI) diff = 2 * Math.PI - diff;
-    if (diff < bestDiff) {
-      bestDiff = diff;
-      best = dir;
-    }
-  }
-  return best;
+  const targetAngle = Math.atan2(t.y - o.y, t.x - o.x);
+  const n0 = neighborHex(origin.col, origin.row, 0);
+  const n0Pixel = hexToPixel(n0.col, n0.row, size);
+  const dir0Angle = Math.atan2(n0Pixel.y - o.y, n0Pixel.x - o.x);
+  const deltaDeg = ((targetAngle - dir0Angle) * 180) / Math.PI;
+  const normalizedDeg = ((deltaDeg % 360) + 360) % 360;
+  return Math.round(normalizedDeg / 60) % 6;
 }
 
 // A right-mounted weapon covers the facing direction plus the next two

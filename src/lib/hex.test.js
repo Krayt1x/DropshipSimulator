@@ -74,6 +74,17 @@ describe('hex', () => {
     }
   });
 
+  it('splits every ring evenly across the 6 directions, with no direction stealing an extra hex from its neighbor (#98)', () => {
+    const origin = { col: 7, row: 7 };
+    for (let d = 1; d <= 6; d++) {
+      const counts = [0, 0, 0, 0, 0, 0];
+      generateGrid(15, 15)
+        .filter((t) => hexDistance(origin, t) === d)
+        .forEach((t) => counts[hexDirection(origin, t)]++);
+      expect(counts).toEqual(Array(6).fill(d));
+    }
+  });
+
   it('gives right-mounted weapons the facing + next two clockwise directions', () => {
     expect(weaponArcDirections(0, 'right')).toEqual([0, 1, 2]);
     expect(weaponArcDirections(1, 'right')).toEqual([1, 2, 3]);

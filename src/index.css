@@ -594,3 +594,75 @@ button.danger:hover {
   font-size: 13px;
   color: var(--text-secondary);
 }
+
+.hp-box-variant-row {
+  display: flex;
+  gap: 4px;
+  margin: 4px 0;
+}
+
+.hp-boxes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hp-boxes-row {
+  display: flex;
+  gap: 4px;
+}
+
+.hp-box {
+  padding: 0;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hp-boxes-pips .hp-box {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  border: 2px solid var(--border-input);
+  background: transparent;
+}
+
+.hp-boxes-pips .hp-box-filled {
+  background: #22c55e;
+  border-color: #22c55e;
+}
+
+.hp-boxes-chunky .hp-box {
+  width: 28px;
+  height: 18px;
+  border-radius: 4px;
+  border: none;
+  background: var(--bg-track);
+}
+
+.hp-boxes-chunky .hp-box-filled {
+  background: linear-gradient(180deg, #4ade80, #16a34a);
+}
+
+.hp-boxes-numbered .hp-box {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border-input);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+}
+
+.hp-boxes-numbered .hp-box-filled {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+.hp-boxes-numbered .hp-box-empty {
+  opacity: 0.5;
+  text-decoration: line-through;
+}

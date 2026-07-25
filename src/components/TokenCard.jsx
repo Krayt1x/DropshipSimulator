@@ -1,4 +1,12 @@
+import { useState } from 'react';
 import { groupEquipmentByType, parseHeatRating } from '../lib/tokens.js';
+import HpBoxes from './HpBoxes.jsx';
+
+const HP_BOX_VARIANTS = [
+  { id: 'pips', label: 'Pips' },
+  { id: 'chunky', label: 'Chunky' },
+  { id: 'numbered', label: 'Numbered' },
+];
 
 function TokenCard({
   token,
@@ -15,6 +23,7 @@ function TokenCard({
   onReturnToReserve,
   onDeselect,
 }) {
+  const [hpBoxVariant, setHpBoxVariant] = useState('pips');
   if (!unit) return null;
 
   const equippedItems = token.equippedIds
@@ -61,6 +70,24 @@ function TokenCard({
             Reset
           </button>
         </div>
+        <div className="hp-box-variant-row">
+          {HP_BOX_VARIANTS.map((v) => (
+            <button
+              type="button"
+              key={v.id}
+              className={`workspace-tab ${hpBoxVariant === v.id ? 'active' : ''}`}
+              onClick={() => setHpBoxVariant(v.id)}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+        <HpBoxes
+          currentHp={token.currentHp}
+          maxHp={Number(unit.hp) || 0}
+          variant={hpBoxVariant}
+          onSetHp={(target) => onAdjustHp(target - token.currentHp)}
+        />
       </div>
 
       <div className="token-card-section">

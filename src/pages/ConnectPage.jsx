@@ -1,13 +1,18 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMultiplayer } from '../context/MultiplayerContext.jsx';
+import {
+  buildInviteLink,
+  extractCode,
+  readHashParam,
+} from '../lib/inviteLink.js';
 import BattlePage from './BattlePage.jsx';
 
-function CopyCode({ code }) {
+function CopyCode({ link }) {
   const [copied, setCopied] = useState(false);
 
   async function copy() {
     try {
-      await navigator.clipboard.writeText(code);
+      await navigator.clipboard.writeText(link);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -20,11 +25,11 @@ function CopyCode({ code }) {
       <textarea
         readOnly
         rows={4}
-        value={code}
+        value={link}
         onClick={(e) => e.target.select()}
       />
       <button type="button" className="ghost" onClick={copy}>
-        {copied ? 'Copied!' : 'Copy code'}
+        {copied ? 'Copied!' : 'Copy link'}
       </button>
     </div>
   );
@@ -32,8 +37,23 @@ function CopyCode({ code }) {
 
 function ConnectPage() {
   const mp = useMultiplayer();
-  const [pastedOffer, setPastedOffer] = useState('');
-  const [pastedAnswer, setPastedAnswer] = useState('');
+  const [pastedOffer, setPastedOffer] = useState(
+    () => readHashParam('offer') ?? '',
+  );
+  const [pastedAnswer, setPastedAnswer] = useState(
+    () => readHashParam('answer') ?? '',
+  );
+
+  useEffect(() => {
+    function onHashChange() {
+      const offer = readHashParam('offer');
+      const answer = readHashParam('answer');
+      if (offer) setPastedOffer(offer);
+      if (answer) setPastedAnswer(answer);
+    }
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
 
   if (!mp) return null;
   const { role, phase, offerCode, answerCode, error } = mp;
@@ -44,7 +64,7 @@ function ConnectPage() {
         <h1 style={{ fontSize: 20, marginBottom: 4 }}>Multiplayer</h1>
         <p className="unit-meta" style={{ marginBottom: 20 }}>
           Connect two browsers directly (WebRTC) so the map and battle board
-          stay in sync live. No account or server needed — just a one-time code
+          stay in sync live. No account or server needed — just a one-time link
           exchange to link up.
         </p>
 
@@ -75,7 +95,7 @@ function ConnectPage() {
             <div className="card">
               <p className="unit-name">Host a game</p>
               <p className="unit-meta" style={{ marginBottom: 12 }}>
-                Creates a connection code to send to your opponent.
+                Creates a link to send to your opponent.
               </p>
               <button type="button" onClick={mp.startHost}>
                 Host a game
@@ -85,12 +105,13 @@ function ConnectPage() {
             <div className="card">
               <p className="unit-name">Join a game</p>
               <p className="unit-meta" style={{ marginBottom: 12 }}>
-                Paste the code your host sent you.
+                Paste the link (or code) your host sent you — or just click
+                their link and this box fills in automatically.
               </p>
               <div className="field">
                 <textarea
                   rows={4}
-                  placeholder="Paste host's code here"
+                  placeholder="Paste host's link or code here"
                   value={pastedOffer}
                   onChange={(e) => setPastedOffer(e.target.value)}
                 />
@@ -98,7 +119,9 @@ function ConnectPage() {
               <button
                 type="button"
                 disabled={!pastedOffer.trim()}
-                onClick={() => mp.joinWithOffer(pastedOffer.trim())}
+                onClick={() =>
+                  mp.joinWithOffer(extractCode(pastedOffer, 'offer'))
+                }
               >
                 Join a game
               </button>
@@ -108,15 +131,15 @@ function ConnectPage() {
 
         {phase === 'offer-ready' && role === 'host' && (
           <div className="card">
-            <p className="unit-name">Step 1: send this code to your opponent</p>
-            <CopyCode code={offerCode} />
+            <p className="unit-name">Step 1: send this link to your opponent</p>
+            <CopyCode link={buildInviteLink('offer', offerCode)} />
             <p className="unit-name" style={{ marginTop: 16 }}>
-              Step 2: paste the answer code they send back
+              Step 2: paste the answer link (or code) they send back
             </p>
             <div className="field">
               <textarea
                 rows={4}
-                placeholder="Paste their answer code here"
+                placeholder="Paste their answer link or code here"
                 value={pastedAnswer}
                 onChange={(e) => setPastedAnswer(e.target.value)}
               />
@@ -124,7 +147,9 @@ function ConnectPage() {
             <button
               type="button"
               disabled={!pastedAnswer.trim()}
-              onClick={() => mp.submitAnswer(pastedAnswer.trim())}
+              onClick={() =>
+                mp.submitAnswer(extractCode(pastedAnswer, 'answer'))
+              }
             >
               Connect
             </button>
@@ -133,8 +158,8 @@ function ConnectPage() {
 
         {phase === 'connecting' && role === 'guest' && answerCode && (
           <div className="card">
-            <p className="unit-name">Send this answer code back to your host</p>
-            <CopyCode code={answerCode} />
+            <p className="unit-name">Send this link back to your host</p>
+            <CopyCode link={buildInviteLink('answer', answerCode)} />
             <p className="unit-meta">
               Waiting for the host to finish connecting…
             </p>

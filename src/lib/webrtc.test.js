@@ -2,19 +2,20 @@ import { describe, it, expect } from 'vitest';
 import { decodeSignal, encodeSignal } from './webrtc.js';
 
 describe('webrtc signal encoding', () => {
-  it('round-trips an SDP-like description through base64 JSON', () => {
+  it('round-trips an SDP-like description through compressed, URL-safe text', async () => {
     const description = {
       type: 'offer',
       sdp: 'v=0\r\no=- 123 2 IN IP4 0.0.0.0\r\n',
     };
-    const code = encodeSignal(description);
+    const code = await encodeSignal(description);
     expect(typeof code).toBe('string');
-    expect(decodeSignal(code)).toEqual(description);
+    expect(code).not.toMatch(/[+/=]/);
+    expect(await decodeSignal(code)).toEqual(description);
   });
 
-  it('trims whitespace pasted around a code', () => {
+  it('trims whitespace pasted around a code', async () => {
     const description = { type: 'answer', sdp: 'v=0' };
-    const code = encodeSignal(description);
-    expect(decodeSignal(`  ${code}\n`)).toEqual(description);
+    const code = await encodeSignal(description);
+    expect(await decodeSignal(`  ${code}\n`)).toEqual(description);
   });
 });

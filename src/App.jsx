@@ -15,10 +15,11 @@ import { OWNERS } from './lib/tokens.js';
 const DROPSHIP_BUILDER_URL = 'https://Krayt1x.github.io/DropshipBuilder';
 
 function currentPage() {
-  if (window.location.hash === '#map') return 'map';
-  if (window.location.hash === '#play') return 'play';
-  if (window.location.hash === '#battle') return 'battle';
-  if (window.location.hash === '#connect') return 'connect';
+  const path = window.location.hash.split('?')[0];
+  if (path === '#map') return 'map';
+  if (path === '#play') return 'play';
+  if (path === '#battle') return 'battle';
+  if (path === '#connect') return 'connect';
   return 'home';
 }
 

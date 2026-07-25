@@ -1,0 +1,181 @@
+[
+    {
+        "id": 1,
+        "name": "Chicken Legs",
+        "manufacturer": "Corp A",
+        "type": "Movement",
+        "effects": "",
+        "weight": 2,
+        "movement": 7,
+        "range": "",
+        "heat_rating": "",
+        "hit_dice": "",
+        "no_drop_pod": true
+    },
+    {
+        "id": 2,
+        "name": "Long Range Bolt",
+        "manufacturer": "Corp A",
+        "type": "Weapon",
+        "effects": "",
+        "weight": 4,
+        "size": "Large",
+        "range": "9",
+        "heat_rating": "4/6",
+        "hit_dice": "2d8",
+        "no_drop_pod": false
+    },
+    {
+        "id": 3,
+        "name": "Quad Legs",
+        "manufacturer": "Corp A",
+        "type": "Movement",
+        "effects": "+1 to attack rolls. +1 hit dice to weapons.",
+        "weight": 4,
+        "movement": 4,
+        "range": 0,
+        "heat_rating": "",
+        "hit_dice": "",
+        "no_drop_pod": true
+    },
+    {
+        "id": 4,
+        "name": "Artillery",
+        "manufacturer": "Corp A",
+        "type": "Weapon",
+        "effects": "Attack rolls are made against the target tile and all adjacent tiles",
+        "weight": 3,
+        "size": "Large",
+        "range": "3-9",
+        "heat_rating": "4/4",
+        "hit_dice": "3d6",
+        "no_drop_pod": false
+    },
+    {
+        "id": 5,
+        "name": "Legs",
+        "manufacturer": "Corp B",
+        "type": "Movement",
+        "effects": "",
+        "weight": 0,
+        "movement": 5,
+        "range": 0,
+        "heat_rating": "",
+        "hit_dice": "",
+        "no_drop_pod": true
+    },
+    {
+        "id": 6,
+        "name": "Legs",
+        "manufacturer": "Corp A",
+        "type": "Movement",
+        "effects": "",
+        "weight": 0,
+        "movement": 5,
+        "range": "",
+        "heat_rating": "",
+        "hit_dice": "",
+        "no_drop_pod": true
+    },
+    {
+        "id": 7,
+        "name": "Heavy Assault",
+        "manufacturer": "Corp A",
+        "type": "Weapon",
+        "effects": "",
+        "weight": 3,
+        "size": "Medium",
+        "range": "6",
+        "heat_rating": "2/4",
+        "hit_dice": "3d6",
+        "no_drop_pod": false
+    },
+    {
+        "id": 8,
+        "name": "Mid range assault",
+        "manufacturer": "Corp A",
+        "type": "Weapon",
+        "effects": "",
+        "weight": 2,
+        "size": "Medium",
+        "range": "6",
+        "heat_rating": "2/4",
+        "hit_dice": "2d6",
+        "no_drop_pod": false
+    },
+    {
+        "id": 9,
+        "name": "Light Assault",
+        "manufacturer": "Corp A",
+        "type": "Weapon",
+        "effects": "",
+        "weight": 1,
+        "size": "Small",
+        "range": "3",
+        "heat_rating": "1/4",
+        "hit_dice": "4d4",
+        "no_drop_pod": false
+    },
+    {
+        "id": 10,
+        "name": "Flame Thrower",
+        "manufacturer": "Corp A",
+        "type": "Weapon",
+        "effects": "Damage is applied as heat",
+        "weight": 1,
+        "size": "Small",
+        "range": "3",
+        "heat_rating": "2/4",
+        "hit_dice": "2d4",
+        "no_drop_pod": false
+    },
+    {
+        "id": 11,
+        "name": "Weapon Slot Recalibration",
+        "manufacturer": "Corp A",
+        "type": "Augment",
+        "effects": "",
+        "effect_stats": [
+            { "stat": "right_slots", "amount": 1 },
+            { "stat": "left_slots", "amount": -1 }
+        ],
+        "weight": 1,
+        "no_drop_pod": true
+    },
+    {
+        "id": 12,
+        "name": "Synchronized Firing Pattern",
+        "manufacturer": "Corp A",
+        "type": "Augment",
+        "effects": "Artillery weapons can target models in either the left or right arcs.",
+        "weight": 1,
+        "no_drop_pod": true
+    },
+    {
+        "id": 13,
+        "name": "Repair Module",
+        "manufacturer": "Corp A",
+        "type": "Augment",
+        "effects": "Actions can be used to repair 1d4 damage.",
+        "weight": 1,
+        "no_drop_pod": true
+    },
+    {
+        "id": 14,
+        "name": "Drop Pod Buff",
+        "manufacturer": "Corp A",
+        "type": "Augment",
+        "effects": "When dropping a drop pod, a player may select the deviation direction and halve the deviation distance.",
+        "weight": 1,
+        "no_drop_pod": true
+    },
+    {
+        "id": 15,
+        "name": "A-Corp Heat Management Upgrade",
+        "manufacturer": "Corp A",
+        "type": "Augment",
+        "effects": "Only apply the Heat Effect that you rolled on the table.",
+        "weight": 1,
+        "no_drop_pod": true
+    }
+]

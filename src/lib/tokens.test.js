@@ -1,0 +1,39 @@
+import { describe, it, expect } from 'vitest';
+import { createToken, groupEquipmentByType, parseHeatRating } from './tokens.js';
+
+describe('tokens', () => {
+  it('creates a token with full HP and zeroed weapon heat', () => {
+    const unit = { id: 1, hp: 20 };
+    const token = createToken({
+      unit,
+      equippedIds: [5, 6],
+      owner: 'p1',
+      position: { col: 2, row: 3 },
+    });
+
+    expect(token.currentHp).toBe(20);
+    expect(token.position).toEqual({ col: 2, row: 3 });
+    expect(token.facing).toBe(0);
+    expect(token.weaponState).toEqual({
+      5: { heat: 0, broken: false },
+      6: { heat: 0, broken: false },
+    });
+  });
+
+  it('groups equipment by type', () => {
+    const items = [
+      { id: 1, type: 'Weapon' },
+      { id: 2, type: 'Movement' },
+      { id: 3, type: 'Weapon' },
+    ];
+    expect(groupEquipmentByType(items)).toEqual({
+      Weapon: [items[0], items[2]],
+      Movement: [items[1]],
+    });
+  });
+
+  it('parses a heat rating string into generate/max', () => {
+    expect(parseHeatRating('2/4')).toEqual({ generate: 2, max: 4 });
+    expect(parseHeatRating('')).toEqual({ generate: 0, max: 0 });
+  });
+});

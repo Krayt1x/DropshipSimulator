@@ -572,6 +572,21 @@ button.danger:hover {
   border-bottom: 1px dashed var(--border-input);
 }
 
+.weapon-name-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-weight: 700;
+  font-size: inherit;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+
+.weapon-name-btn.active {
+  color: #dc2626;
+}
+
 .token-broken-toggle {
   display: flex;
   align-items: center;

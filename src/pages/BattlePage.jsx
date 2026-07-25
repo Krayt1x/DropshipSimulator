@@ -7,6 +7,7 @@ import {
   OWNERS,
   deployedDiceByOwner,
   sumDiceTotals,
+  parseWeaponRange,
 } from '../lib/tokens.js';
 import {
   resetActiveGame,
@@ -76,6 +77,7 @@ function BattlePage() {
   const [draft, setDraft] = useState(null);
   const [movingTokenId, setMovingTokenId] = useState(null);
   const [sidebarTab, setSidebarTab] = useState('add');
+  const [rangeWeapon, setRangeWeapon] = useState(null);
   const [lastAction, setLastAction] = useState(null);
   const [zoom, setZoom] = useState(1);
   const [viewportHeight, setViewportHeight] = useState(
@@ -185,6 +187,25 @@ function BattlePage() {
     deployedDiceByOwner(tokens, units),
     bankedDice,
   );
+
+  function toggleWeaponRange(instanceIndex, range) {
+    setRangeWeapon((current) =>
+      current?.tokenId === selectedToken?.id &&
+      current?.instanceIndex === instanceIndex
+        ? null
+        : { tokenId: selectedToken?.id, instanceIndex, range },
+    );
+  }
+
+  const activeRangeSpec =
+    rangeWeapon &&
+    selectedToken?.id === rangeWeapon.tokenId &&
+    selectedToken.position
+      ? parseWeaponRange(rangeWeapon.range)
+      : null;
+  const weaponRange = activeRangeSpec
+    ? { origin: selectedToken.position, ...activeRangeSpec }
+    : null;
 
   function canControl(token) {
     return !myPlayer || token.owner === myPlayer;
@@ -424,6 +445,12 @@ function BattlePage() {
                 }
                 onSetHeat={setHeat}
                 onToggleBroken={toggleBroken}
+                activeRangeIndex={
+                  rangeWeapon?.tokenId === selectedToken.id
+                    ? rangeWeapon.instanceIndex
+                    : null
+                }
+                onToggleRange={toggleWeaponRange}
                 onDestroy={destroySelected}
                 onReturnToReserve={returnSelectedToReserve}
                 onDeselect={() => setSelectedTokenId(null)}
@@ -530,6 +557,7 @@ function BattlePage() {
               units={units}
               selectedTokenId={selectedTokenId}
               rangeOrigin={selectedToken?.position ?? null}
+              weaponRange={weaponRange}
               deploymentZones={deploymentZones}
               hasBackground={Boolean(background)}
               size={boardSize}

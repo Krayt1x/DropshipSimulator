@@ -46,6 +46,21 @@ export function createToken({ unit, equippedIds, owner, position }) {
   };
 }
 
+// "6" means 0-6 hexes away; "3-9" means a min-range weapon that can't hit
+// anything closer than 3 hexes. Returns null for weapons with no usable range.
+export function parseWeaponRange(range) {
+  const str = String(range ?? '').trim();
+  if (!str) return null;
+  if (str.includes('-')) {
+    const [min, max] = str.split('-').map(Number);
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return null;
+    return { min, max };
+  }
+  const max = Number(str);
+  if (!Number.isFinite(max) || max <= 0) return null;
+  return { min: 0, max };
+}
+
 export function healthBarColor(fraction) {
   if (fraction <= 0.25) return '#dc2626';
   if (fraction <= 0.5) return '#f59e0b';

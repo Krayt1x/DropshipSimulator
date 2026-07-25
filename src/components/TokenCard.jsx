@@ -10,11 +10,13 @@ function TokenCard({
   equipment,
   moving,
   canControl = true,
+  activeRangeIndex,
   onAdjustHp,
   onRotate,
   onArmMove,
   onSetHeat,
   onToggleBroken,
+  onToggleRange,
   onDestroy,
   onReturnToReserve,
   onDeselect,
@@ -148,10 +150,20 @@ function TokenCard({
               heat: 0,
               broken: false,
             };
+            const rangeActive = activeRangeIndex === weapon.instanceIndex;
             return (
               <div className="token-weapon-row" key={weapon.instanceIndex}>
                 <div>
-                  <b>{weapon.name}</b>
+                  <button
+                    type="button"
+                    className={`weapon-name-btn ${rangeActive ? 'active' : ''}`}
+                    title="Show this weapon's range on the board"
+                    onClick={() =>
+                      onToggleRange(weapon.instanceIndex, weapon.range)
+                    }
+                  >
+                    {weapon.name}
+                  </button>
                   <span className="unit-meta">
                     {' '}
                     · Range {weapon.range || '—'} · Heat{' '}

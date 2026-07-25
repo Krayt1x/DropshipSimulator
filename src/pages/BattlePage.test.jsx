@@ -1,5 +1,11 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  cleanup,
+  within,
+} from '@testing-library/react';
 import BattlePage from './BattlePage.jsx';
 
 beforeEach(() => window.localStorage.clear());
@@ -202,11 +208,16 @@ describe('BattlePage', () => {
       screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
     );
 
+    const reserveCard = screen.getByText('Reserve (1)').closest('.card');
     expect(screen.getByRole('button', { name: 'A10' })).toBeDefined();
-    fireEvent.click(screen.getByRole('button', { name: 'Collapse' }));
+    fireEvent.click(
+      within(reserveCard).getByRole('button', { name: 'Collapse' }),
+    );
     expect(screen.queryByRole('button', { name: 'A10' })).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
+    fireEvent.click(
+      within(reserveCard).getByRole('button', { name: 'Expand' }),
+    );
     expect(screen.getByRole('button', { name: 'A10' })).toBeDefined();
   });
 

@@ -367,6 +367,8 @@ button.danger:hover {
   border-radius: 10px;
   padding: 1rem;
   overflow: auto;
+  display: flex;
+  justify-content: center;
 }
 
 .battle-board-viewport .hex-grid {
@@ -746,6 +748,25 @@ button.danger:hover {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.turn-order-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.turn-order-list > li {
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.turn-order-list ul {
+  margin: 4px 0;
+  padding-left: 16px;
+  font-weight: 400;
 }
 
 .destroyed-row {

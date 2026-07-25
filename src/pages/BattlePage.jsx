@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocalStorageState, makeKey } from '../lib/storage.js';
 import { backgroundContainerStyle } from '../lib/mapBackground.js';
 import { formatRollLogMessage } from '../lib/dice.js';
@@ -21,6 +21,7 @@ import RosterList from '../components/RosterList.jsx';
 import ReserveList from '../components/ReserveList.jsx';
 import DestroyedList from '../components/DestroyedList.jsx';
 import TurnTracker from '../components/TurnTracker.jsx';
+import TurnOrder from '../components/TurnOrder.jsx';
 import DiceRoller from '../components/DiceRoller.jsx';
 import GameLog from '../components/GameLog.jsx';
 import manufacturers from '../data/manufacturers.json';
@@ -40,6 +41,10 @@ const BOARD_WIDTH = 1000;
 // side) — subtracted so the board fits inside it without an unwanted
 // horizontal scrollbar at 100% zoom.
 const BOARD_PADDING = 34;
+// Rough allowance for everything above/around the board viewport (nav bar,
+// page header, turn tracker, deployment controls, zoom controls) so the
+// auto-fit zoom keeps the whole board on screen without vertical scrolling.
+const BOARD_CHROME_HEIGHT = 300;
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2;
 const ZOOM_STEP = 0.25;
@@ -73,6 +78,17 @@ function BattlePage() {
   const [sidebarTab, setSidebarTab] = useState('add');
   const [lastMove, setLastMove] = useState(null);
   const [zoom, setZoom] = useState(1);
+  const [viewportHeight, setViewportHeight] = useState(
+    () => window.innerHeight,
+  );
+
+  useEffect(() => {
+    function onResize() {
+      setViewportHeight(window.innerHeight);
+    }
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
   const [turn, setTurn] = useLocalStorageState(
     'dropshipsimulator:battle:turn',
     DEFAULT_TURN,
@@ -147,7 +163,12 @@ function BattlePage() {
     return !myPlayer || token.owner === myPlayer;
   }
 
-  const fitSize = (BOARD_WIDTH - BOARD_PADDING) / (1.5 * (dimensions.cols + 1));
+  const fitWidth =
+    (BOARD_WIDTH - BOARD_PADDING) / (1.5 * (dimensions.cols + 1));
+  const availableHeight = Math.max(200, viewportHeight - BOARD_CHROME_HEIGHT);
+  const fitHeight =
+    (availableHeight - BOARD_PADDING) / (Math.sqrt(3) * (dimensions.rows + 1));
+  const fitSize = Math.min(fitWidth, fitHeight);
   const boardSize = fitSize * zoom;
 
   function adjustZoom(delta) {
@@ -498,6 +519,7 @@ function BattlePage() {
           </div>
         </div>
         <div>
+          <TurnOrder />
           <DiceRoller onRoll={handleDiceRoll} />
           <div className="card">
             <button

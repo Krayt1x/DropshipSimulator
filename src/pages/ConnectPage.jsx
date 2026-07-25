@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMultiplayer } from '../context/MultiplayerContext.jsx';
+import { useLocalStorageState } from '../lib/storage.js';
 import {
   buildInviteLink,
   extractCode,
@@ -43,6 +44,11 @@ function ConnectPage() {
   const [pastedAnswer, setPastedAnswer] = useState(
     () => readHashParam('answer') ?? '',
   );
+  const [tokens] = useLocalStorageState('dropshipsimulator:battle:tokens', []);
+  const [, setDeploymentPhase] = useLocalStorageState(
+    'dropshipsimulator:battle:deploymentPhase',
+    false,
+  );
 
   useEffect(() => {
     function onHashChange() {
@@ -54,6 +60,19 @@ function ConnectPage() {
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
+
+  // Joining a fresh game (nothing deployed yet) starts in deployment phase so
+  // the guest can bring in units immediately instead of finding the board
+  // locked with an extra click needed.
+  useEffect(() => {
+    if (
+      mp?.phase === 'connected' &&
+      mp.role === 'guest' &&
+      tokens.length === 0
+    ) {
+      setDeploymentPhase(true);
+    }
+  }, [mp?.phase, mp?.role, tokens.length, setDeploymentPhase]);
 
   if (!mp) return null;
   const { role, phase, offerCode, answerCode, error } = mp;

@@ -48,6 +48,18 @@ body {
   display: flex;
   gap: 1.5rem;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 700px) {
+  .topnav {
+    gap: 0.5rem 1rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .player-identity-picker {
+    margin-left: 0;
+  }
 }
 
 [data-theme='dark'] .topnav {
@@ -233,14 +245,14 @@ button.danger:hover {
 
 .map-editor-layout {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: minmax(0, 1fr) 280px;
   gap: 1.25rem;
   align-items: start;
 }
 
 @media (max-width: 900px) {
   .map-editor-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .token-card-mobile-overlay {
@@ -295,6 +307,7 @@ button.danger:hover {
 .battle-board-viewport {
   width: 820px;
   max-width: 100%;
+  min-width: 0;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 10px;

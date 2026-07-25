@@ -132,10 +132,8 @@ function BattleBoard({
   const { width, height } = boardPixelSize(cols, rows, size);
   const hexes = generateGrid(cols, rows);
 
-  function colorFor(key) {
-    const typeId = tiles[key];
-    const type = tileTypes.find((t) => t.id === typeId);
-    return type?.color ?? null;
+  function tileTypeFor(key) {
+    return tileTypes.find((t) => t.id === tiles[key]);
   }
 
   return (
@@ -149,7 +147,8 @@ function BattleBoard({
     >
       {hexes.map(({ col, row, key }) => {
         const { x, y } = hexToPixel(col, row, size);
-        const fill = colorFor(key);
+        const type = tileTypeFor(key);
+        const fill = type?.color ?? null;
         const distance = rangeOrigin
           ? hexDistance(rangeOrigin, { col, row })
           : null;
@@ -181,7 +180,7 @@ function BattleBoard({
                 if (tokenId) onDropToken?.(tokenId, col, row);
               }}
             >
-              <title>{`${col}, ${row}`}</title>
+              <title>{`${col}, ${row}${type ? ` — ${type.name}` : ''}`}</title>
             </polygon>
             {tileTint && (
               <polygon

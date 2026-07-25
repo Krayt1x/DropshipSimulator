@@ -1039,6 +1039,24 @@ button.danger:hover {
   font-weight: 600;
 }
 
+.dice-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.dice-summary-chip {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .game-log-list {
   list-style: none;
   margin: 0;
@@ -1055,6 +1073,7 @@ button.danger:hover {
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border);
   padding-bottom: 6px;
+  white-space: pre-line;
 }
 
 .game-log-entry:last-child {

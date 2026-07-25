@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DIE_TYPES, rollDie } from '../lib/dice.js';
+import { DIE_TYPES, rollDie, summarizeRollResults } from '../lib/dice.js';
 
 function DiceRoller({ onRoll }) {
   const [pool, setPool] = useState({});
@@ -75,15 +75,35 @@ function DiceRoller({ onRoll }) {
           Clear
         </button>
       </div>
-      {results && (
-        <div className="dice-results">
-          {results.map((r, i) => (
-            <span className="dice-result-chip" key={i}>
-              {r.label}: {r.value}
-            </span>
-          ))}
-        </div>
-      )}
+      {results &&
+        (() => {
+          const { words, numbers } = summarizeRollResults(results);
+          return (
+            <>
+              <div className="dice-results">
+                {results.map((r, i) => (
+                  <span className="dice-result-chip" key={i}>
+                    {r.label}: {r.value}
+                  </span>
+                ))}
+              </div>
+              {(words.length > 0 || numbers.length > 0) && (
+                <div className="dice-summary">
+                  {words.map(([value, count]) => (
+                    <span className="dice-summary-chip" key={value}>
+                      {count} {value}
+                    </span>
+                  ))}
+                  {numbers.map(([value, count]) => (
+                    <span className="dice-summary-chip" key={value}>
+                      {count} x {value}&apos;s
+                    </span>
+                  ))}
+                </div>
+              )}
+            </>
+          );
+        })()}
     </div>
   );
 }

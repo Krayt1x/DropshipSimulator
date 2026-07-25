@@ -51,7 +51,15 @@ function RosterList({ tokens, units, myPlayer, selectedTokenId, onSelect }) {
                   className="tile-swatch"
                   style={{ background: ownerColor(token.owner) }}
                 />
-                {unit?.name ?? 'Unknown unit'}
+                <span
+                  style={
+                    token.destroyed
+                      ? { textDecoration: 'line-through' }
+                      : undefined
+                  }
+                >
+                  {unit?.name ?? 'Unknown unit'}
+                </span>
                 <span className="unit-meta" style={{ marginLeft: 'auto' }}>
                   {statusLabel(token)}
                 </span>

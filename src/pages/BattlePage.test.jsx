@@ -15,7 +15,7 @@ describe('BattlePage', () => {
 
     expect(screen.queryByRole('button', { name: 'Add unit' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Import roster' })).toBeNull();
-    expect(screen.getByText(/only available during the/i)).toBeDefined();
+    expect(screen.queryByText(/only available during the/i)).toBeNull();
 
     startDeploymentPhase();
     expect(screen.getByRole('button', { name: 'Add unit' })).toBeDefined();
@@ -389,7 +389,7 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Roll (2)' }));
 
     expect(screen.getAllByText(/D6:/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Rolled: D6/)).toBeDefined();
+    expect(screen.getByText(/Rolled 2d6/)).toBeDefined();
   });
 
   it('deletes the game after confirming End Game', () => {

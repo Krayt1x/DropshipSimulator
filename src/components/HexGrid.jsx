@@ -19,10 +19,8 @@ function HexGrid({
   const { width, height } = boardPixelSize(cols, rows, size);
   const hexes = generateGrid(cols, rows);
 
-  function colorFor(key) {
-    const typeId = tiles[key];
-    const type = tileTypes.find((t) => t.id === typeId);
-    return type?.color ?? null;
+  function tileTypeFor(key) {
+    return tileTypes.find((t) => t.id === tiles[key]);
   }
 
   return (
@@ -36,7 +34,8 @@ function HexGrid({
     >
       {hexes.map(({ col, row, key }) => {
         const { x, y } = hexToPixel(col, row, size);
-        const fill = colorFor(key);
+        const type = tileTypeFor(key);
+        const fill = type?.color ?? null;
         return (
           <polygon
             key={key}
@@ -52,7 +51,7 @@ function HexGrid({
             }
             onClick={() => onHexClick(key)}
           >
-            <title>{`${col}, ${row}`}</title>
+            <title>{`${col}, ${row}${type ? ` — ${type.name}` : ''}`}</title>
           </polygon>
         );
       })}

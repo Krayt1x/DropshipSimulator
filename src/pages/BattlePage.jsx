@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocalStorageState, makeKey } from '../lib/storage.js';
 import { backgroundContainerStyle } from '../lib/mapBackground.js';
+import { formatRollLogMessage } from '../lib/dice.js';
 import {
   createToken,
   OWNERS,
@@ -127,8 +128,7 @@ function BattlePage() {
   }
 
   function handleDiceRoll(rolled) {
-    const summary = rolled.map((r) => `${r.label} ${r.value}`).join(', ');
-    appendLog(`Rolled: ${summary}`);
+    appendLog(formatRollLogMessage(rolled));
   }
 
   const selectedToken = tokens.find((t) => t.id === selectedTokenId) ?? null;
@@ -428,14 +428,7 @@ function BattlePage() {
                 />
               )}
             </>
-          ) : (
-            <div className="card">
-              <p className="unit-meta">
-                Adding and importing units is only available during the
-                Deployment Phase. Start one above to bring in new units.
-              </p>
-            </div>
-          )}
+          ) : null}
           <RosterList
             tokens={tokens}
             units={units}

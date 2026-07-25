@@ -7,6 +7,7 @@ import BattleBoard from '../components/BattleBoard.jsx';
 import TokenForm from '../components/TokenForm.jsx';
 import TokenCard from '../components/TokenCard.jsx';
 import RosterImport from '../components/RosterImport.jsx';
+import RosterList from '../components/RosterList.jsx';
 import ReserveList from '../components/ReserveList.jsx';
 import DestroyedList from '../components/DestroyedList.jsx';
 import TurnTracker from '../components/TurnTracker.jsx';
@@ -406,6 +407,13 @@ function BattlePage() {
               </p>
             </div>
           )}
+          <RosterList
+            tokens={tokens}
+            units={units}
+            myPlayer={myPlayer}
+            selectedTokenId={selectedTokenId}
+            onSelect={setSelectedTokenId}
+          />
           <ReserveList
             tokens={reserveTokens}
             units={units}

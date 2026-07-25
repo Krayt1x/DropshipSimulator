@@ -16,6 +16,12 @@ afterEach(cleanup);
 // call site stays valid without touching each one individually.
 function startDeploymentPhase() {}
 
+// TokenCard (the Unit Card) is now hidden while deployment phase is active
+// (#87), so tests that need to interact with it must end the phase first.
+function endDeploymentPhase() {
+  fireEvent.click(screen.getByRole('button', { name: 'End deployment phase' }));
+}
+
 describe('BattlePage', () => {
   it('only shows Add unit / Import roster during the deployment phase', () => {
     render(<BattlePage />);
@@ -40,6 +46,7 @@ describe('BattlePage', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
+    endDeploymentPhase();
 
     expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
     expect(screen.getByText('5 / 5')).toBeDefined();
@@ -54,6 +61,7 @@ describe('BattlePage', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
+    endDeploymentPhase();
 
     fireEvent.click(screen.getByRole('button', { name: '−' }));
     expect(screen.getByText('4 / 5')).toBeDefined();
@@ -68,6 +76,7 @@ describe('BattlePage', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
+    endDeploymentPhase();
 
     fireEvent.click(screen.getByRole('button', { name: 'Move token' }));
     fireEvent.click(screen.getByTestId('hex-3,3'));
@@ -84,6 +93,7 @@ describe('BattlePage', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
+    endDeploymentPhase();
 
     const tokenMarker = container.querySelector('[data-testid^="token-"]');
     const targetHex = screen.getByTestId('hex-4,4');
@@ -111,6 +121,7 @@ describe('BattlePage', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
+    endDeploymentPhase();
 
     expect(
       screen.getByRole('button', { name: 'Undo last move' }).disabled,
@@ -166,6 +177,7 @@ describe('BattlePage', () => {
 
     expect(screen.getByText('Reserve (1)')).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-1,1'));
 
@@ -239,6 +251,7 @@ describe('BattlePage', () => {
     fireEvent.change(screen.getByLabelText('Mech'), { target: { value: '1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
+    endDeploymentPhase();
 
     // This token belongs to Player 2 (the locked owner), so it's controllable.
     expect(screen.getByRole('button', { name: 'Move token' }).disabled).toBe(
@@ -252,6 +265,7 @@ describe('BattlePage', () => {
     fireEvent.change(screen.getByLabelText('Mech'), { target: { value: '1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
+    endDeploymentPhase();
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
 
     window.localStorage.setItem(
@@ -276,6 +290,7 @@ describe('BattlePage', () => {
     fireEvent.change(screen.getByLabelText('Mech'), { target: { value: '1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
+    endDeploymentPhase();
 
     fireEvent.click(screen.getByRole('button', { name: 'Model Destroyed' }));
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Destroy' }));
@@ -292,6 +307,7 @@ describe('BattlePage', () => {
     fireEvent.change(screen.getByLabelText('Mech'), { target: { value: '1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
+    endDeploymentPhase();
     fireEvent.click(screen.getByRole('button', { name: 'Model Destroyed' }));
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Destroy' }));
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
@@ -308,6 +324,7 @@ describe('BattlePage', () => {
     fireEvent.change(screen.getByLabelText('Mech'), { target: { value: '1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
+    endDeploymentPhase();
 
     fireEvent.click(screen.getByRole('button', { name: 'Return to reserve' }));
 
@@ -362,6 +379,7 @@ describe('BattlePage', () => {
     );
 
     const reserveItem = screen.getByRole('button', { name: 'A10' });
+    endDeploymentPhase();
     const data = {};
     const dataTransfer = {
       setData: (type, value) => {
@@ -387,6 +405,7 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
     expect(screen.getByText(/deployed A10 at \(0, 0\)/)).toBeDefined();
+    endDeploymentPhase();
 
     fireEvent.click(screen.getByRole('button', { name: 'Move token' }));
     fireEvent.click(screen.getByTestId('hex-3,3'));

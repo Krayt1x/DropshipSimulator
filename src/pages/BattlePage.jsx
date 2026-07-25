@@ -503,7 +503,7 @@ function BattlePage() {
 
       <div className="battle-layout">
         <div>
-          {selectedToken ? (
+          {selectedToken && !deploymentPhase ? (
             <div
               className="token-card-mobile-overlay"
               onClick={(e) => {
@@ -680,7 +680,6 @@ function BattlePage() {
               type="button"
               className="danger"
               style={{ width: '100%' }}
-              disabled={tokens.length === 0}
               onClick={endGame}
             >
               End Game

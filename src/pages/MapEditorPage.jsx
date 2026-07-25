@@ -14,6 +14,14 @@ const DEFAULT_TILE_TYPES = [
 const DEFAULT_DIMENSIONS = { cols: 14, rows: 10 };
 const MIN_DIMENSION = 1;
 const MAX_DIMENSION = 40;
+const BOARD_WIDTH = 820;
+// .battle-board-viewport's own padding (1rem each side) + border (1px each
+// side) — subtracted so the board fits inside it without an unwanted
+// horizontal scrollbar at 100% zoom.
+const BOARD_PADDING = 34;
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 2;
+const ZOOM_STEP = 0.25;
 
 function clampDimension(value) {
   const n = Math.round(Number(value));
@@ -43,6 +51,19 @@ function MapEditorPage() {
   );
   const [colsInput, setColsInput] = useState(dimensions.cols);
   const [rowsInput, setRowsInput] = useState(dimensions.rows);
+  const [zoom, setZoom] = useState(1);
+
+  const fitSize = (BOARD_WIDTH - BOARD_PADDING) / (1.5 * (dimensions.cols + 1));
+  const boardSize = fitSize * zoom;
+
+  function adjustZoom(delta) {
+    setZoom((current) =>
+      Math.min(
+        ZOOM_MAX,
+        Math.max(ZOOM_MIN, Number((current + delta).toFixed(2))),
+      ),
+    );
+  }
 
   function handleHexClick(key) {
     if (!selectedTool || selectedTool === 'eraser') {
@@ -136,18 +157,42 @@ function MapEditorPage() {
       </form>
 
       <div className="map-editor-layout">
-        <div
-          className="map-editor-board"
-          style={backgroundContainerStyle(background)}
-        >
-          <HexGrid
-            cols={dimensions.cols}
-            rows={dimensions.rows}
-            tiles={tiles}
-            tileTypes={tileTypes}
-            hasBackground={Boolean(background)}
-            onHexClick={handleHexClick}
-          />
+        <div className="battle-board-column">
+          <div className="zoom-controls">
+            <button
+              type="button"
+              className="ghost"
+              aria-label="Zoom out"
+              disabled={zoom <= ZOOM_MIN}
+              onClick={() => adjustZoom(-ZOOM_STEP)}
+            >
+              −
+            </button>
+            <span className="zoom-level">{Math.round(zoom * 100)}%</span>
+            <button
+              type="button"
+              className="ghost"
+              aria-label="Zoom in"
+              disabled={zoom >= ZOOM_MAX}
+              onClick={() => adjustZoom(ZOOM_STEP)}
+            >
+              +
+            </button>
+          </div>
+          <div
+            className="battle-board-viewport"
+            style={backgroundContainerStyle(background)}
+          >
+            <HexGrid
+              cols={dimensions.cols}
+              rows={dimensions.rows}
+              tiles={tiles}
+              tileTypes={tileTypes}
+              hasBackground={Boolean(background)}
+              size={boardSize}
+              onHexClick={handleHexClick}
+            />
+          </div>
         </div>
         <div>
           <TilePalette

@@ -6,8 +6,16 @@ import {
   hexToPixel,
 } from '../lib/hex.js';
 
-function HexGrid({ cols, rows, tiles, tileTypes, hasBackground, onHexClick }) {
-  const size = hexSize();
+function HexGrid({
+  cols,
+  rows,
+  tiles,
+  tileTypes,
+  hasBackground,
+  size: sizeProp,
+  onHexClick,
+}) {
+  const size = sizeProp ?? hexSize();
   const { width, height } = boardPixelSize(cols, rows, size);
   const hexes = generateGrid(cols, rows);
 

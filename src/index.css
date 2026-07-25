@@ -318,14 +318,6 @@ button.danger:hover {
   }
 }
 
-.map-editor-board {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 1rem;
-  overflow: auto;
-}
-
 .hex-grid {
   display: block;
   max-width: 100%;
@@ -345,7 +337,8 @@ button.danger:hover {
   width: 820px;
   max-width: 100%;
   min-width: 0;
-  background: var(--bg-card);
+  background-color: var(--bg-card);
+  background-repeat: no-repeat;
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 1rem;
@@ -505,7 +498,8 @@ button.danger:hover {
 }
 
 .token-owner-btn.selected {
-  background: var(--bg-track);
+  color: #fff;
+  font-weight: 700;
 }
 
 .token-card-header {
@@ -828,11 +822,6 @@ button.danger:hover {
 .hp-box-filled {
   background: #22c55e;
   border-color: #22c55e;
-}
-
-.map-editor-board {
-  background-color: var(--bg-card);
-  background-repeat: no-repeat;
 }
 
 .background-swatch-row {

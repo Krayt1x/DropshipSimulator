@@ -121,18 +121,24 @@ function TokenForm({
           <p className="unit-meta">You can only deploy units for yourself.</p>
         )}
         <div className="token-owner-row">
-          {ownerOptions.map((o) => (
-            <button
-              type="button"
-              key={o.id}
-              className={`token-owner-btn ${owner === o.id ? 'selected' : ''}`}
-              style={{ borderColor: o.color }}
-              onClick={() => setOwner(o.id)}
-            >
-              <span className="tile-swatch" style={{ background: o.color }} />
-              {o.label}
-            </button>
-          ))}
+          {ownerOptions.map((o) => {
+            const selected = owner === o.id;
+            return (
+              <button
+                type="button"
+                key={o.id}
+                className={`token-owner-btn ${selected ? 'selected' : ''}`}
+                style={{
+                  borderColor: o.color,
+                  background: selected ? o.color : undefined,
+                }}
+                onClick={() => setOwner(o.id)}
+              >
+                <span className="tile-swatch" style={{ background: o.color }} />
+                {o.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 

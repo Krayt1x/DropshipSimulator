@@ -468,4 +468,37 @@ describe('BattlePage', () => {
 
     confirmSpy.mockRestore();
   });
+
+  it("never tints the model's own tile as part of its weapon's arc", () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Import roster' }));
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: [
+          'Test List (Corp A)',
+          'Weight: 6t / 100t',
+          '',
+          'A10 - 6t',
+          '  Right: Long Range Bolt',
+        ].join('\n'),
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
+    );
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Long Range Bolt' }));
+
+    const ownHexGroup = screen.getByTestId('hex-5,5').closest('g');
+    expect(
+      ownHexGroup.querySelector('polygon[fill="rgba(220,38,38,0.4)"]'),
+    ).toBeNull();
+  });
 });

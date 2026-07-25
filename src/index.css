@@ -242,6 +242,34 @@ button.danger:hover {
   .map-editor-layout {
     grid-template-columns: 1fr;
   }
+
+  .token-card-mobile-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    justify-content: flex-end;
+    z-index: 40;
+  }
+
+  .token-card-mobile-overlay .card.token-card {
+    width: 82%;
+    max-width: 360px;
+    height: 100%;
+    margin: 0;
+    border-radius: 0;
+    overflow-y: auto;
+    animation: token-card-slide-in 0.2s ease-out;
+  }
+
+  @keyframes token-card-slide-in {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
 }
 
 .map-editor-board {

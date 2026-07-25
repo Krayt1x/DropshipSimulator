@@ -312,25 +312,32 @@ function BattlePage() {
             onSelect={setSelectedTokenId}
           />
           {selectedToken ? (
-            <TokenCard
-              token={selectedToken}
-              unit={selectedUnit}
-              equipment={equipment}
-              moving={movingTokenId === selectedToken.id}
-              canControl={canControl(selectedToken)}
-              onAdjustHp={adjustHp}
-              onRotate={rotate}
-              onArmMove={() =>
-                setMovingTokenId((current) =>
-                  current === selectedToken.id ? null : selectedToken.id,
-                )
-              }
-              onSetHeat={setHeat}
-              onToggleBroken={toggleBroken}
-              onDestroy={destroySelected}
-              onReturnToReserve={returnSelectedToReserve}
-              onDeselect={() => setSelectedTokenId(null)}
-            />
+            <div
+              className="token-card-mobile-overlay"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setSelectedTokenId(null);
+              }}
+            >
+              <TokenCard
+                token={selectedToken}
+                unit={selectedUnit}
+                equipment={equipment}
+                moving={movingTokenId === selectedToken.id}
+                canControl={canControl(selectedToken)}
+                onAdjustHp={adjustHp}
+                onRotate={rotate}
+                onArmMove={() =>
+                  setMovingTokenId((current) =>
+                    current === selectedToken.id ? null : selectedToken.id,
+                  )
+                }
+                onSetHeat={setHeat}
+                onToggleBroken={toggleBroken}
+                onDestroy={destroySelected}
+                onReturnToReserve={returnSelectedToReserve}
+                onDeselect={() => setSelectedTokenId(null)}
+              />
+            </div>
           ) : deploymentPhase ? (
             <>
               <div className="workspace-tabs">

@@ -140,6 +140,7 @@ function BattlePage() {
             tokens={tokens}
             units={units}
             selectedTokenId={selectedTokenId}
+            rangeOrigin={selectedToken?.position ?? null}
             onHexClick={handleHexClick}
           />
         </div>

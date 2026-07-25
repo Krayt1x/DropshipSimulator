@@ -3,7 +3,7 @@ import {
   generateGrid,
   hexPointsAttr,
   hexSize,
-  oddRToPixel,
+  hexToPixel,
 } from '../lib/hex.js';
 
 function HexGrid({ cols, rows, tiles, tileTypes, onHexClick }) {
@@ -27,7 +27,7 @@ function HexGrid({ cols, rows, tiles, tileTypes, onHexClick }) {
       aria-label="Hex grid"
     >
       {hexes.map(({ col, row, key }) => {
-        const { x, y } = oddRToPixel(col, row, size);
+        const { x, y } = hexToPixel(col, row, size);
         const fill = colorFor(key);
         return (
           <polygon

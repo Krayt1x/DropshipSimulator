@@ -1,21 +1,22 @@
-// Pointy-top hexes laid out in an "odd-r" offset grid (odd rows shifted
-// right by half a hex width) — a common layout for rectangular hex boards.
+// Flat-top hexes laid out in an "odd-q" offset grid (odd columns shifted
+// down by half a hex height). Flat-top gives true North/South neighbors
+// (and diagonal East/West), so models can face straight up or down.
 
 export function hexSize() {
   return 32;
 }
 
-export function oddRToPixel(col, row, size = hexSize()) {
-  const width = Math.sqrt(3) * size;
-  const x = width * (col + 0.5 * (row & 1)) + width / 2;
-  const y = size * 1.5 * row + size;
+export function hexToPixel(col, row, size = hexSize()) {
+  const height = Math.sqrt(3) * size;
+  const x = size * 1.5 * col + size;
+  const y = height * (row + 0.5 * (col & 1)) + height / 2;
   return { x, y };
 }
 
 export function hexCorners(centerX, centerY, size = hexSize()) {
   const corners = [];
   for (let i = 0; i < 6; i++) {
-    const angleDeg = 60 * i - 30;
+    const angleDeg = 60 * i;
     const angleRad = (Math.PI / 180) * angleDeg;
     corners.push([
       centerX + size * Math.cos(angleRad),
@@ -46,9 +47,26 @@ export function generateGrid(cols, rows) {
 }
 
 export function boardPixelSize(cols, rows, size = hexSize()) {
-  const width = Math.sqrt(3) * size;
+  const height = Math.sqrt(3) * size;
   return {
-    width: width * cols + width,
-    height: size * 1.5 * rows + size * 1.5,
+    width: size * 1.5 * cols + size * 1.5,
+    height: height * rows + height,
   };
+}
+
+export function offsetToAxial(col, row) {
+  const q = col;
+  const r = row - (col - (col & 1)) / 2;
+  return { q, r };
+}
+
+export function hexDistance(a, b) {
+  const A = offsetToAxial(a.col, a.row);
+  const B = offsetToAxial(b.col, b.row);
+  return (
+    (Math.abs(A.q - B.q) +
+      Math.abs(A.q + A.r - B.q - B.r) +
+      Math.abs(A.r - B.r)) /
+    2
+  );
 }

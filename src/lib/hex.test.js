@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { generateGrid, tileKey, oddRToPixel, boardPixelSize } from './hex.js';
+import {
+  generateGrid,
+  tileKey,
+  hexToPixel,
+  boardPixelSize,
+  hexDistance,
+} from './hex.js';
 
 describe('hex', () => {
   it('generates a full rectangular grid of col/row tiles', () => {
@@ -13,10 +19,17 @@ describe('hex', () => {
     expect(tileKey(4, 7)).toBe('4,7');
   });
 
-  it('offsets odd rows horizontally relative to even rows', () => {
-    const evenRow = oddRToPixel(0, 0, 10);
-    const oddRow = oddRToPixel(0, 1, 10);
-    expect(oddRow.x).toBeGreaterThan(evenRow.x);
+  it('offsets odd columns vertically relative to even columns', () => {
+    const evenCol = hexToPixel(0, 0, 10);
+    const oddCol = hexToPixel(1, 0, 10);
+    expect(oddCol.y).toBeGreaterThan(evenCol.y);
+  });
+
+  it('moves straight across columns at the same row height for even columns', () => {
+    const a = hexToPixel(0, 3, 10);
+    const b = hexToPixel(2, 3, 10);
+    expect(a.y).toBe(b.y);
+    expect(b.x).toBeGreaterThan(a.x);
   });
 
   it('grows the board pixel size with more columns and rows', () => {
@@ -24,5 +37,23 @@ describe('hex', () => {
     const large = boardPixelSize(4, 4, 10);
     expect(large.width).toBeGreaterThan(small.width);
     expect(large.height).toBeGreaterThan(small.height);
+  });
+
+  it('reports zero distance from a hex to itself', () => {
+    expect(hexDistance({ col: 3, row: 3 }, { col: 3, row: 3 })).toBe(0);
+  });
+
+  it('gives adjacent hexes a distance of 1', () => {
+    // true north/south neighbors on a flat-top grid
+    expect(hexDistance({ col: 2, row: 2 }, { col: 2, row: 1 })).toBe(1);
+    expect(hexDistance({ col: 2, row: 2 }, { col: 2, row: 3 })).toBe(1);
+    // diagonal neighbor via an odd column
+    expect(hexDistance({ col: 2, row: 2 }, { col: 3, row: 2 })).toBe(1);
+  });
+
+  it('is symmetric', () => {
+    const a = { col: 1, row: 1 };
+    const b = { col: 5, row: 4 };
+    expect(hexDistance(a, b)).toBe(hexDistance(b, a));
   });
 });

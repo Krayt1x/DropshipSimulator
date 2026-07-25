@@ -34,7 +34,8 @@ const DEFAULT_TILE_TYPES = [
   { id: 'objective', name: 'Objective', color: '#f97316' },
 ];
 const DEFAULT_DIMENSIONS = { cols: 14, rows: 10 };
-const BOARD_WIDTH = 820;
+// Must match .battle-board-viewport's width in index.css.
+const BOARD_WIDTH = 1000;
 // .battle-board-viewport's own padding (1rem each side) + border (1px each
 // side) — subtracted so the board fits inside it without an unwanted
 // horizontal scrollbar at 100% zoom.

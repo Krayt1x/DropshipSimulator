@@ -3,7 +3,8 @@
 }
 
 :root {
-  --bg-page: #f4f3ef;
+  --bg-page: #e5e3d9;
+  --bg-container: #f4f3ef;
   --bg-card: #ffffff;
   --bg-input: #ffffff;
   --bg-track: #eceae1;
@@ -20,6 +21,7 @@
 
 [data-theme='dark'] {
   --bg-page: #171613;
+  --bg-container: #171613;
   --bg-card: #221f1a;
   --bg-input: #2a2721;
   --bg-track: #332f26;
@@ -168,10 +170,14 @@ body {
   background: rgba(255, 255, 255, 0.08);
 }
 
+/* 1680 = 1000 (board) + 280 + 280 (sidebars) + 2 x 20 (gaps) + 2 x 24
+   (this container's own padding) + a little slack, so the battle board can
+   reach its full 1000px width without overflowing into a scrollbar. */
 .container-wide {
-  max-width: 1400px;
+  max-width: 1680px;
   margin: 0 auto;
   padding: 1.5rem;
+  background: var(--bg-container);
 }
 
 h1 {
@@ -235,6 +241,7 @@ textarea {
   max-width: 960px;
   margin: 0 auto;
   padding: 1.5rem;
+  background: var(--bg-container);
 }
 
 button {
@@ -345,13 +352,13 @@ button.danger:hover {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: 820px;
+  width: 1000px;
   max-width: 100%;
   min-width: 0;
 }
 
 .battle-board-viewport {
-  width: 820px;
+  width: 1000px;
   max-width: 100%;
   min-width: 0;
   background-color: var(--bg-card);
@@ -360,13 +367,6 @@ button.danger:hover {
   border-radius: 10px;
   padding: 1rem;
   overflow: auto;
-}
-
-/* The map editor's layout has more room to spare than the 3-column battle
-   layout, so its board can be wider — must match MapEditorPage's BOARD_WIDTH. */
-.map-editor-layout .battle-board-column,
-.map-editor-layout .battle-board-viewport {
-  width: 1000px;
 }
 
 .battle-board-viewport .hex-grid {

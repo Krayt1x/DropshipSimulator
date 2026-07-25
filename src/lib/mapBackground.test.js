@@ -24,6 +24,17 @@ describe('mapBackground', () => {
     expect(style.background).toBe(preset.css);
   });
 
+  it("doesn't override a preset's own fallback color with transparent", () => {
+    // A preset's `background` shorthand (e.g. Terrain's gradients-over-a-
+    // solid-color) already carries its own color; a separate
+    // `backgroundColor: 'transparent'` in the same style object would clobber
+    // it, since React applies style properties in order and the longhand
+    // would run after the shorthand.
+    const preset = MAP_BACKGROUND_PRESETS[0];
+    const style = backgroundContainerStyle({ type: 'preset', id: preset.id });
+    expect(style.backgroundColor).toBeUndefined();
+  });
+
   it('falls back to an empty style for an unknown preset id', () => {
     expect(
       backgroundContainerStyle({ type: 'preset', id: 'does-not-exist' }),

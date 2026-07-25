@@ -24,7 +24,5 @@ export function backgroundContainerStyle(background) {
     };
   }
   const preset = MAP_BACKGROUND_PRESETS.find((p) => p.id === background.id);
-  return preset
-    ? { background: preset.css, backgroundColor: 'transparent' }
-    : {};
+  return preset ? { background: preset.css } : {};
 }

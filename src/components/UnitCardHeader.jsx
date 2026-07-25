@@ -30,6 +30,7 @@ function UnitCardHeader({ unit, token, equippedItems }) {
             <li key={item.id}>
               {item.name}
               {item.range ? ` · Range ${item.range}` : ''}
+              {item.hit_dice ? ` · Hit ${item.hit_dice}` : ''}
               {item.heat_rating ? ` · Heat ${item.heat_rating}` : ''}
               {item.movement ? ` · ${item.movement} move` : ''}
             </li>

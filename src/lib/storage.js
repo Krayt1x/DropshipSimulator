@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { publish, subscribe } from './syncBus.js';
 
 export function useLocalStorageState(key, initialValue) {
   const [value, setValue] = useState(() => {
@@ -16,7 +17,10 @@ export function useLocalStorageState(key, initialValue) {
     } catch {
       // localStorage unavailable (private browsing, quota) — state still works in-memory
     }
+    publish(key, value);
   }, [key, value]);
+
+  useEffect(() => subscribe(key, setValue), [key]);
 
   return [value, setValue];
 }

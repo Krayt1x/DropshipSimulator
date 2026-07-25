@@ -71,8 +71,18 @@ body {
   font-weight: 600;
 }
 
-.theme-toggle {
+.connection-badge {
   margin-left: auto;
+  color: #fbbf24;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.connection-badge-live {
+  color: #4ade80;
+}
+
+.theme-toggle {
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.3);
   color: var(--nav-text);
@@ -131,13 +141,26 @@ h1 {
 
 input[type='text'],
 input[type='number'],
-select {
+select,
+textarea {
   padding: 8px 10px;
   border: 1px solid var(--border-input);
   border-radius: 6px;
   font-size: 14px;
   background: var(--bg-input);
   color: var(--text-primary);
+}
+
+textarea {
+  width: 100%;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem;
 }
 
 button {

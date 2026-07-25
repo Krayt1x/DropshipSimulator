@@ -123,6 +123,21 @@ describe('BattlePage', () => {
     ).toBe(true);
   });
 
+  it('advances the turn tracker as each player ends their turn', () => {
+    render(<BattlePage />);
+
+    expect(screen.getByText('Turn 1')).toBeDefined();
+    expect(screen.getByText('▲ Player 1')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+    expect(screen.getByText('Turn 1')).toBeDefined();
+    expect(screen.getByText('Player 2 ▼')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+    expect(screen.getByText('Turn 2')).toBeDefined();
+    expect(screen.getByText('▲ Player 1')).toBeDefined();
+  });
+
   it('imports a roster export into reserve and places a unit from it', () => {
     render(<BattlePage />);
     startDeploymentPhase();

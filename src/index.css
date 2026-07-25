@@ -548,6 +548,64 @@ button.danger:hover {
   margin-bottom: 12px;
 }
 
+.battle-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.turn-tracker-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.split-tracker {
+  display: flex;
+  align-items: stretch;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.turn-segment {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  background: var(--bg-track);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.turn-segment.active {
+  color: #fff;
+}
+
+.turn-mid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  background: var(--bg-card);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-primary);
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.turn-mid-sub {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
 .reserve-header {
   display: flex;
   justify-content: space-between;

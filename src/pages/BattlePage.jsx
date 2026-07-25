@@ -8,6 +8,7 @@ import TokenCard from '../components/TokenCard.jsx';
 import RosterImport from '../components/RosterImport.jsx';
 import ReserveList from '../components/ReserveList.jsx';
 import DestroyedList from '../components/DestroyedList.jsx';
+import TurnTracker from '../components/TurnTracker.jsx';
 import manufacturers from '../data/manufacturers.json';
 import units from '../data/units.json';
 import equipment from '../data/equipment.json';
@@ -18,6 +19,7 @@ const BOARD_WIDTH = 820;
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2;
 const ZOOM_STEP = 0.25;
+const DEFAULT_TURN = { number: 1, active: 'p1' };
 
 function BattlePage() {
   const [tileTypes] = useLocalStorageState(
@@ -48,6 +50,18 @@ function BattlePage() {
   const [sidebarTab, setSidebarTab] = useState('add');
   const [lastMove, setLastMove] = useState(null);
   const [zoom, setZoom] = useState(1);
+  const [turn, setTurn] = useLocalStorageState(
+    'dropshipsimulator:battle:turn',
+    DEFAULT_TURN,
+  );
+
+  function endTurn() {
+    setTurn((current) =>
+      current.active === 'p1'
+        ? { number: current.number, active: 'p2' }
+        : { number: current.number + 1, active: 'p1' },
+    );
+  }
 
   const selectedToken = tokens.find((t) => t.id === selectedTokenId) ?? null;
   const selectedUnit = selectedToken
@@ -208,12 +222,17 @@ function BattlePage() {
 
   return (
     <div className="container-wide">
-      <h1 style={{ fontSize: 20, marginBottom: 4 }}>Battle board</h1>
-      <p className="unit-meta" style={{ marginBottom: 20 }}>
-        Place units from the catalogue, move them around, and track HP and
-        weapon heat as you play. This tool manages state only — it's on you and
-        your opponent to know and apply the rules.
-      </p>
+      <div className="battle-header-row">
+        <div>
+          <h1 style={{ fontSize: 20, marginBottom: 4 }}>Battle board</h1>
+          <p className="unit-meta" style={{ marginBottom: 20 }}>
+            Place units from the catalogue, move them around, and track HP and
+            weapon heat as you play. This tool manages state only — it's on you
+            and your opponent to know and apply the rules.
+          </p>
+        </div>
+        <TurnTracker turn={turn} onEndTurn={endTurn} />
+      </div>
 
       <div className="deployment-controls">
         <button

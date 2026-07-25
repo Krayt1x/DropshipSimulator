@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocalStorageState, makeKey } from '../lib/storage.js';
 import { backgroundContainerStyle } from '../lib/mapBackground.js';
-import { formatRollLogMessage } from '../lib/dice.js';
+import { formatRollLogMessage, parseHitDice } from '../lib/dice.js';
 import {
   createToken,
   OWNERS,
   deployedDiceByOwner,
   sumDiceTotals,
   parseWeaponRange,
+  parseHeatRating,
 } from '../lib/tokens.js';
 import {
   resetActiveGame,
@@ -80,6 +81,7 @@ function BattlePage() {
   const [rangeWeapon, setRangeWeapon] = useState(null);
   const [lastAction, setLastAction] = useState(null);
   const [zoom, setZoom] = useState(1);
+  const diceRollerRef = useRef(null);
   const [viewportHeight, setViewportHeight] = useState(
     () => window.innerHeight,
   );
@@ -158,10 +160,7 @@ function BattlePage() {
   }
 
   function rollToActionPool(dice) {
-    setActionPool((current) => [
-      ...current,
-      ...dice.map((d) => ({ ...d, used: false })),
-    ]);
+    setActionPool(dice.map((d) => ({ ...d, used: false })));
     setLastAction({ type: 'rollToPool', dieIds: dice.map((d) => d.id) });
   }
 
@@ -378,6 +377,17 @@ function BattlePage() {
     }));
   }
 
+  function rollHitDice(instanceIndex, item) {
+    const parsed = parseHitDice(item.hit_dice);
+    if (!parsed) return;
+    diceRollerRef.current?.addDice(parsed.dieId, parsed.count);
+    const { generate } = parseHeatRating(item.heat_rating);
+    if (generate > 0) {
+      const currentHeat = selectedToken?.weaponState[instanceIndex]?.heat ?? 0;
+      setHeat(instanceIndex, currentHeat + generate);
+    }
+  }
+
   function toggleBroken(weaponId) {
     updateSelected((t) => ({
       weaponState: {
@@ -527,6 +537,7 @@ function BattlePage() {
                 onSetHeat={setHeat}
                 onSetWeaponHp={setWeaponHp}
                 onToggleBroken={toggleBroken}
+                onRollHitDice={rollHitDice}
                 activeRangeIndex={
                   rangeWeapon?.tokenId === selectedToken.id
                     ? rangeWeapon.instanceIndex
@@ -653,6 +664,7 @@ function BattlePage() {
         <div>
           <TurnOrder />
           <DiceRoller
+            ref={diceRollerRef}
             onRoll={handleDiceRoll}
             actionPool={actionPool}
             onRollToActionPool={rollToActionPool}

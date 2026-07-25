@@ -21,6 +21,7 @@ function TokenCard({
   onSetHeat,
   onSetWeaponHp,
   onToggleBroken,
+  onRollHitDice,
   onToggleRange,
   onDestroy,
   onReturnToReserve,
@@ -81,13 +82,22 @@ function TokenCard({
             <button
               type="button"
               className={`weapon-name-btn ${rangeActive ? 'active' : ''}`}
+              style={
+                state.broken ? { textDecoration: 'line-through' } : undefined
+              }
               title="Show this weapon's range on the board"
               onClick={() => onToggleRange(item.instanceIndex, item.range)}
             >
               {item.name}
             </button>
           ) : (
-            <b>{item.name}</b>
+            <b
+              style={
+                state.broken ? { textDecoration: 'line-through' } : undefined
+              }
+            >
+              {item.name}
+            </b>
           )}
           <span className="unit-meta">
             {' '}
@@ -96,7 +106,23 @@ function TokenCard({
               ? `Range ${item.range || '—'}`
               : `Move ${item.movement ?? '—'}`}{' '}
             · Heat {item.heat_rating || '—'}
-            {showRange ? ` · ${item.hit_dice || '—'}` : ''}
+            {showRange && (
+              <>
+                {' · '}
+                {item.hit_dice ? (
+                  <button
+                    type="button"
+                    className="hit-dice-btn"
+                    title="Roll this weapon's hit dice and add heat"
+                    onClick={() => onRollHitDice(item.instanceIndex, item)}
+                  >
+                    {item.hit_dice}
+                  </button>
+                ) : (
+                  '—'
+                )}
+              </>
+            )}
           </span>
         </div>
         <div className="token-stat-row">

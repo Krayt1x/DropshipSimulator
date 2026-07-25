@@ -24,6 +24,19 @@ export function rollDie(dieType) {
   return String(Math.floor(Math.random() * dieType.sides) + 1);
 }
 
+// "2d8" -> { count: 2, dieId: 'd8' }; returns null for anything else (word
+// dice pools, blank hit dice, etc. aren't rollable into the numeric pool).
+export function parseHitDice(hitDice) {
+  const match = String(hitDice ?? '')
+    .trim()
+    .match(/^(\d+)d(\d+)$/i);
+  if (!match) return null;
+  const count = Number(match[1]);
+  const dieId = `d${match[2]}`;
+  if (!DIE_TYPES.some((d) => d.id === dieId)) return null;
+  return { count, dieId };
+}
+
 export function isWordDie(label) {
   return Boolean(DIE_TYPES.find((d) => d.label === label)?.faces);
 }

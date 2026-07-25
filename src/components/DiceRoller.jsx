@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { forwardRef, useImperativeHandle, useState } from 'react';
 import { makeKey } from '../lib/storage.js';
 import {
   DIE_TYPES,
@@ -7,13 +7,16 @@ import {
   isWordDie,
 } from '../lib/dice.js';
 
-function DiceRoller({
-  onRoll,
-  actionPool,
-  onRollToActionPool,
-  onUseActionPoolDie,
-  activeOwnerDice,
-}) {
+const DiceRoller = forwardRef(function DiceRoller(
+  {
+    onRoll,
+    actionPool,
+    onRollToActionPool,
+    onUseActionPoolDie,
+    activeOwnerDice,
+  },
+  ref,
+) {
   const [pool, setPool] = useState({});
   const [results, setResults] = useState(null);
   const [selectedPoolId, setSelectedPoolId] = useState(null);
@@ -24,6 +27,15 @@ function DiceRoller({
       [id]: Math.max(0, (current[id] ?? 0) + delta),
     }));
   }
+
+  useImperativeHandle(ref, () => ({
+    addDice(dieId, count) {
+      setPool((current) => ({
+        ...current,
+        [dieId]: (current[dieId] ?? 0) + count,
+      }));
+    },
+  }));
 
   function roll() {
     const rolled = [];
@@ -181,6 +193,6 @@ function DiceRoller({
       )}
     </div>
   );
-}
+});
 
 export default DiceRoller;

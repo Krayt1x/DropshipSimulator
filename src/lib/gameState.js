@@ -10,6 +10,7 @@ const RESET_VALUES = {
   'dropshipsimulator:battle:turn': DEFAULT_TURN,
   'dropshipsimulator:battle:log': [],
   'dropshipsimulator:battle:bankedDice': DEFAULT_BANKED_DICE,
+  'dropshipsimulator:battle:usedDice': [],
 };
 
 // Clears the active game's shared (synced) state. Any mounted

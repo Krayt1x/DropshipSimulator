@@ -24,7 +24,7 @@ export function rollDie(dieType) {
   return String(Math.floor(Math.random() * dieType.sides) + 1);
 }
 
-function isWordDie(label) {
+export function isWordDie(label) {
   return Boolean(DIE_TYPES.find((d) => d.label === label)?.faces);
 }
 

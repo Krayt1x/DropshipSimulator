@@ -23,6 +23,7 @@ const SYNCED_KEYS = [
   'dropshipsimulator:battle:turn',
   'dropshipsimulator:battle:log',
   'dropshipsimulator:battle:bankedDice',
+  'dropshipsimulator:battle:usedDice',
 ];
 
 const MultiplayerContext = createContext(null);

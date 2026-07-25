@@ -76,7 +76,7 @@ function BattlePage() {
   const [draft, setDraft] = useState(null);
   const [movingTokenId, setMovingTokenId] = useState(null);
   const [sidebarTab, setSidebarTab] = useState('add');
-  const [lastMove, setLastMove] = useState(null);
+  const [lastAction, setLastAction] = useState(null);
   const [zoom, setZoom] = useState(1);
   const [viewportHeight, setViewportHeight] = useState(
     () => window.innerHeight,
@@ -100,6 +100,10 @@ function BattlePage() {
   const [bankedDice, setBankedDice] = useLocalStorageState(
     'dropshipsimulator:battle:bankedDice',
     DEFAULT_BANKED_DICE,
+  );
+  const [usedDice, setUsedDice] = useLocalStorageState(
+    'dropshipsimulator:battle:usedDice',
+    [],
   );
 
   function appendLog(message) {
@@ -127,6 +131,8 @@ function BattlePage() {
       appendLog(`${ownerLabel(current.active)} ended their turn`);
       return next;
     });
+    setUsedDice([]);
+    setLastAction(null);
   }
 
   function endGame() {
@@ -141,11 +147,33 @@ function BattlePage() {
     setSelectedTokenId(null);
     setDraft(null);
     setMovingTokenId(null);
-    setLastMove(null);
+    setLastAction(null);
   }
 
   function handleDiceRoll(rolled) {
     appendLog(formatRollLogMessage(rolled));
+  }
+
+  function useDie(die) {
+    setUsedDice((current) => [...current, die]);
+    setLastAction({ type: 'usedDie', dieId: die.id });
+    appendLog(`Used a ${die.label.toLowerCase()} die: ${die.value}`);
+  }
+
+  function undoLastAction() {
+    if (!lastAction) return;
+    if (lastAction.type === 'usedDie') {
+      setUsedDice((current) =>
+        current.filter((d) => d.id !== lastAction.dieId),
+      );
+    } else if (lastAction.type === 'move') {
+      const { tokenId, position } = lastAction;
+      const occupant = tokenAt(`${position.col},${position.row}`);
+      if (!occupant || occupant.id === tokenId) {
+        placeTokenAt(tokenId, position.col, position.row);
+      }
+    }
+    setLastAction(null);
   }
 
   const selectedToken = tokens.find((t) => t.id === selectedTokenId) ?? null;
@@ -204,7 +232,11 @@ function BattlePage() {
 
   function moveTokenTo(token, col, row) {
     if (token.position) {
-      setLastMove({ tokenId: token.id, position: token.position });
+      setLastAction({
+        type: 'move',
+        tokenId: token.id,
+        position: token.position,
+      });
       appendLog(
         `${ownerLabel(token.owner)} moved ${unitName(token)} to (${col}, ${row})`,
       );
@@ -214,16 +246,6 @@ function BattlePage() {
       );
     }
     placeTokenAt(token.id, col, row);
-  }
-
-  function undoLastMove() {
-    if (!lastMove) return;
-    const { tokenId, position } = lastMove;
-    const occupant = tokenAt(`${position.col},${position.row}`);
-    if (!occupant || occupant.id === tokenId) {
-      placeTokenAt(tokenId, position.col, position.row);
-    }
-    setLastMove(null);
   }
 
   function handleHexClick(key) {
@@ -520,16 +542,22 @@ function BattlePage() {
         </div>
         <div>
           <TurnOrder />
-          <DiceRoller onRoll={handleDiceRoll} />
+          <DiceRoller
+            onRoll={handleDiceRoll}
+            usedDice={usedDice}
+            onUseDie={useDie}
+          />
           <div className="card">
             <button
               type="button"
               className="ghost"
               style={{ width: '100%' }}
-              disabled={!lastMove}
-              onClick={undoLastMove}
+              disabled={!lastAction}
+              onClick={undoLastAction}
             >
-              Undo last move
+              {lastAction?.type === 'usedDie'
+                ? 'Undo used die'
+                : 'Undo last move'}
             </button>
           </div>
           <GameLog entries={logEntries} />

@@ -6,8 +6,7 @@ import {
   boardPixelSize,
   hexDistance,
   neighborHex,
-  hexDirection,
-  weaponArcDirections,
+  isInWeaponArc,
   hexLine,
 } from './hex.js';
 
@@ -66,36 +65,53 @@ describe('hex', () => {
     expect(neighborHex(4, 4, 3)).toEqual({ col: 4, row: 5 }); // S
   });
 
-  it('buckets a hex into the direction it actually sits in', () => {
+  it('puts the direct neighbor in the direction facing right (and not its opposite)', () => {
     const origin = { col: 4, row: 4 };
-    for (let dir = 0; dir < 6; dir++) {
-      const target = neighborHex(origin.col, origin.row, dir);
-      expect(hexDirection(origin, target)).toBe(dir);
-    }
+    const north = neighborHex(origin.col, origin.row, 0);
+    expect(isInWeaponArc(origin, north, 0, 'right')).toBe(true);
+    expect(isInWeaponArc(origin, north, 3, 'right')).toBe(false);
   });
 
-  it('splits every ring evenly across the 6 directions, with no direction stealing an extra hex from its neighbor (#98)', () => {
+  it('excludes a hex sitting exactly on the shared boundary from both arcs it borders (#101)', () => {
+    // Regression case: facing North from (6,5), hexes (3,0)/(4,2)/(5,3) sit
+    // exactly on the boundary between the facing direction and its
+    // counter-clockwise neighbor — previously bucketed into a single
+    // direction first, which silently claimed them for whichever side won
+    // that tie. They're ambiguous, so neither the right arc (which the tie
+    // used to leak into) should claim them...
+    const origin = { col: 6, row: 5 };
+    ['3,0', '4,2', '5,3'].forEach((s) => {
+      const [col, row] = s.split(',').map(Number);
+      expect(isInWeaponArc(origin, { col, row }, 0, 'right')).toBe(false);
+    });
+  });
+
+  it('gives right and left arcs mirror-symmetric coverage on every ring', () => {
     const origin = { col: 7, row: 7 };
-    for (let d = 1; d <= 6; d++) {
-      const counts = [0, 0, 0, 0, 0, 0];
-      generateGrid(15, 15)
-        .filter((t) => hexDistance(origin, t) === d)
-        .forEach((t) => counts[hexDirection(origin, t)]++);
-      expect(counts).toEqual(Array(6).fill(d));
+    for (let facing = 0; facing < 6; facing++) {
+      for (let d = 1; d <= 6; d++) {
+        const ring = generateGrid(15, 15).filter(
+          (t) => hexDistance(origin, t) === d,
+        );
+        const rightCount = ring.filter((t) =>
+          isInWeaponArc(origin, t, facing, 'right'),
+        ).length;
+        const leftCount = ring.filter((t) =>
+          isInWeaponArc(origin, t, facing, 'left'),
+        ).length;
+        expect(rightCount).toBe(leftCount);
+      }
     }
   });
 
-  it('gives right-mounted weapons the facing + next two clockwise directions', () => {
-    expect(weaponArcDirections(0, 'right')).toEqual([0, 1, 2]);
-    expect(weaponArcDirections(1, 'right')).toEqual([1, 2, 3]);
-  });
-
-  it('gives left-mounted weapons the facing + previous two directions, mirrored', () => {
-    expect(weaponArcDirections(0, 'left')).toEqual([4, 5, 0]);
-  });
-
-  it('unions both arcs for "both", covering every direction but directly behind', () => {
-    expect(weaponArcDirections(0, 'both').sort()).toEqual([0, 1, 2, 4, 5]);
+  it('unions both arcs for "both", excluding only hexes directly behind', () => {
+    const origin = { col: 7, row: 7 };
+    const behind = neighborHex(origin.col, origin.row, 3);
+    expect(isInWeaponArc(origin, behind, 0, 'both')).toBe(false);
+    [0, 1, 2, 4, 5].forEach((dir) => {
+      const target = neighborHex(origin.col, origin.row, dir);
+      expect(isInWeaponArc(origin, target, 0, 'both')).toBe(true);
+    });
   });
 
   it('walks a straight hex-by-hex line between two points, including both ends', () => {

@@ -132,42 +132,50 @@ export function neighborHex(col, row, dir) {
   return { col: col + dc, row: row + dr };
 }
 
-// Buckets `target` into one of the 6 neighbor directions from `origin`,
-// measuring the pixel-space angle as a multiple of 60° from direction 0's
-// own angle and rounding to the nearest whole direction — used to restrict
-// a weapon's range indicator to its mounted side's arc (#92).
-//
-// Rounding this way (rather than looping over all 6 neighbors and keeping
-// whichever has the smallest angle difference) matters: a hex sitting
-// exactly on the boundary between two directions is an unavoidable tie, and
-// looping in a fixed 0..5 order always resolved those ties toward whichever
-// direction came first, silently making direction 0's sector — and any arc
-// that includes it — one hex wider than its neighbors on every ring (#98).
-// Rounding a single continuous angle instead breaks every boundary tie the
-// same (clockwise) way, so each direction wins exactly one boundary and
-// loses the other, and every direction's sector ends up the same size.
-export function hexDirection(origin, target, size = hexSize()) {
+function directionAngleDeg(origin, dir, size) {
   const o = hexToPixel(origin.col, origin.row, size);
-  const t = hexToPixel(target.col, target.row, size);
-  const targetAngle = Math.atan2(t.y - o.y, t.x - o.x);
-  const n0 = neighborHex(origin.col, origin.row, 0);
-  const n0Pixel = hexToPixel(n0.col, n0.row, size);
-  const dir0Angle = Math.atan2(n0Pixel.y - o.y, n0Pixel.x - o.x);
-  const deltaDeg = ((targetAngle - dir0Angle) * 180) / Math.PI;
-  const normalizedDeg = ((deltaDeg % 360) + 360) % 360;
-  return Math.round(normalizedDeg / 60) % 6;
+  const n = neighborHex(origin.col, origin.row, dir);
+  const np = hexToPixel(n.col, n.row, size);
+  return (Math.atan2(np.y - o.y, np.x - o.x) * 180) / Math.PI;
+}
+
+// Normalizes a degree value to (-180, 180].
+function normalizeAngle(deg) {
+  let d = deg % 360;
+  if (d <= -180) d += 360;
+  if (d > 180) d -= 360;
+  return d;
 }
 
 // A right-mounted weapon covers the facing direction plus the next two
-// clockwise (facing, +1, +2); a left-mounted one covers the facing direction
-// plus the previous two (facing, -1, -2) — both share the forward direction.
-// 'both' (e.g. Artillery with Synchronized Firing Pattern, #97) unions the
-// two arcs, covering every direction except directly behind.
-export function weaponArcDirections(facing, side) {
-  if (side === 'both') {
-    const offsets = [4, 5, 0, 1, 2];
-    return offsets.map((o) => (facing + o) % 6);
-  }
-  const offsets = side === 'right' ? [0, 1, 2] : [4, 5, 0];
-  return offsets.map((o) => (facing + o) % 6);
+// clockwise (a 180° wedge); a left-mounted one covers facing plus the
+// previous two — both share the forward direction. 'both' (e.g. Artillery
+// with Synchronized Firing Pattern, #97) unions the two arcs, covering
+// every direction except directly behind.
+//
+// This measures `target`'s angle from `origin` directly against the arc's
+// boundary angles rather than bucketing it into a single nearest direction
+// first (as an earlier version did) — a hex sitting exactly on an arc's
+// boundary is equally close to the excluded direction on the other side of
+// that boundary, so bucketing it into a direction and then checking that
+// direction's arc membership always silently grabbed those boundary hexes
+// for whichever side happened to win the tie, making that arc one hex too
+// wide right where it meets its excluded neighbor (#98, #101). Checking the
+// angle against the arc's own span directly and excluding both boundaries
+// outright means a boundary hex belongs to neither adjacent arc, which is
+// the least-wrong answer for a hex that's genuinely ambiguous.
+const EPSILON_DEG = 1e-6;
+export function isInWeaponArc(origin, target, facing, side, size = hexSize()) {
+  const o = hexToPixel(origin.col, origin.row, size);
+  const t = hexToPixel(target.col, target.row, size);
+  const targetAngle = (Math.atan2(t.y - o.y, t.x - o.x) * 180) / Math.PI;
+  const facingAngle = directionAngleDeg(origin, facing, size);
+  const rel = normalizeAngle(targetAngle - facingAngle);
+  if (side === 'right')
+    return rel > -30 + EPSILON_DEG && rel < 150 - EPSILON_DEG;
+  if (side === 'left')
+    return rel > -150 + EPSILON_DEG && rel < 30 - EPSILON_DEG;
+  if (side === 'both')
+    return rel > -150 + EPSILON_DEG && rel < 150 - EPSILON_DEG;
+  return true;
 }

@@ -6,7 +6,7 @@ export const DEFAULT_BANKED_DICE = emptyDiceTotals();
 
 const RESET_VALUES = {
   'dropshipsimulator:battle:tokens': [],
-  'dropshipsimulator:battle:deploymentPhase': false,
+  'dropshipsimulator:battle:deploymentPhase': true,
   'dropshipsimulator:battle:turn': DEFAULT_TURN,
   'dropshipsimulator:battle:log': [],
   'dropshipsimulator:battle:bankedDice': DEFAULT_BANKED_DICE,

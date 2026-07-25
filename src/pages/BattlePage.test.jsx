@@ -11,21 +11,24 @@ import BattlePage from './BattlePage.jsx';
 beforeEach(() => window.localStorage.clear());
 afterEach(cleanup);
 
-function startDeploymentPhase() {
-  fireEvent.click(screen.getByRole('button', { name: 'Deployment Phase' }));
-}
+// Deployment phase now defaults to on (#75), so tests that used to need
+// this to arm the phase no longer do — kept as a no-op so every existing
+// call site stays valid without touching each one individually.
+function startDeploymentPhase() {}
 
 describe('BattlePage', () => {
   it('only shows Add unit / Import roster during the deployment phase', () => {
     render(<BattlePage />);
 
+    expect(screen.getByRole('button', { name: 'Add unit' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Import roster' })).toBeDefined();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'End deployment phase' }),
+    );
     expect(screen.queryByRole('button', { name: 'Add unit' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Import roster' })).toBeNull();
     expect(screen.queryByText(/only available during the/i)).toBeNull();
-
-    startDeploymentPhase();
-    expect(screen.getByRole('button', { name: 'Add unit' })).toBeDefined();
-    expect(screen.getByRole('button', { name: 'Import roster' })).toBeDefined();
   });
 
   it('places a token on the board and shows its stat card', () => {
@@ -314,15 +317,8 @@ describe('BattlePage', () => {
   it('toggles the deployment phase and tints the top/bottom 3 rows of tiles', () => {
     const { container } = render(<BattlePage />);
 
-    expect(container.querySelectorAll('polygon[fill^="rgba(37"]')).toHaveLength(
-      0,
-    );
-    expect(
-      container.querySelectorAll('polygon[fill^="rgba(220"]'),
-    ).toHaveLength(0);
-
-    startDeploymentPhase();
-    // default board is 14 cols x 10 rows: 3 tinted rows per zone x 14 cols
+    // deployment phase now defaults to on: default board is 14 cols x 10
+    // rows, giving 3 tinted rows per zone x 14 cols
     expect(container.querySelectorAll('polygon[fill^="rgba(37"]')).toHaveLength(
       42,
     );
@@ -339,6 +335,14 @@ describe('BattlePage', () => {
     expect(
       container.querySelectorAll('polygon[fill^="rgba(220"]'),
     ).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Deployment Phase' }));
+    expect(container.querySelectorAll('polygon[fill^="rgba(37"]')).toHaveLength(
+      42,
+    );
+    expect(
+      container.querySelectorAll('polygon[fill^="rgba(220"]'),
+    ).toHaveLength(42);
   });
 
   it('deploys a reserve unit onto the board via drag and drop', () => {

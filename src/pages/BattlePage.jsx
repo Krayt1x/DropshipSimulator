@@ -70,7 +70,7 @@ function BattlePage() {
   );
   const [deploymentPhase, setDeploymentPhase] = useLocalStorageState(
     'dropshipsimulator:battle:deploymentPhase',
-    false,
+    true,
   );
   const [myPlayer] = useLocalStorageState('dropshipsimulator:myPlayer', null);
   const [selectedTokenId, setSelectedTokenId] = useState(null);
@@ -150,6 +150,7 @@ function BattlePage() {
     setDraft(null);
     setMovingTokenId(null);
     setLastAction(null);
+    window.location.hash = '#home';
   }
 
   function handleDiceRoll(rolled) {
@@ -157,8 +158,20 @@ function BattlePage() {
   }
 
   function rollToActionPool(dice) {
-    setActionPool((current) => [...current, ...dice]);
+    setActionPool((current) => [
+      ...current,
+      ...dice.map((d) => ({ ...d, used: false })),
+    ]);
     setLastAction({ type: 'rollToPool', dieIds: dice.map((d) => d.id) });
+  }
+
+  function useActionPoolDie(dieId) {
+    const die = actionPool.find((d) => d.id === dieId);
+    setActionPool((current) =>
+      current.map((d) => (d.id === dieId ? { ...d, used: true } : d)),
+    );
+    setLastAction({ type: 'useDie', dieId });
+    if (die) appendLog(`Used a ${die.label.toLowerCase()} die: ${die.value}`);
   }
 
   function undoLastAction() {
@@ -167,12 +180,22 @@ function BattlePage() {
       setActionPool((current) =>
         current.filter((d) => !lastAction.dieIds.includes(d.id)),
       );
+      appendLog('Undid dice roll into Action Pool');
+    } else if (lastAction.type === 'useDie') {
+      setActionPool((current) =>
+        current.map((d) =>
+          d.id === lastAction.dieId ? { ...d, used: false } : d,
+        ),
+      );
+      appendLog('Undid using a die from the Action Pool');
     } else if (lastAction.type === 'move') {
       const { tokenId, position } = lastAction;
       const occupant = tokenAt(`${position.col},${position.row}`);
       if (!occupant || occupant.id === tokenId) {
         placeTokenAt(tokenId, position.col, position.row);
       }
+      const token = tokens.find((t) => t.id === tokenId);
+      appendLog(`Undid ${token ? unitName(token) + "'s" : 'the'} last move`);
     }
     setLastAction(null);
   }
@@ -573,6 +596,7 @@ function BattlePage() {
             onRoll={handleDiceRoll}
             actionPool={actionPool}
             onRollToActionPool={rollToActionPool}
+            onUseActionPoolDie={useActionPoolDie}
           />
           <div className="card">
             <button
@@ -584,7 +608,9 @@ function BattlePage() {
             >
               {lastAction?.type === 'rollToPool'
                 ? 'Undo dice roll'
-                : 'Undo last move'}
+                : lastAction?.type === 'useDie'
+                  ? 'Undo used die'
+                  : 'Undo last move'}
             </button>
           </div>
           <GameLog entries={logEntries} />

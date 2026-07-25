@@ -1077,9 +1077,20 @@ button.danger:hover {
   text-align: center;
 }
 
-.dice-result-chip.used {
+.dice-result-chip.pooled {
   background: var(--accent);
   color: #fff;
+  border: 2px solid transparent;
+}
+
+.dice-result-chip.pooled.selected {
+  border-color: #fff;
+}
+
+.dice-result-chip.pooled.spent {
+  background: var(--bg-track);
+  color: var(--text-muted);
+  text-decoration: line-through;
 }
 
 .dice-action-pool {

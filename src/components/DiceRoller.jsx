@@ -7,9 +7,15 @@ import {
   isWordDie,
 } from '../lib/dice.js';
 
-function DiceRoller({ onRoll, actionPool, onRollToActionPool }) {
+function DiceRoller({
+  onRoll,
+  actionPool,
+  onRollToActionPool,
+  onUseActionPoolDie,
+}) {
   const [pool, setPool] = useState({});
   const [results, setResults] = useState(null);
+  const [selectedPoolId, setSelectedPoolId] = useState(null);
 
   function adjust(id, delta) {
     setPool((current) => ({
@@ -40,6 +46,12 @@ function DiceRoller({ onRoll, actionPool, onRollToActionPool }) {
   function clearPool() {
     setPool({});
     setResults(null);
+  }
+
+  function useSelectedPoolDie() {
+    if (!selectedPoolId) return;
+    onUseActionPoolDie(selectedPoolId);
+    setSelectedPoolId(null);
   }
 
   const poolTotal = Object.values(pool).reduce((sum, n) => sum + n, 0);
@@ -124,11 +136,27 @@ function DiceRoller({ onRoll, actionPool, onRollToActionPool }) {
           </p>
           <div className="dice-results">
             {actionPool.map((r) => (
-              <span className="dice-result-chip used" key={r.id}>
+              <button
+                type="button"
+                key={r.id}
+                className={`dice-result-chip pooled ${r.used ? 'spent' : ''} ${r.id === selectedPoolId ? 'selected' : ''}`}
+                onClick={() =>
+                  setSelectedPoolId((current) =>
+                    current === r.id ? null : r.id,
+                  )
+                }
+              >
                 {r.label}: {r.value}
-              </span>
+              </button>
             ))}
           </div>
+          {selectedPoolId && (
+            <div className="token-owner-row" style={{ marginTop: 8 }}>
+              <button type="button" onClick={useSelectedPoolDie}>
+                Use Dice
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

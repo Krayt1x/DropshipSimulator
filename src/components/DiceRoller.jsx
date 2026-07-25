@@ -135,15 +135,24 @@ const DiceRoller = forwardRef(function DiceRoller(
         results.length > 0 &&
         (() => {
           const { words, numbers } = summarizeRollResults(results);
+          const groups = DIE_TYPES.map((die) => ({
+            die,
+            rolls: results.filter((r) => r.label === die.label),
+          })).filter((group) => group.rolls.length > 0);
           return (
             <>
-              <div className="dice-results">
-                {results.map((r) => (
-                  <span className="dice-result-chip" key={r.id}>
-                    {r.label}: {r.value}
-                  </span>
-                ))}
-              </div>
+              {groups.map(({ die, rolls }) => (
+                <div key={die.id}>
+                  <p className="equipment-subheader">{die.label}</p>
+                  <div className="dice-results">
+                    {rolls.map((r) => (
+                      <span className="dice-result-chip" key={r.id}>
+                        {r.value}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
               {(words.length > 0 || numbers.length > 0) && (
                 <div className="dice-summary">
                   {words.map(([value, count]) => (

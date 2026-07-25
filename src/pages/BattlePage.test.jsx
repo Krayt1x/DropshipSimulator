@@ -443,7 +443,9 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add D6 to pool' }));
     fireEvent.click(screen.getByRole('button', { name: 'Roll (2)' }));
 
-    expect(screen.getAllByText(/D6:/).length).toBeGreaterThan(0);
+    expect(
+      screen.getByText('D6', { selector: 'p.equipment-subheader' }),
+    ).toBeDefined();
     expect(screen.getByText(/Rolled 2d6/)).toBeDefined();
   });
 

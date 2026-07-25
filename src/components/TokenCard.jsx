@@ -25,7 +25,10 @@ function TokenCard({
   if (!unit) return null;
 
   const equippedItems = token.equippedIds
-    .map((id) => equipment.find((e) => Number(e.id) === Number(id)))
+    .map((id, instanceIndex) => {
+      const item = equipment.find((e) => Number(e.id) === Number(id));
+      return item ? { ...item, instanceIndex } : null;
+    })
     .filter(Boolean);
   const grouped = groupEquipmentByType(equippedItems);
   const weapons = grouped.Weapon ?? [];
@@ -141,12 +144,12 @@ function TokenCard({
           <label>Weapons</label>
           {weapons.map((weapon) => {
             const { max } = parseHeatRating(weapon.heat_rating);
-            const state = token.weaponState[weapon.id] ?? {
+            const state = token.weaponState[weapon.instanceIndex] ?? {
               heat: 0,
               broken: false,
             };
             return (
-              <div className="token-weapon-row" key={weapon.id}>
+              <div className="token-weapon-row" key={weapon.instanceIndex}>
                 <div>
                   <b>{weapon.name}</b>
                   <span className="unit-meta">
@@ -160,19 +163,30 @@ function TokenCard({
                     type="button"
                     className="ghost"
                     onClick={() =>
-                      onSetHeat(weapon.id, Math.max(0, state.heat - 1))
+                      onSetHeat(
+                        weapon.instanceIndex,
+                        Math.max(0, state.heat - 1),
+                      )
                     }
                   >
                     −
                   </button>
-                  <span>
+                  <span
+                    style={
+                      max && state.heat > max
+                        ? { color: '#dc2626', fontWeight: 700 }
+                        : undefined
+                    }
+                  >
                     Heat {state.heat}
                     {max ? ` / ${max}` : ''}
                   </span>
                   <button
                     type="button"
                     className="ghost"
-                    onClick={() => onSetHeat(weapon.id, state.heat + 1)}
+                    onClick={() =>
+                      onSetHeat(weapon.instanceIndex, state.heat + 1)
+                    }
                   >
                     +
                   </button>
@@ -180,7 +194,7 @@ function TokenCard({
                     <input
                       type="checkbox"
                       checked={state.broken}
-                      onChange={() => onToggleBroken(weapon.id)}
+                      onChange={() => onToggleBroken(weapon.instanceIndex)}
                     />
                     Broken
                   </label>
@@ -195,7 +209,7 @@ function TokenCard({
         <div className="token-card-section">
           <label>Augments</label>
           {augments.map((item) => (
-            <p key={item.id} className="unit-meta">
+            <p key={item.instanceIndex} className="unit-meta">
               <b>{item.name}</b>
               {item.effects ? `: ${item.effects}` : ''}
             </p>

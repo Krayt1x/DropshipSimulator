@@ -19,8 +19,23 @@ describe('tokens', () => {
     expect(token.position).toEqual({ col: 2, row: 3 });
     expect(token.facing).toBe(3);
     expect(token.weaponState).toEqual({
-      5: { heat: 0, broken: false },
-      6: { heat: 0, broken: false },
+      0: { heat: 0, broken: false },
+      1: { heat: 0, broken: false },
+    });
+  });
+
+  it('tracks heat separately for two of the same weapon', () => {
+    const unit = { id: 1, hp: 20 };
+    const token = createToken({
+      unit,
+      equippedIds: [7, 7],
+      owner: 'p1',
+      position: null,
+    });
+
+    expect(token.weaponState).toEqual({
+      0: { heat: 0, broken: false },
+      1: { heat: 0, broken: false },
     });
   });
 

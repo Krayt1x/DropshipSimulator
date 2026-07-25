@@ -24,10 +24,13 @@ export function parseHeatRating(heatRating) {
 // matching the flat-top hex grid's six true neighbor directions.
 const DEFAULT_FACING_BY_OWNER = { p1: 3, p2: 0 };
 
+// weaponState is keyed by position in equippedIds rather than by equipment
+// id, so two of the same weapon (e.g. two Artillery in different slots) each
+// track their own heat instead of sharing one.
 export function createToken({ unit, equippedIds, owner, position }) {
   const weaponState = {};
-  equippedIds.forEach((id) => {
-    weaponState[id] = { heat: 0, broken: false };
+  equippedIds.forEach((id, index) => {
+    weaponState[index] = { heat: 0, broken: false };
   });
   return {
     id: makeKey('token'),

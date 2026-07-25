@@ -26,8 +26,8 @@ function UnitCardHeader({ unit, token, equippedItems }) {
       </div>
       {equippedItems.length > 0 && (
         <ul className="roster-import-preview" style={{ marginTop: 8 }}>
-          {equippedItems.map((item) => (
-            <li key={item.id}>
+          {equippedItems.map((item, index) => (
+            <li key={item.instanceIndex ?? item.id ?? index}>
               {item.name}
               {item.range ? ` · Range ${item.range}` : ''}
               {item.hit_dice ? ` · Hit ${item.hit_dice}` : ''}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import ThemeToggle from './components/ThemeToggle.jsx';
+import HomePage from './pages/HomePage.jsx';
 import MapEditorPage from './pages/MapEditorPage.jsx';
 import BattlePage from './pages/BattlePage.jsx';
 import ConnectPage from './pages/ConnectPage.jsx';
@@ -10,9 +11,10 @@ import { OWNERS } from './lib/tokens.js';
 const DROPSHIP_BUILDER_URL = 'https://Krayt1x.github.io/DropshipBuilder';
 
 function currentPage() {
+  if (window.location.hash === '#map') return 'map';
   if (window.location.hash === '#battle') return 'battle';
   if (window.location.hash === '#connect') return 'connect';
-  return 'map';
+  return 'home';
 }
 
 function ConnectionBadge() {
@@ -72,7 +74,9 @@ function AppShell() {
   return (
     <>
       <nav className="topnav">
-        <strong>Dropship Simulator</strong>
+        <a href="#home" className="topnav-brand">
+          <strong>Dropship Simulator</strong>
+        </a>
         <a href="#map" className={page === 'map' ? 'active' : ''}>
           Map editor
         </a>
@@ -93,8 +97,10 @@ function AppShell() {
         <BattlePage />
       ) : page === 'connect' ? (
         <ConnectPage />
-      ) : (
+      ) : page === 'map' ? (
         <MapEditorPage />
+      ) : (
+        <HomePage />
       )}
     </>
   );

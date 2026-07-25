@@ -34,6 +34,7 @@ export function createToken({ unit, equippedIds, owner, position }) {
     currentHp: Number(unit.hp) || 0,
     equippedIds,
     weaponState,
+    destroyed: false,
   };
 }
 

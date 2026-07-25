@@ -508,3 +508,89 @@ button.danger:hover {
   flex-wrap: wrap;
   margin-bottom: 12px;
 }
+
+.reserve-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.destroyed-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.destroyed-row .tile-swatch-btn {
+  flex: 1;
+}
+
+.destroyed-restore {
+  font-size: 12px;
+  padding: 6px 8px;
+  white-space: nowrap;
+}
+
+.badge-destroyed {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #b91c1c;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.topnav-brand {
+  text-decoration: none;
+}
+
+.home-container {
+  padding-top: 4rem;
+}
+
+.home-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 700px) {
+  .home-tile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.home-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 32px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  text-decoration: none;
+  color: var(--text-primary);
+}
+
+.home-tile:hover {
+  border-color: var(--accent);
+}
+
+.home-tile-icon {
+  font-size: 36px;
+}
+
+.home-tile-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.home-tile-description {
+  font-size: 13px;
+  color: var(--text-secondary);
+}

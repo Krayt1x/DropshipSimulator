@@ -5,9 +5,28 @@ import BattlePage from './BattlePage.jsx';
 beforeEach(() => window.localStorage.clear());
 afterEach(cleanup);
 
+function startDeploymentPhase() {
+  fireEvent.click(screen.getByRole('button', { name: 'Deployment Phase' }));
+}
+
 describe('BattlePage', () => {
+  it('only shows Add unit / Import roster during the deployment phase', () => {
+    render(<BattlePage />);
+
+    expect(screen.queryByRole('button', { name: 'Add unit' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Import roster' })).toBeNull();
+    expect(
+      screen.getByText(/only available during the/i),
+    ).toBeDefined();
+
+    startDeploymentPhase();
+    expect(screen.getByRole('button', { name: 'Add unit' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Import roster' })).toBeDefined();
+  });
+
   it('places a token on the board and shows its stat card', () => {
     render(<BattlePage />);
+    startDeploymentPhase();
 
     fireEvent.change(screen.getByLabelText('Mech'), {
       target: { value: '1' },
@@ -21,6 +40,7 @@ describe('BattlePage', () => {
 
   it('adjusts HP on the selected token', () => {
     render(<BattlePage />);
+    startDeploymentPhase();
 
     fireEvent.change(screen.getByLabelText('Mech'), {
       target: { value: '1' },
@@ -34,6 +54,7 @@ describe('BattlePage', () => {
 
   it('moves a selected token to a new hex', () => {
     render(<BattlePage />);
+    startDeploymentPhase();
 
     fireEvent.change(screen.getByLabelText('Mech'), {
       target: { value: '1' },
@@ -49,6 +70,7 @@ describe('BattlePage', () => {
 
   it('imports a roster export into reserve and places a unit from it', () => {
     render(<BattlePage />);
+    startDeploymentPhase();
 
     fireEvent.click(screen.getByRole('button', { name: 'Import roster' }));
     fireEvent.change(screen.getByLabelText('Roster export'), {
@@ -77,6 +99,7 @@ describe('BattlePage', () => {
 
   it('groups reserve units by owning player', () => {
     render(<BattlePage />);
+    startDeploymentPhase();
 
     fireEvent.click(screen.getByRole('button', { name: 'Import roster' }));
     fireEvent.change(screen.getByLabelText('Roster export'), {
@@ -92,9 +115,30 @@ describe('BattlePage', () => {
     expect(screen.queryByText('Player 1 (1)')).toBeNull();
   });
 
+  it('collapses and expands the reserve list', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Import roster' }));
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: { value: ['Test List (Corp A)', 'Weight: 6t / 100t', '', 'A10 - 6t'].join('\n') },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
+    );
+
+    expect(screen.getByRole('button', { name: 'A10' })).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse' }));
+    expect(screen.queryByRole('button', { name: 'A10' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
+    expect(screen.getByRole('button', { name: 'A10' })).toBeDefined();
+  });
+
   it("prevents controlling another player's token once an identity is chosen", () => {
     window.localStorage.setItem('dropshipsimulator:myPlayer', JSON.stringify('p2'));
     render(<BattlePage />);
+    startDeploymentPhase();
 
     // Only Player 2 should be offered as an owner when adding a unit.
     expect(screen.queryByRole('button', { name: 'Player 1' })).toBeNull();
@@ -110,8 +154,9 @@ describe('BattlePage', () => {
     ).toBe(false);
   });
 
-  it('disables move/remove for a token belonging to the other player', () => {
+  it('disables move/destroy for a token belonging to the other player', () => {
     render(<BattlePage />);
+    startDeploymentPhase();
     fireEvent.change(screen.getByLabelText('Mech'), { target: { value: '1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
@@ -126,8 +171,48 @@ describe('BattlePage', () => {
       true,
     );
     expect(
-      screen.getByRole('button', { name: 'Remove from board' }).disabled,
+      screen.getByRole('button', { name: 'Model Destroyed' }).disabled,
     ).toBe(true);
+  });
+
+  it('marks a token destroyed and lists it under Destroyed Models', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+    fireEvent.change(screen.getByLabelText('Mech'), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Model Destroyed' }));
+
+    expect(screen.getByText('Destroyed Models (1)')).toBeDefined();
+    expect(screen.getByText('Destroyed', { selector: 'span.badge-destroyed' })).toBeDefined();
+  });
+
+  it('returns a destroyed model to reserve', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+    fireEvent.change(screen.getByLabelText('Mech'), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+    fireEvent.click(screen.getByRole('button', { name: 'Model Destroyed' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Return to reserve' }));
+
+    expect(screen.queryByText('Destroyed Models (1)')).toBeNull();
+    expect(screen.getByText('Reserve (1)')).toBeDefined();
+  });
+
+  it('returns a deployed token directly to reserve', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+    fireEvent.change(screen.getByLabelText('Mech'), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Return to reserve' }));
+
+    expect(screen.getByText('Reserve (1)')).toBeDefined();
   });
 
   it('toggles the deployment phase and tints the top/bottom 3 rows of tiles', () => {
@@ -136,7 +221,7 @@ describe('BattlePage', () => {
     expect(container.querySelectorAll('polygon[fill^="rgba(37"]')).toHaveLength(0);
     expect(container.querySelectorAll('polygon[fill^="rgba(220"]')).toHaveLength(0);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Deployment Phase' }));
+    startDeploymentPhase();
     // default board is 14 cols x 10 rows: 3 tinted rows per zone x 14 cols
     expect(
       container.querySelectorAll('polygon[fill^="rgba(37"]'),
@@ -152,6 +237,7 @@ describe('BattlePage', () => {
 
   it('deploys a reserve unit onto the board via drag and drop', () => {
     render(<BattlePage />);
+    startDeploymentPhase();
     fireEvent.click(screen.getByRole('button', { name: 'Import roster' }));
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: { value: ['Test List (Corp A)', 'Weight: 6t / 100t', '', 'A10 - 6t'].join('\n') },

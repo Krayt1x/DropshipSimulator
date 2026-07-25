@@ -11,7 +11,8 @@ function TokenCard({
   onArmMove,
   onSetHeat,
   onToggleBroken,
-  onRemove,
+  onDestroy,
+  onReturnToReserve,
   onDeselect,
 }) {
   if (!unit) return null;
@@ -27,7 +28,10 @@ function TokenCard({
   return (
     <div className="card token-card">
       <div className="token-card-header">
-        <p className="unit-name">{unit.name}</p>
+        <p className="unit-name">
+          {unit.name}
+          {token.destroyed && <span className="badge-destroyed">Destroyed</span>}
+        </p>
         <button type="button" className="ghost" onClick={onDeselect}>
           Close
         </button>
@@ -72,26 +76,28 @@ function TokenCard({
         </div>
       </div>
 
-      <div className="token-card-section">
-        {!canControl && (
-          <p className="unit-meta">
-            This unit belongs to another player — you can't move or deploy
-            it.
-          </p>
-        )}
-        <button
-          type="button"
-          className={moving ? '' : 'ghost'}
-          disabled={!canControl}
-          onClick={onArmMove}
-        >
-          {moving
-            ? 'Click a hex to place'
-            : token.position
-              ? 'Move token'
-              : 'Place on board'}
-        </button>
-      </div>
+      {!token.destroyed && (
+        <div className="token-card-section">
+          {!canControl && (
+            <p className="unit-meta">
+              This unit belongs to another player — you can't move or deploy
+              it.
+            </p>
+          )}
+          <button
+            type="button"
+            className={moving ? '' : 'ghost'}
+            disabled={!canControl}
+            onClick={onArmMove}
+          >
+            {moving
+              ? 'Click a hex to place'
+              : token.position
+                ? 'Move token'
+                : 'Place on board'}
+          </button>
+        </div>
+      )}
 
       {weapons.length > 0 && (
         <div className="token-card-section">
@@ -160,14 +166,35 @@ function TokenCard({
         </div>
       )}
 
-      <button
-        type="button"
-        className="danger"
-        disabled={!canControl}
-        onClick={onRemove}
-      >
-        Remove from board
-      </button>
+      {token.destroyed ? (
+        <button
+          type="button"
+          className="ghost"
+          disabled={!canControl}
+          onClick={onReturnToReserve}
+        >
+          Return to reserve
+        </button>
+      ) : (
+        <div className="token-stat-row">
+          <button
+            type="button"
+            className="danger"
+            disabled={!canControl}
+            onClick={onDestroy}
+          >
+            Model Destroyed
+          </button>
+          <button
+            type="button"
+            className="ghost"
+            disabled={!canControl}
+            onClick={onReturnToReserve}
+          >
+            Return to reserve
+          </button>
+        </div>
+      )}
     </div>
   );
 }

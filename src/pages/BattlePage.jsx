@@ -6,6 +6,7 @@ import TokenForm from '../components/TokenForm.jsx';
 import TokenCard from '../components/TokenCard.jsx';
 import RosterImport from '../components/RosterImport.jsx';
 import ReserveList from '../components/ReserveList.jsx';
+import DestroyedList from '../components/DestroyedList.jsx';
 import manufacturers from '../data/manufacturers.json';
 import units from '../data/units.json';
 import equipment from '../data/equipment.json';
@@ -41,7 +42,8 @@ function BattlePage() {
   const selectedUnit = selectedToken
     ? units.find((u) => Number(u.id) === Number(selectedToken.unitId))
     : null;
-  const reserveTokens = tokens.filter((t) => !t.position);
+  const reserveTokens = tokens.filter((t) => !t.position && !t.destroyed);
+  const destroyedTokens = tokens.filter((t) => t.destroyed);
 
   function canControl(token) {
     return !myPlayer || token.owner === myPlayer;
@@ -139,11 +141,22 @@ function BattlePage() {
     }));
   }
 
-  function removeSelected() {
-    if (!window.confirm('Remove this unit from the board?')) return;
-    setTokens((current) => current.filter((t) => t.id !== selectedTokenId));
-    setSelectedTokenId(null);
+  function destroySelected() {
+    updateSelected(() => ({ destroyed: true, position: null }));
     setMovingTokenId(null);
+  }
+
+  function returnSelectedToReserve() {
+    updateSelected(() => ({ destroyed: false, position: null }));
+    setMovingTokenId(null);
+  }
+
+  function returnDestroyedToReserve(tokenId) {
+    setTokens((current) =>
+      current.map((t) =>
+        t.id === tokenId ? { ...t, destroyed: false, position: null } : t,
+      ),
+    );
   }
 
   function importRoster({ entries, owner }) {
@@ -216,10 +229,11 @@ function BattlePage() {
               }
               onSetHeat={setHeat}
               onToggleBroken={toggleBroken}
-              onRemove={removeSelected}
+              onDestroy={destroySelected}
+              onReturnToReserve={returnSelectedToReserve}
               onDeselect={() => setSelectedTokenId(null)}
             />
-          ) : (
+          ) : deploymentPhase ? (
             <>
               <div className="workspace-tabs">
                 <button
@@ -261,7 +275,22 @@ function BattlePage() {
                 />
               )}
             </>
+          ) : (
+            <div className="card">
+              <p className="unit-meta">
+                Adding and importing units is only available during the
+                Deployment Phase. Start one above to bring in new units.
+              </p>
+            </div>
           )}
+          <DestroyedList
+            tokens={destroyedTokens}
+            units={units}
+            selectedTokenId={selectedTokenId}
+            canControl={canControl}
+            onSelect={setSelectedTokenId}
+            onReturnToReserve={returnDestroyedToReserve}
+          />
         </div>
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { OWNERS, ownerColor } from '../lib/tokens.js';
 
 function ReserveGroup({ owner, tokens, units, selectedTokenId, canControl, onSelect }) {
@@ -47,25 +48,40 @@ function ReserveGroup({ owner, tokens, units, selectedTokenId, canControl, onSel
 }
 
 function ReserveList({ tokens, units, selectedTokenId, canControl, onSelect }) {
+  const [collapsed, setCollapsed] = useState(false);
   if (tokens.length === 0) return null;
 
   return (
     <div className="card">
-      <p className="unit-name">Reserve ({tokens.length})</p>
-      <p className="unit-meta" style={{ marginBottom: 8 }}>
-        Not yet deployed. Select one and place it, or drag it onto the board.
-      </p>
-      {OWNERS.map((owner) => (
-        <ReserveGroup
-          key={owner.id}
-          owner={owner}
-          tokens={tokens.filter((t) => t.owner === owner.id)}
-          units={units}
-          selectedTokenId={selectedTokenId}
-          canControl={canControl}
-          onSelect={onSelect}
-        />
-      ))}
+      <div className="reserve-header">
+        <p className="unit-name">Reserve ({tokens.length})</p>
+        <button
+          type="button"
+          className="ghost"
+          onClick={() => setCollapsed((current) => !current)}
+        >
+          {collapsed ? 'Expand' : 'Collapse'}
+        </button>
+      </div>
+      {!collapsed && (
+        <>
+          <p className="unit-meta" style={{ marginBottom: 8 }}>
+            Not yet deployed. Select one and place it, or drag it onto the
+            board.
+          </p>
+          {OWNERS.map((owner) => (
+            <ReserveGroup
+              key={owner.id}
+              owner={owner}
+              tokens={tokens.filter((t) => t.owner === owner.id)}
+              units={units}
+              selectedTokenId={selectedTokenId}
+              canControl={canControl}
+              onSelect={onSelect}
+            />
+          ))}
+        </>
+      )}
     </div>
   );
 }

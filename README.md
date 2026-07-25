@@ -1,9 +1,8 @@
 # Dropship Simulator
 
-A browser-based hex map builder for Dropship, a tabletop wargame. Combat rules
-are still being drafted — this repo currently holds the hex battlefield
-editor, with the turn-based game engine to follow once the rules are locked
-down.
+A browser-based game-state manager for Dropship, a tabletop wargame. It
+doesn't referee the rules — players still need to know them — but it handles
+the board, tokens, HP/heat tracking, and keeping two remote players in sync.
 
 ## Live Demo
 
@@ -11,10 +10,16 @@ down.
 
 ## Features
 
-- Resizable hex grid (pointy-top hexes, adjustable columns/rows)
-- Define your own tile types (name + color) and paint/erase them onto the
-  board — nothing is hardcoded, since terrain rules aren't finalized yet
-- Board state persists locally in the browser
+- **Map editor** — resizable hex grid with user-defined tile types and
+  optional background images (built-in presets or your own upload)
+- **Battle board** — deploy units from the catalogue or import a roster
+  exported from [DropshipBuilder](https://Krayt1x.github.io/DropshipBuilder),
+  move/rotate tokens, track HP and per-weapon heat, mark units destroyed or
+  return them to reserve, and run a Deployment Phase with zone highlighting
+- **Multiplayer** — connect two browsers directly over WebRTC (no server, no
+  accounts) so the map and battle board stay live-synced
+- Per-browser player identity, so each side can only move/deploy their own
+  units
 
 ## Development
 
@@ -27,6 +32,8 @@ npm run dev
 
 ```bash
 npm run test
+npm run lint
+npm run format:check
 ```
 
 ### Building
@@ -35,6 +42,10 @@ npm run test
 npm run build
 ```
 
+## Contributing
+
+- 📖 [Contribution Guide](./CONTRIBUTING.md)
+
 ---
 
-Built with React and Vite.
+Built with React and Vite. Licensed under MIT.

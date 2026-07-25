@@ -1,0 +1,16 @@
+documentation:
+  - changed-files:
+    - any-glob-match-patterns:
+      - '*.md'
+      - 'docs/**'
+
+dependencies:
+  - changed-files:
+    - any-glob-match-patterns:
+      - 'package.json'
+      - 'package-lock.json'
+
+ci:
+  - changed-files:
+    - any-glob-match-patterns:
+      - '.github/workflows/**'

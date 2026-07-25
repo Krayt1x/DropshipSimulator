@@ -81,4 +81,8 @@ describe('hex', () => {
   it('gives left-mounted weapons the facing + previous two directions, mirrored', () => {
     expect(weaponArcDirections(0, 'left')).toEqual([4, 5, 0]);
   });
+
+  it('unions both arcs for "both", covering every direction but directly behind', () => {
+    expect(weaponArcDirections(0, 'both').sort()).toEqual([0, 1, 2, 4, 5]);
+  });
 });

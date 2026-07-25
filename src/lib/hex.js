@@ -124,7 +124,13 @@ export function hexDirection(origin, target, size = hexSize()) {
 // A right-mounted weapon covers the facing direction plus the next two
 // clockwise (facing, +1, +2); a left-mounted one covers the facing direction
 // plus the previous two (facing, -1, -2) — both share the forward direction.
+// 'both' (e.g. Artillery with Synchronized Firing Pattern, #97) unions the
+// two arcs, covering every direction except directly behind.
 export function weaponArcDirections(facing, side) {
+  if (side === 'both') {
+    const offsets = [4, 5, 0, 1, 2];
+    return offsets.map((o) => (facing + o) % 6);
+  }
   const offsets = side === 'right' ? [0, 1, 2] : [4, 5, 0];
   return offsets.map((o) => (facing + o) % 6);
 }

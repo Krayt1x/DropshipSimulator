@@ -82,6 +82,7 @@ function BattlePage() {
   const [lastAction, setLastAction] = useState(null);
   const [zoom, setZoom] = useState(1);
   const diceRollerRef = useRef(null);
+  const [diceTrayOpen, setDiceTrayOpen] = useState(false);
   const [viewportHeight, setViewportHeight] = useState(
     () => window.innerHeight,
   );
@@ -226,12 +227,32 @@ function BattlePage() {
     selectedToken.position
       ? parseWeaponRange(rangeWeapon.range)
       : null;
+  // "Synchronized Firing Pattern" lets Artillery target either arc (#97),
+  // so it overrides the weapon's own mounted side for range purposes.
+  const rangeItem = activeRangeSpec
+    ? equipment.find(
+        (e) =>
+          Number(e.id) ===
+          Number(selectedToken.equippedIds[rangeWeapon.instanceIndex]),
+      )
+    : null;
+  const hasSyncFiringPattern = Boolean(
+    activeRangeSpec &&
+    selectedToken.equippedIds.some(
+      (id) =>
+        equipment.find((e) => Number(e.id) === Number(id))?.name ===
+        'Synchronized Firing Pattern',
+    ),
+  );
   const weaponRange = activeRangeSpec
     ? {
         origin: selectedToken.position,
         ...activeRangeSpec,
         facing: selectedToken.facing,
-        side: selectedToken.weaponState[rangeWeapon.instanceIndex]?.side,
+        side:
+          hasSyncFiringPattern && rangeItem?.name === 'Artillery'
+            ? 'both'
+            : selectedToken.weaponState[rangeWeapon.instanceIndex]?.side,
       }
     : null;
 
@@ -518,43 +539,7 @@ function BattlePage() {
 
       <div className="battle-layout">
         <div>
-          {selectedToken && !deploymentPhase ? (
-            <div
-              className="token-card-mobile-overlay"
-              onClick={(e) => {
-                if (e.target === e.currentTarget) setSelectedTokenId(null);
-              }}
-            >
-              <TokenCard
-                key={selectedToken.id}
-                token={selectedToken}
-                unit={selectedUnit}
-                equipment={equipment}
-                moving={movingTokenId === selectedToken.id}
-                canControl={canControl(selectedToken)}
-                onAdjustHp={adjustHp}
-                onRotate={rotate}
-                onArmMove={() =>
-                  setMovingTokenId((current) =>
-                    current === selectedToken.id ? null : selectedToken.id,
-                  )
-                }
-                onSetHeat={setHeat}
-                onSetWeaponHp={setWeaponHp}
-                onToggleBroken={toggleBroken}
-                onRollHitDice={rollHitDice}
-                activeRangeIndex={
-                  rangeWeapon?.tokenId === selectedToken.id
-                    ? rangeWeapon.instanceIndex
-                    : null
-                }
-                onToggleRange={toggleWeaponRange}
-                onDestroy={destroySelected}
-                onReturnToReserve={returnSelectedToReserve}
-                onDeselect={() => setSelectedTokenId(null)}
-              />
-            </div>
-          ) : deploymentPhase ? (
+          {deploymentPhase && (
             <>
               <div className="workspace-tabs">
                 <button
@@ -596,7 +581,44 @@ function BattlePage() {
                 />
               )}
             </>
-          ) : null}
+          )}
+          {selectedToken && (
+            <div
+              className={`token-card-mobile-overlay ${deploymentPhase ? 'token-card-overlay-deployment' : ''}`}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setSelectedTokenId(null);
+              }}
+            >
+              <TokenCard
+                key={selectedToken.id}
+                token={selectedToken}
+                unit={selectedUnit}
+                equipment={equipment}
+                moving={movingTokenId === selectedToken.id}
+                canControl={canControl(selectedToken)}
+                onAdjustHp={adjustHp}
+                onRotate={rotate}
+                onArmMove={() =>
+                  setMovingTokenId((current) =>
+                    current === selectedToken.id ? null : selectedToken.id,
+                  )
+                }
+                onSetHeat={setHeat}
+                onSetWeaponHp={setWeaponHp}
+                onToggleBroken={toggleBroken}
+                onRollHitDice={rollHitDice}
+                activeRangeIndex={
+                  rangeWeapon?.tokenId === selectedToken.id
+                    ? rangeWeapon.instanceIndex
+                    : null
+                }
+                onToggleRange={toggleWeaponRange}
+                onDestroy={destroySelected}
+                onReturnToReserve={returnSelectedToReserve}
+                onDeselect={() => setSelectedTokenId(null)}
+              />
+            </div>
+          )}
           <ReserveList
             tokens={reserveTokens}
             units={units}
@@ -668,14 +690,32 @@ function BattlePage() {
         </div>
         <div>
           <TurnOrder />
-          <DiceRoller
-            ref={diceRollerRef}
-            onRoll={handleDiceRoll}
-            actionPool={actionPool}
-            onRollToActionPool={rollToActionPool}
-            onUseActionPoolDie={useActionPoolDie}
-            activeOwnerDice={activeOwnerDice}
-          />
+          {diceTrayOpen && (
+            <div
+              className="dice-tray-backdrop"
+              onClick={() => setDiceTrayOpen(false)}
+            />
+          )}
+          <div
+            className={`dice-tray-wrapper ${diceTrayOpen ? 'dice-tray-open' : ''}`}
+          >
+            <DiceRoller
+              ref={diceRollerRef}
+              onRoll={handleDiceRoll}
+              actionPool={actionPool}
+              onRollToActionPool={rollToActionPool}
+              onUseActionPoolDie={useActionPoolDie}
+              activeOwnerDice={activeOwnerDice}
+            />
+          </div>
+          <button
+            type="button"
+            className="dice-tray-toggle"
+            aria-label={diceTrayOpen ? 'Close dice tray' : 'Open dice tray'}
+            onClick={() => setDiceTrayOpen((current) => !current)}
+          >
+            🎲
+          </button>
           <div className="card">
             <button
               type="button"

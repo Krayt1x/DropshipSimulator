@@ -79,7 +79,7 @@ function TokenCard({
           <button type="button" className="ghost" onClick={() => onRotate(-1)}>
             ↺
           </button>
-          <span>{token.facing} / 6</span>
+          <span>{token.facing + 1} / 6</span>
           <button type="button" className="ghost" onClick={() => onRotate(1)}>
             ↻
           </button>

@@ -85,6 +85,10 @@ function DeploymentZones({ cols, width, height, deploymentZones, size }) {
   if (!deploymentZones) return null;
   const { topBoundaryRow, bottomBoundaryRow, style } = deploymentZones;
 
+  // 'tiles' tints the hex polygons themselves, rendered inline in the main
+  // hex loop above (where per-tile row info is already available).
+  if (style === 'tiles') return null;
+
   if (style === 'shaded') {
     const topY = rowBoundaryY(topBoundaryRow, size);
     const bottomY = rowBoundaryY(bottomBoundaryRow, size);
@@ -187,6 +191,14 @@ function BattleBoard({
         const { x, y } = hexToPixel(col, row, size);
         const fill = colorFor(key);
         const distance = rangeOrigin ? hexDistance(rangeOrigin, { col, row }) : null;
+        const tileTint =
+          deploymentZones?.style === 'tiles'
+            ? row <= deploymentZones.topBoundaryRow
+              ? 'rgba(37,99,235,0.35)'
+              : row > deploymentZones.bottomBoundaryRow
+                ? 'rgba(220,38,38,0.35)'
+                : null
+            : null;
         return (
           <g key={key}>
             <polygon
@@ -204,6 +216,13 @@ function BattleBoard({
             >
               <title>{`${col}, ${row}`}</title>
             </polygon>
+            {tileTint && (
+              <polygon
+                points={hexPointsAttr(x, y, size)}
+                fill={tileTint}
+                style={{ pointerEvents: 'none' }}
+              />
+            )}
             {distance !== null && distance > 0 && (
               <text
                 x={x}

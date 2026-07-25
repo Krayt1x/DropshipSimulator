@@ -143,6 +143,17 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Shaded zones' }));
     expect(container.querySelectorAll('line')).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tinted tiles' }));
+    expect(container.querySelectorAll('line')).toHaveLength(0);
+    expect(container.querySelectorAll('rect[fill^="rgba(37"]')).toHaveLength(0);
+    // default board is 14 cols x 10 rows: 3 tinted rows per zone x 14 cols
+    expect(
+      container.querySelectorAll('polygon[fill^="rgba(37"]'),
+    ).toHaveLength(42);
+    expect(
+      container.querySelectorAll('polygon[fill^="rgba(220"]'),
+    ).toHaveLength(42);
   });
 
   it('deploys a reserve unit onto the board via drag and drop', () => {

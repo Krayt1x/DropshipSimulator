@@ -16,6 +16,7 @@ const DEPLOYMENT_STYLES = [
   { id: 'line', label: 'Line' },
   { id: 'zigzag', label: 'Zigzag' },
   { id: 'shaded', label: 'Shaded zones' },
+  { id: 'tiles', label: 'Tinted tiles' },
 ];
 
 function BattlePage() {

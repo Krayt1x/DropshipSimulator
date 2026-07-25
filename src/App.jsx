@@ -67,10 +67,12 @@ function PlayerIdentityPicker() {
 
 function AppShell() {
   const [page, setPage] = useState(currentPage);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     function onHashChange() {
       setPage(currentPage());
+      setMenuOpen(false);
     }
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
@@ -82,21 +84,32 @@ function AppShell() {
         <a href="#home" className="topnav-brand">
           <strong>Dropship Simulator</strong>
         </a>
-        <a href="#map" className={page === 'map' ? 'active' : ''}>
-          Map editor
-        </a>
-        <a href="#battle" className={page === 'battle' ? 'active' : ''}>
-          Battle board
-        </a>
-        <a href="#connect" className={page === 'connect' ? 'active' : ''}>
-          Multiplayer
-        </a>
-        <a href={DROPSHIP_BUILDER_URL} target="_blank" rel="noreferrer">
-          Dropship Builder ↗
-        </a>
-        <PlayerIdentityPicker />
-        <ConnectionBadge />
-        <ThemeToggle />
+        <button
+          type="button"
+          className="hamburger-btn"
+          aria-label="Menu"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((current) => !current)}
+        >
+          ☰
+        </button>
+        <div className={`topnav-links ${menuOpen ? 'open' : ''}`}>
+          <a href="#map" className={page === 'map' ? 'active' : ''}>
+            Map editor
+          </a>
+          <a href="#battle" className={page === 'battle' ? 'active' : ''}>
+            Battle board
+          </a>
+          <a href="#connect" className={page === 'connect' ? 'active' : ''}>
+            Multiplayer
+          </a>
+          <a href={DROPSHIP_BUILDER_URL} target="_blank" rel="noreferrer">
+            Dropship Builder ↗
+          </a>
+          <PlayerIdentityPicker />
+          <ConnectionBadge />
+          <ThemeToggle />
+        </div>
       </nav>
       {page === 'battle' ? (
         <BattlePage />

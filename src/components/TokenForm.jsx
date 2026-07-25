@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { OWNERS, groupEquipmentByType } from '../lib/tokens.js';
 
-function TokenForm({ manufacturers, units, equipment, onArm, armed, myPlayer }) {
+function TokenForm({
+  manufacturers,
+  units,
+  equipment,
+  onArm,
+  armed,
+  myPlayer,
+}) {
   const [manufacturer, setManufacturer] = useState(manufacturers[0] ?? '');
   const [unitId, setUnitId] = useState('');
   const [equippedIds, setEquippedIds] = useState([]);
@@ -103,9 +110,7 @@ function TokenForm({ manufacturers, units, equipment, onArm, armed, myPlayer }) 
                   {item.movement ? ` · ${item.movement} move` : ''}
                 </label>
               ))}
-              {items.length === 0 && (
-                <p className="empty">None available.</p>
-              )}
+              {items.length === 0 && <p className="empty">None available.</p>}
             </div>
           </div>
         ))}
@@ -124,10 +129,7 @@ function TokenForm({ manufacturers, units, equipment, onArm, armed, myPlayer }) 
               style={{ borderColor: o.color }}
               onClick={() => setOwner(o.id)}
             >
-              <span
-                className="tile-swatch"
-                style={{ background: o.color }}
-              />
+              <span className="tile-swatch" style={{ background: o.color }} />
               {o.label}
             </button>
           ))}

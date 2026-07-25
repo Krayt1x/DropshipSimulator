@@ -23,7 +23,10 @@ function HomePage() {
   return (
     <div className="container home-container">
       <h1 style={{ textAlign: 'center' }}>Dropship Simulator</h1>
-      <p className="unit-meta" style={{ textAlign: 'center', marginBottom: 24 }}>
+      <p
+        className="unit-meta"
+        style={{ textAlign: 'center', marginBottom: 24 }}
+      >
         A game-state manager for the Dropship tabletop wargame.
       </p>
       <div className="home-tile-grid">

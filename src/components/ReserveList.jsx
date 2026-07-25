@@ -1,13 +1,23 @@
 import { useState } from 'react';
 import { OWNERS, ownerColor } from '../lib/tokens.js';
 
-function ReserveGroup({ owner, tokens, units, selectedTokenId, canControl, onSelect }) {
+function ReserveGroup({
+  owner,
+  tokens,
+  units,
+  selectedTokenId,
+  canControl,
+  onSelect,
+}) {
   if (tokens.length === 0) return null;
 
   return (
     <div className="reserve-group">
       <p className="reserve-group-label">
-        <span className="tile-swatch" style={{ background: ownerColor(owner.id) }} />
+        <span
+          className="tile-swatch"
+          style={{ background: ownerColor(owner.id) }}
+        />
         {owner.label} ({tokens.length})
       </p>
       <div className="tile-palette-list">

@@ -4,7 +4,10 @@ import HomePage from './pages/HomePage.jsx';
 import MapEditorPage from './pages/MapEditorPage.jsx';
 import BattlePage from './pages/BattlePage.jsx';
 import ConnectPage from './pages/ConnectPage.jsx';
-import { MultiplayerProvider, useMultiplayer } from './context/MultiplayerContext.jsx';
+import {
+  MultiplayerProvider,
+  useMultiplayer,
+} from './context/MultiplayerContext.jsx';
 import { useLocalStorageState } from './lib/storage.js';
 import { OWNERS } from './lib/tokens.js';
 
@@ -50,7 +53,9 @@ function PlayerIdentityPicker() {
           key={o.id}
           className={`player-identity-btn ${myPlayer === o.id ? 'selected' : ''}`}
           style={{ borderColor: o.color }}
-          onClick={() => setMyPlayer((current) => (current === o.id ? null : o.id))}
+          onClick={() =>
+            setMyPlayer((current) => (current === o.id ? null : o.id))
+          }
         >
           <span className="tile-swatch" style={{ background: o.color }} />
           {o.label}

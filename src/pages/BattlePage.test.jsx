@@ -15,9 +15,7 @@ describe('BattlePage', () => {
 
     expect(screen.queryByRole('button', { name: 'Add unit' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Import roster' })).toBeNull();
-    expect(
-      screen.getByText(/only available during the/i),
-    ).toBeDefined();
+    expect(screen.getByText(/only available during the/i)).toBeDefined();
 
     startDeploymentPhase();
     expect(screen.getByRole('button', { name: 'Add unit' })).toBeDefined();
@@ -75,12 +73,9 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Import roster' }));
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
-        value: [
-          'Test List (Corp A)',
-          'Weight: 6t / 100t',
-          '',
-          'A10 - 6t',
-        ].join('\n'),
+        value: ['Test List (Corp A)', 'Weight: 6t / 100t', '', 'A10 - 6t'].join(
+          '\n',
+        ),
       },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
@@ -103,7 +98,11 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Import roster' }));
     fireEvent.change(screen.getByLabelText('Roster export'), {
-      target: { value: ['Test List (Corp A)', 'Weight: 6t / 100t', '', 'A10 - 6t'].join('\n') },
+      target: {
+        value: ['Test List (Corp A)', 'Weight: 6t / 100t', '', 'A10 - 6t'].join(
+          '\n',
+        ),
+      },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
     fireEvent.click(screen.getByRole('button', { name: 'Player 2' }));
@@ -120,7 +119,11 @@ describe('BattlePage', () => {
     startDeploymentPhase();
     fireEvent.click(screen.getByRole('button', { name: 'Import roster' }));
     fireEvent.change(screen.getByLabelText('Roster export'), {
-      target: { value: ['Test List (Corp A)', 'Weight: 6t / 100t', '', 'A10 - 6t'].join('\n') },
+      target: {
+        value: ['Test List (Corp A)', 'Weight: 6t / 100t', '', 'A10 - 6t'].join(
+          '\n',
+        ),
+      },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
     fireEvent.click(
@@ -136,7 +139,10 @@ describe('BattlePage', () => {
   });
 
   it("prevents controlling another player's token once an identity is chosen", () => {
-    window.localStorage.setItem('dropshipsimulator:myPlayer', JSON.stringify('p2'));
+    window.localStorage.setItem(
+      'dropshipsimulator:myPlayer',
+      JSON.stringify('p2'),
+    );
     render(<BattlePage />);
     startDeploymentPhase();
 
@@ -149,9 +155,9 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
     // This token belongs to Player 2 (the locked owner), so it's controllable.
-    expect(
-      screen.getByRole('button', { name: 'Move token' }).disabled,
-    ).toBe(false);
+    expect(screen.getByRole('button', { name: 'Move token' }).disabled).toBe(
+      false,
+    );
   });
 
   it('disables move/destroy for a token belonging to the other player', () => {
@@ -162,7 +168,10 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByTestId('hex-0,0'));
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
 
-    window.localStorage.setItem('dropshipsimulator:myPlayer', JSON.stringify('p2'));
+    window.localStorage.setItem(
+      'dropshipsimulator:myPlayer',
+      JSON.stringify('p2'),
+    );
     cleanup();
     render(<BattlePage />);
     fireEvent.click(screen.getByTestId('hex-0,0'));
@@ -185,7 +194,9 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Model Destroyed' }));
 
     expect(screen.getByText('Destroyed Models (1)')).toBeDefined();
-    expect(screen.getByText('Destroyed', { selector: 'span.badge-destroyed' })).toBeDefined();
+    expect(
+      screen.getByText('Destroyed', { selector: 'span.badge-destroyed' }),
+    ).toBeDefined();
   });
 
   it('returns a destroyed model to reserve', () => {
@@ -218,21 +229,31 @@ describe('BattlePage', () => {
   it('toggles the deployment phase and tints the top/bottom 3 rows of tiles', () => {
     const { container } = render(<BattlePage />);
 
-    expect(container.querySelectorAll('polygon[fill^="rgba(37"]')).toHaveLength(0);
-    expect(container.querySelectorAll('polygon[fill^="rgba(220"]')).toHaveLength(0);
+    expect(container.querySelectorAll('polygon[fill^="rgba(37"]')).toHaveLength(
+      0,
+    );
+    expect(
+      container.querySelectorAll('polygon[fill^="rgba(220"]'),
+    ).toHaveLength(0);
 
     startDeploymentPhase();
     // default board is 14 cols x 10 rows: 3 tinted rows per zone x 14 cols
-    expect(
-      container.querySelectorAll('polygon[fill^="rgba(37"]'),
-    ).toHaveLength(42);
+    expect(container.querySelectorAll('polygon[fill^="rgba(37"]')).toHaveLength(
+      42,
+    );
     expect(
       container.querySelectorAll('polygon[fill^="rgba(220"]'),
     ).toHaveLength(42);
 
-    fireEvent.click(screen.getByRole('button', { name: 'End deployment phase' }));
-    expect(container.querySelectorAll('polygon[fill^="rgba(37"]')).toHaveLength(0);
-    expect(container.querySelectorAll('polygon[fill^="rgba(220"]')).toHaveLength(0);
+    fireEvent.click(
+      screen.getByRole('button', { name: 'End deployment phase' }),
+    );
+    expect(container.querySelectorAll('polygon[fill^="rgba(37"]')).toHaveLength(
+      0,
+    );
+    expect(
+      container.querySelectorAll('polygon[fill^="rgba(220"]'),
+    ).toHaveLength(0);
   });
 
   it('deploys a reserve unit onto the board via drag and drop', () => {
@@ -240,7 +261,11 @@ describe('BattlePage', () => {
     startDeploymentPhase();
     fireEvent.click(screen.getByRole('button', { name: 'Import roster' }));
     fireEvent.change(screen.getByLabelText('Roster export'), {
-      target: { value: ['Test List (Corp A)', 'Weight: 6t / 100t', '', 'A10 - 6t'].join('\n') },
+      target: {
+        value: ['Test List (Corp A)', 'Weight: 6t / 100t', '', 'A10 - 6t'].join(
+          '\n',
+        ),
+      },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
     fireEvent.click(

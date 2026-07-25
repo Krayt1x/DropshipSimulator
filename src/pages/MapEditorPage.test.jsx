@@ -36,9 +36,9 @@ describe('MapEditorPage', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Add tile type' }));
 
-    expect(
-      screen.getByRole('button', { name: 'Rubble' }).className,
-    ).toContain('selected');
+    expect(screen.getByRole('button', { name: 'Rubble' }).className).toContain(
+      'selected',
+    );
   });
 
   it('resizes the board and drops out-of-range tiles', () => {
@@ -54,8 +54,6 @@ describe('MapEditorPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Resize board' }));
 
     expect(screen.queryByTestId('hex-3,3')).toBeNull();
-    expect(screen.getByTestId('hex-0,0').style.fill).toBe(
-      'rgb(120, 113, 108)',
-    );
+    expect(screen.getByTestId('hex-0,0').style.fill).toBe('rgb(120, 113, 108)');
   });
 });

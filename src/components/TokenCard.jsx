@@ -31,7 +31,9 @@ function TokenCard({
       <div className="token-card-header">
         <p className="unit-name">
           {unit.name}
-          {token.destroyed && <span className="badge-destroyed">Destroyed</span>}
+          {token.destroyed && (
+            <span className="badge-destroyed">Destroyed</span>
+          )}
         </p>
         <button type="button" className="ghost" onClick={onDeselect}>
           Close
@@ -43,7 +45,11 @@ function TokenCard({
       <div className="token-card-section">
         <label>HP</label>
         <div className="token-stat-row">
-          <button type="button" className="ghost" onClick={() => onAdjustHp(-1)}>
+          <button
+            type="button"
+            className="ghost"
+            onClick={() => onAdjustHp(-1)}
+          >
             −
           </button>
           <span
@@ -84,8 +90,7 @@ function TokenCard({
         <div className="token-card-section">
           {!canControl && (
             <p className="unit-meta">
-              This unit belongs to another player — you can't move or deploy
-              it.
+              This unit belongs to another player — you can't move or deploy it.
             </p>
           )}
           <button
@@ -118,8 +123,8 @@ function TokenCard({
                   <b>{weapon.name}</b>
                   <span className="unit-meta">
                     {' '}
-                    · Range {weapon.range || '—'} · Heat {weapon.heat_rating || '—'} ·{' '}
-                    {weapon.hit_dice || '—'}
+                    · Range {weapon.range || '—'} · Heat{' '}
+                    {weapon.heat_rating || '—'} · {weapon.hit_dice || '—'}
                   </span>
                 </div>
                 <div className="token-stat-row">

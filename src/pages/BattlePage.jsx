@@ -176,8 +176,8 @@ function BattlePage() {
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Battle board</h1>
       <p className="unit-meta" style={{ marginBottom: 20 }}>
         Place units from the catalogue, move them around, and track HP and
-        weapon heat as you play. This tool manages state only — it's on you
-        and your opponent to know and apply the rules.
+        weapon heat as you play. This tool manages state only — it's on you and
+        your opponent to know and apply the rules.
       </p>
 
       <div className="deployment-controls">
@@ -190,7 +190,9 @@ function BattlePage() {
           {deploymentPhase ? 'End deployment phase' : 'Deployment Phase'}
         </button>
         {!deploymentZonesValid && (
-          <span className="unit-meta">Board needs at least 7 rows for deployment zones.</span>
+          <span className="unit-meta">
+            Board needs at least 7 rows for deployment zones.
+          </span>
         )}
       </div>
 

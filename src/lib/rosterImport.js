@@ -33,7 +33,9 @@ export function parseRosterExport(text, { units, manufacturers, equipment }) {
     );
   }
 
-  const manufacturerUnits = units.filter((u) => u.manufacturer === manufacturer);
+  const manufacturerUnits = units.filter(
+    (u) => u.manufacturer === manufacturer,
+  );
   const manufacturerEquipment = equipment.filter(
     (e) => e.manufacturer === manufacturer,
   );

@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { createToken, groupEquipmentByType, parseHeatRating } from './tokens.js';
+import {
+  createToken,
+  groupEquipmentByType,
+  parseHeatRating,
+} from './tokens.js';
 
 describe('tokens', () => {
   it('creates a token with full HP and zeroed weapon heat', () => {

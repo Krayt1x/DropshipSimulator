@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { backgroundContainerStyle, MAP_BACKGROUND_PRESETS } from './mapBackground.js';
+import {
+  backgroundContainerStyle,
+  MAP_BACKGROUND_PRESETS,
+} from './mapBackground.js';
 
 describe('mapBackground', () => {
   it('returns an empty style when no background is set', () => {

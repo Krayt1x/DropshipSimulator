@@ -109,7 +109,9 @@ function BattleBoard({
       {hexes.map(({ col, row, key }) => {
         const { x, y } = hexToPixel(col, row, size);
         const fill = colorFor(key);
-        const distance = rangeOrigin ? hexDistance(rangeOrigin, { col, row }) : null;
+        const distance = rangeOrigin
+          ? hexDistance(rangeOrigin, { col, row })
+          : null;
         const tileTint = deploymentZones
           ? row <= deploymentZones.topBoundaryRow
             ? 'rgba(37,99,235,0.35)'
@@ -123,7 +125,13 @@ function BattleBoard({
               data-testid={`hex-${key}`}
               points={hexPointsAttr(x, y, size)}
               className={`hex-tile ${fill ? '' : 'hex-tile-empty'}`}
-              style={fill ? { fill } : hasBackground ? { fill: 'transparent' } : undefined}
+              style={
+                fill
+                  ? { fill }
+                  : hasBackground
+                    ? { fill: 'transparent' }
+                    : undefined
+              }
               onClick={() => onHexClick(key)}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {

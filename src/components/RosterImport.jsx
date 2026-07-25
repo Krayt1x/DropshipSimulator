@@ -29,8 +29,8 @@ function RosterImport({ manufacturers, units, equipment, onImport, myPlayer }) {
     <div className="card token-form">
       <p className="unit-name">Import roster</p>
       <p className="unit-meta">
-        Paste the text from DropshipBuilder's "Share" button on the list
-        builder page.
+        Paste the text from DropshipBuilder's "Share" button on the list builder
+        page.
       </p>
 
       <div className="field">
@@ -47,7 +47,12 @@ function RosterImport({ manufacturers, units, equipment, onImport, myPlayer }) {
         />
       </div>
 
-      <button type="button" className="ghost" disabled={!text.trim()} onClick={parse}>
+      <button
+        type="button"
+        className="ghost"
+        disabled={!text.trim()}
+        onClick={parse}
+      >
         Preview import
       </button>
 
@@ -56,8 +61,9 @@ function RosterImport({ manufacturers, units, equipment, onImport, myPlayer }) {
           {result.entries.length > 0 && (
             <>
               <label>
-                {result.listName} ({result.manufacturer}) — {result.entries.length}{' '}
-                unit{result.entries.length === 1 ? '' : 's'}
+                {result.listName} ({result.manufacturer}) —{' '}
+                {result.entries.length} unit
+                {result.entries.length === 1 ? '' : 's'}
               </label>
               <ul className="roster-import-preview">
                 {result.entries.map((entry, i) => (
@@ -88,7 +94,9 @@ function RosterImport({ manufacturers, units, equipment, onImport, myPlayer }) {
           <div className="field">
             <label>Owner</label>
             {myPlayer && (
-              <p className="unit-meta">You can only import units for yourself.</p>
+              <p className="unit-meta">
+                You can only import units for yourself.
+              </p>
             )}
             <div className="token-owner-row">
               {ownerOptions.map((o) => (
@@ -99,7 +107,10 @@ function RosterImport({ manufacturers, units, equipment, onImport, myPlayer }) {
                   style={{ borderColor: o.color }}
                   onClick={() => setOwner(o.id)}
                 >
-                  <span className="tile-swatch" style={{ background: o.color }} />
+                  <span
+                    className="tile-swatch"
+                    style={{ background: o.color }}
+                  />
                   {o.label}
                 </button>
               ))}

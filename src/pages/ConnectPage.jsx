@@ -16,7 +16,12 @@ function CopyCode({ code }) {
 
   return (
     <div className="field">
-      <textarea readOnly rows={4} value={code} onClick={(e) => e.target.select()} />
+      <textarea
+        readOnly
+        rows={4}
+        value={code}
+        onClick={(e) => e.target.select()}
+      />
       <button type="button" className="ghost" onClick={copy}>
         {copied ? 'Copied!' : 'Copy code'}
       </button>
@@ -36,9 +41,9 @@ function ConnectPage() {
     <div className="container">
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Multiplayer</h1>
       <p className="unit-meta" style={{ marginBottom: 20 }}>
-        Connect two browsers directly (WebRTC) so the map and battle board
-        stay in sync live. No account or server needed — just a one-time
-        code exchange to link up.
+        Connect two browsers directly (WebRTC) so the map and battle board stay
+        in sync live. No account or server needed — just a one-time code
+        exchange to link up.
       </p>
 
       {error && (
@@ -51,7 +56,9 @@ function ConnectPage() {
 
       {phase === 'connected' && (
         <div className="card">
-          <p className="unit-name">✅ Connected as {role === 'host' ? 'host' : 'guest'}</p>
+          <p className="unit-name">
+            ✅ Connected as {role === 'host' ? 'host' : 'guest'}
+          </p>
           <p className="unit-meta" style={{ marginBottom: 12 }}>
             Changes to the map and battle board now sync automatically.
           </p>
@@ -126,7 +133,9 @@ function ConnectPage() {
         <div className="card">
           <p className="unit-name">Send this answer code back to your host</p>
           <CopyCode code={answerCode} />
-          <p className="unit-meta">Waiting for the host to finish connecting…</p>
+          <p className="unit-meta">
+            Waiting for the host to finish connecting…
+          </p>
         </div>
       )}
 

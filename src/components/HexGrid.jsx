@@ -35,7 +35,13 @@ function HexGrid({ cols, rows, tiles, tileTypes, hasBackground, onHexClick }) {
             data-testid={`hex-${key}`}
             points={hexPointsAttr(x, y, size)}
             className={`hex-tile ${fill ? '' : 'hex-tile-empty'}`}
-            style={fill ? { fill } : hasBackground ? { fill: 'transparent' } : undefined}
+            style={
+              fill
+                ? { fill }
+                : hasBackground
+                  ? { fill: 'transparent' }
+                  : undefined
+            }
             onClick={() => onHexClick(key)}
           >
             <title>{`${col}, ${row}`}</title>

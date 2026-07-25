@@ -1,12 +1,23 @@
 import { OWNERS, ownerColor } from '../lib/tokens.js';
 
-function DestroyedGroup({ owner, tokens, units, selectedTokenId, canControl, onSelect, onReturnToReserve }) {
+function DestroyedGroup({
+  owner,
+  tokens,
+  units,
+  selectedTokenId,
+  canControl,
+  onSelect,
+  onReturnToReserve,
+}) {
   if (tokens.length === 0) return null;
 
   return (
     <div className="reserve-group">
       <p className="reserve-group-label">
-        <span className="tile-swatch" style={{ background: ownerColor(owner.id) }} />
+        <span
+          className="tile-swatch"
+          style={{ background: ownerColor(owner.id) }}
+        />
         {owner.label} ({tokens.length})
       </p>
       <div className="tile-palette-list">
@@ -41,7 +52,14 @@ function DestroyedGroup({ owner, tokens, units, selectedTokenId, canControl, onS
   );
 }
 
-function DestroyedList({ tokens, units, selectedTokenId, canControl, onSelect, onReturnToReserve }) {
+function DestroyedList({
+  tokens,
+  units,
+  selectedTokenId,
+  canControl,
+  onSelect,
+  onReturnToReserve,
+}) {
   if (tokens.length === 0) return null;
 
   return (

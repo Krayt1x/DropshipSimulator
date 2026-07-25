@@ -18,7 +18,10 @@ function UnitCardHeader({ unit, token, equippedItems }) {
       <div className="stat-bar-track">
         <div
           className="stat-bar-fill"
-          style={{ width: `${fraction * 100}%`, background: healthBarColor(fraction) }}
+          style={{
+            width: `${fraction * 100}%`,
+            background: healthBarColor(fraction),
+          }}
         />
       </div>
       {equippedItems.length > 0 && (

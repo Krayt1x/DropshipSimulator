@@ -101,8 +101,8 @@ function BattlePage() {
     'dropshipsimulator:battle:bankedDice',
     DEFAULT_BANKED_DICE,
   );
-  const [usedDice, setUsedDice] = useLocalStorageState(
-    'dropshipsimulator:battle:usedDice',
+  const [actionPool, setActionPool] = useLocalStorageState(
+    'dropshipsimulator:battle:actionPool',
     [],
   );
 
@@ -131,7 +131,7 @@ function BattlePage() {
       appendLog(`${ownerLabel(current.active)} ended their turn`);
       return next;
     });
-    setUsedDice([]);
+    setActionPool([]);
     setLastAction(null);
   }
 
@@ -154,17 +154,16 @@ function BattlePage() {
     appendLog(formatRollLogMessage(rolled));
   }
 
-  function useDie(die) {
-    setUsedDice((current) => [...current, die]);
-    setLastAction({ type: 'usedDie', dieId: die.id });
-    appendLog(`Used a ${die.label.toLowerCase()} die: ${die.value}`);
+  function rollToActionPool(dice) {
+    setActionPool((current) => [...current, ...dice]);
+    setLastAction({ type: 'rollToPool', dieIds: dice.map((d) => d.id) });
   }
 
   function undoLastAction() {
     if (!lastAction) return;
-    if (lastAction.type === 'usedDie') {
-      setUsedDice((current) =>
-        current.filter((d) => d.id !== lastAction.dieId),
+    if (lastAction.type === 'rollToPool') {
+      setActionPool((current) =>
+        current.filter((d) => !lastAction.dieIds.includes(d.id)),
       );
     } else if (lastAction.type === 'move') {
       const { tokenId, position } = lastAction;
@@ -473,18 +472,18 @@ function BattlePage() {
               )}
             </>
           ) : null}
-          <RosterList
-            tokens={tokens}
-            units={units}
-            myPlayer={myPlayer}
-            selectedTokenId={selectedTokenId}
-            onSelect={setSelectedTokenId}
-          />
           <ReserveList
             tokens={reserveTokens}
             units={units}
             selectedTokenId={selectedTokenId}
             canControl={canControl}
+            onSelect={setSelectedTokenId}
+          />
+          <RosterList
+            tokens={tokens}
+            units={units}
+            myPlayer={myPlayer}
+            selectedTokenId={selectedTokenId}
             onSelect={setSelectedTokenId}
           />
           <DestroyedList
@@ -544,8 +543,8 @@ function BattlePage() {
           <TurnOrder />
           <DiceRoller
             onRoll={handleDiceRoll}
-            usedDice={usedDice}
-            onUseDie={useDie}
+            actionPool={actionPool}
+            onRollToActionPool={rollToActionPool}
           />
           <div className="card">
             <button
@@ -555,8 +554,8 @@ function BattlePage() {
               disabled={!lastAction}
               onClick={undoLastAction}
             >
-              {lastAction?.type === 'usedDie'
-                ? 'Undo used die'
+              {lastAction?.type === 'rollToPool'
+                ? 'Undo dice roll'
                 : 'Undo last move'}
             </button>
           </div>

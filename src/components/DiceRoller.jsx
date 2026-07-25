@@ -7,10 +7,9 @@ import {
   isWordDie,
 } from '../lib/dice.js';
 
-function DiceRoller({ onRoll, usedDice, onUseDie }) {
+function DiceRoller({ onRoll, actionPool, onRollToActionPool }) {
   const [pool, setPool] = useState({});
   const [results, setResults] = useState(null);
-  const [selectedId, setSelectedId] = useState(null);
 
   function adjust(id, delta) {
     setPool((current) => ({
@@ -33,22 +32,14 @@ function DiceRoller({ onRoll, usedDice, onUseDie }) {
     });
     if (rolled.length === 0) return;
     setResults(rolled);
-    setSelectedId(null);
     onRoll(rolled);
+    const colored = rolled.filter((r) => isWordDie(r.label));
+    if (colored.length > 0) onRollToActionPool(colored);
   }
 
   function clearPool() {
     setPool({});
     setResults(null);
-    setSelectedId(null);
-  }
-
-  function useSelectedDie() {
-    const die = results?.find((r) => r.id === selectedId);
-    if (!die) return;
-    setResults((current) => current.filter((r) => r.id !== selectedId));
-    setSelectedId(null);
-    onUseDie(die);
   }
 
   const poolTotal = Object.values(pool).reduce((sum, n) => sum + n, 0);
@@ -103,33 +94,11 @@ function DiceRoller({ onRoll, usedDice, onUseDie }) {
           return (
             <>
               <div className="dice-results">
-                {results.map((r) => {
-                  const usable = isWordDie(r.label);
-                  return (
-                    <button
-                      type="button"
-                      key={r.id}
-                      disabled={!usable}
-                      className={`dice-result-chip ${r.id === selectedId ? 'selected' : ''}`}
-                      onClick={() =>
-                        setSelectedId((current) =>
-                          current === r.id ? null : r.id,
-                        )
-                      }
-                    >
-                      {r.label}: {r.value}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="token-owner-row" style={{ marginTop: 8 }}>
-                <button
-                  type="button"
-                  disabled={!selectedId}
-                  onClick={useSelectedDie}
-                >
-                  Use Dice
-                </button>
+                {results.map((r) => (
+                  <span className="dice-result-chip" key={r.id}>
+                    {r.label}: {r.value}
+                  </span>
+                ))}
               </div>
               {(words.length > 0 || numbers.length > 0) && (
                 <div className="dice-summary">
@@ -148,13 +117,13 @@ function DiceRoller({ onRoll, usedDice, onUseDie }) {
             </>
           );
         })()}
-      {usedDice.length > 0 && (
-        <div className="dice-used-section">
+      {actionPool.length > 0 && (
+        <div className="dice-action-pool">
           <p className="unit-meta" style={{ marginBottom: 6 }}>
-            Dice used this turn
+            Action Pool
           </p>
           <div className="dice-results">
-            {usedDice.map((r) => (
+            {actionPool.map((r) => (
               <span className="dice-result-chip used" key={r.id}>
                 {r.label}: {r.value}
               </span>

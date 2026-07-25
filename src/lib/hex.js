@@ -70,3 +70,24 @@ export function hexDistance(a, b) {
     2
   );
 }
+
+// The y-coordinate of the boundary between `boundaryRow` and the row after
+// it, approximated using column 0 (columns zigzag vertically, so this is a
+// straight-line approximation of the true hex-edge boundary).
+export function rowBoundaryY(boundaryRow, size = hexSize()) {
+  const top = hexToPixel(0, boundaryRow, size);
+  const bottom = hexToPixel(0, boundaryRow + 1, size);
+  return (top.y + bottom.y) / 2;
+}
+
+// The true zigzag boundary between `boundaryRow` and the row after it,
+// following the actual hex edges of every column.
+export function rowBoundaryPolyline(cols, boundaryRow, size = hexSize()) {
+  const points = [];
+  for (let col = 0; col < cols; col++) {
+    const top = hexToPixel(col, boundaryRow, size);
+    const bottom = hexToPixel(col, boundaryRow + 1, size);
+    points.push([top.x, (top.y + bottom.y) / 2]);
+  }
+  return points;
+}

@@ -1,11 +1,18 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { OWNERS, groupEquipmentByType } from '../lib/tokens.js';
 
-function TokenForm({ manufacturers, units, equipment, onArm, armed }) {
+function TokenForm({ manufacturers, units, equipment, onArm, armed, myPlayer }) {
   const [manufacturer, setManufacturer] = useState(manufacturers[0] ?? '');
   const [unitId, setUnitId] = useState('');
   const [equippedIds, setEquippedIds] = useState([]);
-  const [owner, setOwner] = useState(OWNERS[0].id);
+  const [owner, setOwner] = useState(myPlayer ?? OWNERS[0].id);
+  const ownerOptions = myPlayer
+    ? OWNERS.filter((o) => o.id === myPlayer)
+    : OWNERS;
+
+  useEffect(() => {
+    if (myPlayer) setOwner(myPlayer);
+  }, [myPlayer]);
 
   const unitOptions = useMemo(
     () => units.filter((u) => u.manufacturer === manufacturer),
@@ -105,8 +112,11 @@ function TokenForm({ manufacturers, units, equipment, onArm, armed }) {
 
       <div className="field">
         <label>Owner</label>
+        {myPlayer && (
+          <p className="unit-meta">You can only deploy units for yourself.</p>
+        )}
         <div className="token-owner-row">
-          {OWNERS.map((o) => (
+          {ownerOptions.map((o) => (
             <button
               type="button"
               key={o.id}

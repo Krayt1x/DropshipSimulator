@@ -1,11 +1,18 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { parseRosterExport } from '../lib/rosterImport.js';
 import { OWNERS } from '../lib/tokens.js';
 
-function RosterImport({ manufacturers, units, equipment, onImport }) {
+function RosterImport({ manufacturers, units, equipment, onImport, myPlayer }) {
   const [text, setText] = useState('');
-  const [owner, setOwner] = useState(OWNERS[0].id);
+  const [owner, setOwner] = useState(myPlayer ?? OWNERS[0].id);
   const [result, setResult] = useState(null);
+  const ownerOptions = myPlayer
+    ? OWNERS.filter((o) => o.id === myPlayer)
+    : OWNERS;
+
+  useEffect(() => {
+    if (myPlayer) setOwner(myPlayer);
+  }, [myPlayer]);
 
   function parse() {
     setResult(parseRosterExport(text, { manufacturers, units, equipment }));
@@ -80,8 +87,11 @@ function RosterImport({ manufacturers, units, equipment, onImport }) {
         <>
           <div className="field">
             <label>Owner</label>
+            {myPlayer && (
+              <p className="unit-meta">You can only import units for yourself.</p>
+            )}
             <div className="token-owner-row">
-              {OWNERS.map((o) => (
+              {ownerOptions.map((o) => (
                 <button
                   type="button"
                   key={o.id}

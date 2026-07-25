@@ -4,6 +4,10 @@ import MapEditorPage from './pages/MapEditorPage.jsx';
 import BattlePage from './pages/BattlePage.jsx';
 import ConnectPage from './pages/ConnectPage.jsx';
 import { MultiplayerProvider, useMultiplayer } from './context/MultiplayerContext.jsx';
+import { useLocalStorageState } from './lib/storage.js';
+import { OWNERS } from './lib/tokens.js';
+
+const DROPSHIP_BUILDER_URL = 'https://Krayt1x.github.io/DropshipBuilder';
 
 function currentPage() {
   if (window.location.hash === '#battle') return 'battle';
@@ -27,6 +31,30 @@ function ConnectionBadge() {
     >
       ● {label}
     </a>
+  );
+}
+
+function PlayerIdentityPicker() {
+  const [myPlayer, setMyPlayer] = useLocalStorageState(
+    'dropshipsimulator:myPlayer',
+    null,
+  );
+  return (
+    <div className="player-identity-picker">
+      <span className="player-identity-label">You are:</span>
+      {OWNERS.map((o) => (
+        <button
+          type="button"
+          key={o.id}
+          className={`player-identity-btn ${myPlayer === o.id ? 'selected' : ''}`}
+          style={{ borderColor: o.color }}
+          onClick={() => setMyPlayer((current) => (current === o.id ? null : o.id))}
+        >
+          <span className="tile-swatch" style={{ background: o.color }} />
+          {o.label}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -54,6 +82,10 @@ function AppShell() {
         <a href="#connect" className={page === 'connect' ? 'active' : ''}>
           Multiplayer
         </a>
+        <a href={DROPSHIP_BUILDER_URL} target="_blank" rel="noreferrer">
+          Dropship Builder ↗
+        </a>
+        <PlayerIdentityPicker />
         <ConnectionBadge />
         <ThemeToggle />
       </nav>

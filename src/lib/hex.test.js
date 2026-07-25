@@ -5,6 +5,8 @@ import {
   hexToPixel,
   boardPixelSize,
   hexDistance,
+  rowBoundaryY,
+  rowBoundaryPolyline,
 } from './hex.js';
 
 describe('hex', () => {
@@ -55,5 +57,22 @@ describe('hex', () => {
     const a = { col: 1, row: 1 };
     const b = { col: 5, row: 4 };
     expect(hexDistance(a, b)).toBe(hexDistance(b, a));
+  });
+
+  it('places a row boundary between the two rows it separates', () => {
+    const rowTwoCenter = hexToPixel(0, 2, 10).y;
+    const rowThreeCenter = hexToPixel(0, 3, 10).y;
+    const boundary = rowBoundaryY(2, 10);
+    expect(boundary).toBeGreaterThan(rowTwoCenter);
+    expect(boundary).toBeLessThan(rowThreeCenter);
+  });
+
+  it('builds one boundary point per column for the zigzag polyline', () => {
+    const points = rowBoundaryPolyline(5, 2, 10);
+    expect(points).toHaveLength(5);
+    // x coordinates should be strictly increasing across columns
+    for (let i = 1; i < points.length; i++) {
+      expect(points[i][0]).toBeGreaterThan(points[i - 1][0]);
+    }
   });
 });

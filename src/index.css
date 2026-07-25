@@ -71,8 +71,36 @@ body {
   font-weight: 600;
 }
 
-.connection-badge {
+.player-identity-picker {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.player-identity-label {
+  color: var(--nav-text);
+  font-size: 13px;
+}
+
+.player-identity-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: var(--nav-text);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.player-identity-btn.selected {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.connection-badge {
   color: #fbbf24;
   text-decoration: none;
   font-size: 13px;
@@ -449,4 +477,39 @@ button.danger:hover {
   background: rgba(220, 38, 38, 0.08);
   border-radius: 6px;
   padding: 6px 10px;
+}
+
+.reserve-group {
+  margin-bottom: 10px;
+}
+
+.reserve-group:last-child {
+  margin-bottom: 0;
+}
+
+.reserve-group-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin: 0 0 4px;
+}
+
+.reserve-draggable {
+  cursor: grab;
+}
+
+.deployment-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.deployment-style-row {
+  display: flex;
+  gap: 4px;
 }

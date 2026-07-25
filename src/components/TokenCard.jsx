@@ -5,6 +5,7 @@ function TokenCard({
   unit,
   equipment,
   moving,
+  canControl = true,
   onAdjustHp,
   onRotate,
   onArmMove,
@@ -72,9 +73,16 @@ function TokenCard({
       </div>
 
       <div className="token-card-section">
+        {!canControl && (
+          <p className="unit-meta">
+            This unit belongs to another player — you can't move or deploy
+            it.
+          </p>
+        )}
         <button
           type="button"
           className={moving ? '' : 'ghost'}
+          disabled={!canControl}
           onClick={onArmMove}
         >
           {moving
@@ -152,7 +160,12 @@ function TokenCard({
         </div>
       )}
 
-      <button type="button" className="danger" onClick={onRemove}>
+      <button
+        type="button"
+        className="danger"
+        disabled={!canControl}
+        onClick={onRemove}
+      >
         Remove from board
       </button>
     </div>

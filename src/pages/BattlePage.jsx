@@ -12,6 +12,11 @@ import equipment from '../data/equipment.json';
 
 const DEFAULT_TILE_TYPES = [{ id: 'plain', name: 'Plain', color: '#78716c' }];
 const DEFAULT_DIMENSIONS = { cols: 14, rows: 10 };
+const DEPLOYMENT_STYLES = [
+  { id: 'line', label: 'Line' },
+  { id: 'zigzag', label: 'Zigzag' },
+  { id: 'shaded', label: 'Shaded zones' },
+];
 
 function BattlePage() {
   const [tileTypes] = useLocalStorageState(
@@ -27,6 +32,15 @@ function BattlePage() {
     'dropshipsimulator:battle:tokens',
     [],
   );
+  const [deploymentPhase, setDeploymentPhase] = useLocalStorageState(
+    'dropshipsimulator:battle:deploymentPhase',
+    false,
+  );
+  const [deploymentStyle, setDeploymentStyle] = useLocalStorageState(
+    'dropshipsimulator:battle:deploymentStyle',
+    'zigzag',
+  );
+  const [myPlayer] = useLocalStorageState('dropshipsimulator:myPlayer', null);
   const [selectedTokenId, setSelectedTokenId] = useState(null);
   const [draft, setDraft] = useState(null);
   const [movingTokenId, setMovingTokenId] = useState(null);
@@ -38,9 +52,29 @@ function BattlePage() {
     : null;
   const reserveTokens = tokens.filter((t) => !t.position);
 
+  function canControl(token) {
+    return !myPlayer || token.owner === myPlayer;
+  }
+
+  const topBoundaryRow = 2;
+  const bottomBoundaryRow = dimensions.rows - 4;
+  const deploymentZonesValid = bottomBoundaryRow > topBoundaryRow;
+  const deploymentZones =
+    deploymentPhase && deploymentZonesValid
+      ? { topBoundaryRow, bottomBoundaryRow, style: deploymentStyle }
+      : null;
+
   function tokenAt(key) {
     return tokens.find(
       (t) => t.position && `${t.position.col},${t.position.row}` === key,
+    );
+  }
+
+  function placeTokenAt(tokenId, col, row) {
+    setTokens((current) =>
+      current.map((t) =>
+        t.id === tokenId ? { ...t, position: { col, row } } : t,
+      ),
     );
   }
 
@@ -48,7 +82,7 @@ function BattlePage() {
     const [col, row] = key.split(',').map(Number);
 
     if (draft) {
-      if (tokenAt(key)) return;
+      if (tokenAt(key) || !canControl({ owner: draft.owner })) return;
       const token = createToken({ ...draft, position: { col, row } });
       setTokens((current) => [...current, token]);
       setDraft(null);
@@ -57,17 +91,24 @@ function BattlePage() {
     }
 
     if (movingTokenId) {
-      setTokens((current) =>
-        current.map((t) =>
-          t.id === movingTokenId ? { ...t, position: { col, row } } : t,
-        ),
-      );
+      const movingToken = tokens.find((t) => t.id === movingTokenId);
+      if (movingToken && canControl(movingToken)) {
+        placeTokenAt(movingTokenId, col, row);
+      }
       setMovingTokenId(null);
       return;
     }
 
     const existing = tokenAt(key);
     setSelectedTokenId(existing ? existing.id : null);
+  }
+
+  function handleDropToken(tokenId, col, row) {
+    if (tokenAt(`${col},${row}`)) return;
+    const token = tokens.find((t) => t.id === tokenId);
+    if (!token || !canControl(token)) return;
+    placeTokenAt(tokenId, col, row);
+    setSelectedTokenId(tokenId);
   }
 
   function updateSelected(patch) {
@@ -130,6 +171,34 @@ function BattlePage() {
         and your opponent to know and apply the rules.
       </p>
 
+      <div className="deployment-controls">
+        <button
+          type="button"
+          className={deploymentPhase ? '' : 'ghost'}
+          disabled={!deploymentZonesValid}
+          onClick={() => setDeploymentPhase((current) => !current)}
+        >
+          {deploymentPhase ? 'End deployment phase' : 'Deployment Phase'}
+        </button>
+        {deploymentPhase && (
+          <div className="deployment-style-row">
+            {DEPLOYMENT_STYLES.map((s) => (
+              <button
+                type="button"
+                key={s.id}
+                className={`workspace-tab ${deploymentStyle === s.id ? 'active' : ''}`}
+                onClick={() => setDeploymentStyle(s.id)}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        )}
+        {!deploymentZonesValid && (
+          <span className="unit-meta">Board needs at least 7 rows for deployment zones.</span>
+        )}
+      </div>
+
       <div className="map-editor-layout">
         <div className="map-editor-board">
           <BattleBoard
@@ -141,7 +210,9 @@ function BattlePage() {
             units={units}
             selectedTokenId={selectedTokenId}
             rangeOrigin={selectedToken?.position ?? null}
+            deploymentZones={deploymentZones}
             onHexClick={handleHexClick}
+            onDropToken={handleDropToken}
           />
         </div>
         <div>
@@ -149,6 +220,7 @@ function BattlePage() {
             tokens={reserveTokens}
             units={units}
             selectedTokenId={selectedTokenId}
+            canControl={canControl}
             onSelect={setSelectedTokenId}
           />
           {selectedToken ? (
@@ -157,6 +229,7 @@ function BattlePage() {
               unit={selectedUnit}
               equipment={equipment}
               moving={movingTokenId === selectedToken.id}
+              canControl={canControl(selectedToken)}
               onAdjustHp={adjustHp}
               onRotate={rotate}
               onArmMove={() =>
@@ -195,6 +268,7 @@ function BattlePage() {
                   manufacturers={manufacturers}
                   units={units}
                   equipment={equipment}
+                  myPlayer={myPlayer}
                   onImport={importRoster}
                 />
               ) : (
@@ -202,6 +276,7 @@ function BattlePage() {
                   manufacturers={manufacturers}
                   units={units}
                   equipment={equipment}
+                  myPlayer={myPlayer}
                   armed={Boolean(draft)}
                   onArm={(next) =>
                     setDraft((current) => (current ? null : next))

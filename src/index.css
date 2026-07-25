@@ -284,6 +284,23 @@ button.danger:hover {
   align-items: start;
 }
 
+.battle-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 280px;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .battle-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .battle-layout > .battle-board-column {
+    order: -1;
+  }
+}
+
 @media (max-width: 900px) {
   .map-editor-layout {
     grid-template-columns: minmax(0, 1fr);
@@ -762,6 +779,22 @@ button.danger:hover {
 .home-tile-description {
   font-size: 13px;
   color: var(--text-secondary);
+}
+
+.resume-game-row {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.resume-game-row .resume-game-banner {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.resume-game-row > .danger {
+  flex-shrink: 0;
 }
 
 .resume-game-banner {

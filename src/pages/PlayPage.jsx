@@ -1,4 +1,5 @@
 import { useLocalStorageState } from '../lib/storage.js';
+import { resetActiveGame } from '../lib/gameState.js';
 
 const TILES = [
   {
@@ -19,6 +20,17 @@ function PlayPage() {
   const [tokens] = useLocalStorageState('dropshipsimulator:battle:tokens', []);
   const hasActiveGame = tokens.length > 0;
 
+  function handleEndGame() {
+    if (
+      !window.confirm(
+        'End this game? This will delete all deployed units and reset the board.',
+      )
+    ) {
+      return;
+    }
+    resetActiveGame();
+  }
+
   return (
     <div className="container home-container">
       <h1 style={{ textAlign: 'center' }}>Play</h1>
@@ -29,15 +41,20 @@ function PlayPage() {
         Choose how you want to play.
       </p>
       {hasActiveGame && (
-        <a href="#battle" className="resume-game-banner">
-          <span className="resume-game-icon">▶</span>
-          <span>
-            <span className="resume-game-title">Resume Game</span>
-            <span className="resume-game-description">
-              Continue the match already in progress
+        <div className="resume-game-row">
+          <a href="#battle" className="resume-game-banner">
+            <span className="resume-game-icon">▶</span>
+            <span>
+              <span className="resume-game-title">Resume Game</span>
+              <span className="resume-game-description">
+                Continue the match already in progress
+              </span>
             </span>
-          </span>
-        </a>
+          </a>
+          <button type="button" className="danger" onClick={handleEndGame}>
+            End Game
+          </button>
+        </div>
       )}
       <div className="home-tile-grid">
         {TILES.map((tile) => (

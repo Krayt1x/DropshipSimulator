@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocalStorageState, makeKey } from '../lib/storage.js';
 import { backgroundContainerStyle } from '../lib/mapBackground.js';
 import { createToken, OWNERS } from '../lib/tokens.js';
+import { resetActiveGame, DEFAULT_TURN } from '../lib/gameState.js';
 import BattleBoard from '../components/BattleBoard.jsx';
 import TokenForm from '../components/TokenForm.jsx';
 import TokenCard from '../components/TokenCard.jsx';
@@ -30,7 +31,6 @@ const BOARD_PADDING = 34;
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2;
 const ZOOM_STEP = 0.25;
-const DEFAULT_TURN = { number: 1, active: 'p1' };
 
 function BattlePage() {
   const [tileTypes] = useLocalStorageState(
@@ -105,10 +105,7 @@ function BattlePage() {
     ) {
       return;
     }
-    setTokens([]);
-    setDeploymentPhase(false);
-    setTurn(DEFAULT_TURN);
-    setLogEntries([]);
+    resetActiveGame();
     setSelectedTokenId(null);
     setDraft(null);
     setMovingTokenId(null);
@@ -328,77 +325,10 @@ function BattlePage() {
             Board needs at least 7 rows for deployment zones.
           </span>
         )}
-        <button
-          type="button"
-          className="ghost"
-          disabled={!lastMove}
-          onClick={undoLastMove}
-        >
-          Undo last move
-        </button>
-        <button
-          type="button"
-          className="danger"
-          disabled={tokens.length === 0}
-          onClick={endGame}
-        >
-          End Game
-        </button>
       </div>
 
-      <div className="map-editor-layout">
-        <div className="battle-board-column">
-          <div className="zoom-controls">
-            <button
-              type="button"
-              className="ghost"
-              aria-label="Zoom out"
-              disabled={zoom <= ZOOM_MIN}
-              onClick={() => adjustZoom(-ZOOM_STEP)}
-            >
-              −
-            </button>
-            <span className="zoom-level">{Math.round(zoom * 100)}%</span>
-            <button
-              type="button"
-              className="ghost"
-              aria-label="Zoom in"
-              disabled={zoom >= ZOOM_MAX}
-              onClick={() => adjustZoom(ZOOM_STEP)}
-            >
-              +
-            </button>
-          </div>
-          <div
-            className="battle-board-viewport"
-            style={backgroundContainerStyle(background)}
-          >
-            <BattleBoard
-              cols={dimensions.cols}
-              rows={dimensions.rows}
-              tiles={tiles}
-              tileTypes={tileTypes}
-              tokens={tokens}
-              units={units}
-              selectedTokenId={selectedTokenId}
-              rangeOrigin={selectedToken?.position ?? null}
-              deploymentZones={deploymentZones}
-              hasBackground={Boolean(background)}
-              size={boardSize}
-              canControl={canControl}
-              onHexClick={handleHexClick}
-              onDropToken={handleDropToken}
-            />
-          </div>
-        </div>
+      <div className="battle-layout">
         <div>
-          <ReserveList
-            tokens={reserveTokens}
-            units={units}
-            selectedTokenId={selectedTokenId}
-            canControl={canControl}
-            onSelect={setSelectedTokenId}
-          />
           {selectedToken ? (
             <div
               className="token-card-mobile-overlay"
@@ -476,6 +406,13 @@ function BattlePage() {
               </p>
             </div>
           )}
+          <ReserveList
+            tokens={reserveTokens}
+            units={units}
+            selectedTokenId={selectedTokenId}
+            canControl={canControl}
+            onSelect={setSelectedTokenId}
+          />
           <DestroyedList
             tokens={destroyedTokens}
             units={units}
@@ -484,8 +421,76 @@ function BattlePage() {
             onSelect={setSelectedTokenId}
             onReturnToReserve={returnDestroyedToReserve}
           />
+        </div>
+        <div className="battle-board-column">
+          <div className="zoom-controls">
+            <button
+              type="button"
+              className="ghost"
+              aria-label="Zoom out"
+              disabled={zoom <= ZOOM_MIN}
+              onClick={() => adjustZoom(-ZOOM_STEP)}
+            >
+              −
+            </button>
+            <span className="zoom-level">{Math.round(zoom * 100)}%</span>
+            <button
+              type="button"
+              className="ghost"
+              aria-label="Zoom in"
+              disabled={zoom >= ZOOM_MAX}
+              onClick={() => adjustZoom(ZOOM_STEP)}
+            >
+              +
+            </button>
+          </div>
+          <div
+            className="battle-board-viewport"
+            style={backgroundContainerStyle(background)}
+          >
+            <BattleBoard
+              cols={dimensions.cols}
+              rows={dimensions.rows}
+              tiles={tiles}
+              tileTypes={tileTypes}
+              tokens={tokens}
+              units={units}
+              selectedTokenId={selectedTokenId}
+              rangeOrigin={selectedToken?.position ?? null}
+              deploymentZones={deploymentZones}
+              hasBackground={Boolean(background)}
+              size={boardSize}
+              canControl={canControl}
+              onHexClick={handleHexClick}
+              onDropToken={handleDropToken}
+            />
+          </div>
+        </div>
+        <div>
           <DiceRoller onRoll={handleDiceRoll} />
+          <div className="card">
+            <button
+              type="button"
+              className="ghost"
+              style={{ width: '100%' }}
+              disabled={!lastMove}
+              onClick={undoLastMove}
+            >
+              Undo last move
+            </button>
+          </div>
           <GameLog entries={logEntries} />
+          <div className="card">
+            <button
+              type="button"
+              className="danger"
+              style={{ width: '100%' }}
+              disabled={tokens.length === 0}
+              onClick={endGame}
+            >
+              End Game
+            </button>
+          </div>
         </div>
       </div>
     </div>

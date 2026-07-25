@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMultiplayer } from '../context/MultiplayerContext.jsx';
+import BattlePage from './BattlePage.jsx';
 
 function CopyCode({ code }) {
   const [copied, setCopied] = useState(false);
@@ -38,113 +39,116 @@ function ConnectPage() {
   const { role, phase, offerCode, answerCode, error } = mp;
 
   return (
-    <div className="container">
-      <h1 style={{ fontSize: 20, marginBottom: 4 }}>Multiplayer</h1>
-      <p className="unit-meta" style={{ marginBottom: 20 }}>
-        Connect two browsers directly (WebRTC) so the map and battle board stay
-        in sync live. No account or server needed — just a one-time code
-        exchange to link up.
-      </p>
+    <>
+      <div className="container">
+        <h1 style={{ fontSize: 20, marginBottom: 4 }}>Multiplayer</h1>
+        <p className="unit-meta" style={{ marginBottom: 20 }}>
+          Connect two browsers directly (WebRTC) so the map and battle board
+          stay in sync live. No account or server needed — just a one-time code
+          exchange to link up.
+        </p>
 
-      {error && (
-        <div className="card" style={{ borderColor: '#dc2626' }}>
-          <p className="unit-meta" style={{ color: '#dc2626' }}>
-            {error}
-          </p>
-        </div>
-      )}
-
-      {phase === 'connected' && (
-        <div className="card">
-          <p className="unit-name">
-            ✅ Connected as {role === 'host' ? 'host' : 'guest'}
-          </p>
-          <p className="unit-meta" style={{ marginBottom: 12 }}>
-            Changes to the map and battle board now sync automatically.
-          </p>
-          <button type="button" className="danger" onClick={mp.disconnect}>
-            Disconnect
-          </button>
-        </div>
-      )}
-
-      {phase === 'idle' && (
-        <div className="map-editor-layout">
-          <div className="card">
-            <p className="unit-name">Host a game</p>
-            <p className="unit-meta" style={{ marginBottom: 12 }}>
-              Creates a connection code to send to your opponent.
+        {error && (
+          <div className="card" style={{ borderColor: '#dc2626' }}>
+            <p className="unit-meta" style={{ color: '#dc2626' }}>
+              {error}
             </p>
-            <button type="button" onClick={mp.startHost}>
-              Host a game
+          </div>
+        )}
+
+        {phase === 'connected' && (
+          <div className="card">
+            <p className="unit-name">
+              ✅ Connected as {role === 'host' ? 'host' : 'guest'}
+            </p>
+            <p className="unit-meta" style={{ marginBottom: 12 }}>
+              Changes to the map and battle board now sync automatically.
+            </p>
+            <button type="button" className="danger" onClick={mp.disconnect}>
+              Disconnect
             </button>
           </div>
+        )}
 
+        {phase === 'idle' && (
+          <div className="map-editor-layout">
+            <div className="card">
+              <p className="unit-name">Host a game</p>
+              <p className="unit-meta" style={{ marginBottom: 12 }}>
+                Creates a connection code to send to your opponent.
+              </p>
+              <button type="button" onClick={mp.startHost}>
+                Host a game
+              </button>
+            </div>
+
+            <div className="card">
+              <p className="unit-name">Join a game</p>
+              <p className="unit-meta" style={{ marginBottom: 12 }}>
+                Paste the code your host sent you.
+              </p>
+              <div className="field">
+                <textarea
+                  rows={4}
+                  placeholder="Paste host's code here"
+                  value={pastedOffer}
+                  onChange={(e) => setPastedOffer(e.target.value)}
+                />
+              </div>
+              <button
+                type="button"
+                disabled={!pastedOffer.trim()}
+                onClick={() => mp.joinWithOffer(pastedOffer.trim())}
+              >
+                Join a game
+              </button>
+            </div>
+          </div>
+        )}
+
+        {phase === 'offer-ready' && role === 'host' && (
           <div className="card">
-            <p className="unit-name">Join a game</p>
-            <p className="unit-meta" style={{ marginBottom: 12 }}>
-              Paste the code your host sent you.
+            <p className="unit-name">Step 1: send this code to your opponent</p>
+            <CopyCode code={offerCode} />
+            <p className="unit-name" style={{ marginTop: 16 }}>
+              Step 2: paste the answer code they send back
             </p>
             <div className="field">
               <textarea
                 rows={4}
-                placeholder="Paste host's code here"
-                value={pastedOffer}
-                onChange={(e) => setPastedOffer(e.target.value)}
+                placeholder="Paste their answer code here"
+                value={pastedAnswer}
+                onChange={(e) => setPastedAnswer(e.target.value)}
               />
             </div>
             <button
               type="button"
-              disabled={!pastedOffer.trim()}
-              onClick={() => mp.joinWithOffer(pastedOffer.trim())}
+              disabled={!pastedAnswer.trim()}
+              onClick={() => mp.submitAnswer(pastedAnswer.trim())}
             >
-              Join a game
+              Connect
             </button>
           </div>
-        </div>
-      )}
+        )}
 
-      {phase === 'offer-ready' && role === 'host' && (
-        <div className="card">
-          <p className="unit-name">Step 1: send this code to your opponent</p>
-          <CopyCode code={offerCode} />
-          <p className="unit-name" style={{ marginTop: 16 }}>
-            Step 2: paste the answer code they send back
-          </p>
-          <div className="field">
-            <textarea
-              rows={4}
-              placeholder="Paste their answer code here"
-              value={pastedAnswer}
-              onChange={(e) => setPastedAnswer(e.target.value)}
-            />
+        {phase === 'connecting' && role === 'guest' && answerCode && (
+          <div className="card">
+            <p className="unit-name">Send this answer code back to your host</p>
+            <CopyCode code={answerCode} />
+            <p className="unit-meta">
+              Waiting for the host to finish connecting…
+            </p>
           </div>
-          <button
-            type="button"
-            disabled={!pastedAnswer.trim()}
-            onClick={() => mp.submitAnswer(pastedAnswer.trim())}
-          >
-            Connect
-          </button>
-        </div>
-      )}
+        )}
 
-      {phase === 'connecting' && role === 'guest' && answerCode && (
-        <div className="card">
-          <p className="unit-name">Send this answer code back to your host</p>
-          <CopyCode code={answerCode} />
-          <p className="unit-meta">
-            Waiting for the host to finish connecting…
-          </p>
-        </div>
-      )}
-
-      {phase === 'connecting' && !(role === 'guest' && answerCode) && (
-        <div className="card">
-          <p className="unit-meta">Connecting…</p>
-        </div>
-      )}
-    </div>
+        {phase === 'connecting' && !(role === 'guest' && answerCode) && (
+          <div className="card">
+            <p className="unit-meta">Connecting…</p>
+          </div>
+        )}
+      </div>
+      {phase === 'connected' && <BattlePage />}
+    </>
   );
 }
 

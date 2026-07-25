@@ -1,27 +1,27 @@
 const TILES = [
   {
-    href: '#map',
-    icon: '🗺️',
-    title: 'Map editor',
-    description: 'Build a hex battlefield with your own tile types.',
+    href: '#battle',
+    icon: '🧍',
+    title: 'Single Player',
+    description: 'Play locally on one device — no connection needed.',
   },
   {
-    href: '#play',
-    icon: '⚔️',
-    title: 'Play',
-    description: 'Deploy units, track HP and heat, solo or with a friend.',
+    href: '#connect',
+    icon: '🔗',
+    title: 'Multiplayer',
+    description: 'Connect two browsers so a match stays in sync live.',
   },
 ];
 
-function HomePage() {
+function PlayPage() {
   return (
     <div className="container home-container">
-      <h1 style={{ textAlign: 'center' }}>Dropship Simulator</h1>
+      <h1 style={{ textAlign: 'center' }}>Play</h1>
       <p
         className="unit-meta"
         style={{ textAlign: 'center', marginBottom: 24 }}
       >
-        A game-state manager for the Dropship tabletop wargame.
+        Choose how you want to play.
       </p>
       <div className="home-tile-grid">
         {TILES.map((tile) => (
@@ -36,4 +36,4 @@ function HomePage() {
   );
 }
 
-export default HomePage;
+export default PlayPage;

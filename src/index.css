@@ -142,7 +142,8 @@ body {
 }
 
 .player-identity-btn.selected {
-  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-weight: 700;
 }
 
 .connection-badge {
@@ -724,7 +725,7 @@ button.danger:hover {
 
 .home-tile-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
 }
 

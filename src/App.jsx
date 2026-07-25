@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import ThemeToggle from './components/ThemeToggle.jsx';
 import HomePage from './pages/HomePage.jsx';
+import PlayPage from './pages/PlayPage.jsx';
 import MapEditorPage from './pages/MapEditorPage.jsx';
 import BattlePage from './pages/BattlePage.jsx';
 import ConnectPage from './pages/ConnectPage.jsx';
@@ -15,6 +16,7 @@ const DROPSHIP_BUILDER_URL = 'https://Krayt1x.github.io/DropshipBuilder';
 
 function currentPage() {
   if (window.location.hash === '#map') return 'map';
+  if (window.location.hash === '#play') return 'play';
   if (window.location.hash === '#battle') return 'battle';
   if (window.location.hash === '#connect') return 'connect';
   return 'home';
@@ -47,20 +49,26 @@ function PlayerIdentityPicker() {
   return (
     <div className="player-identity-picker">
       <span className="player-identity-label">You are:</span>
-      {OWNERS.map((o) => (
-        <button
-          type="button"
-          key={o.id}
-          className={`player-identity-btn ${myPlayer === o.id ? 'selected' : ''}`}
-          style={{ borderColor: o.color }}
-          onClick={() =>
-            setMyPlayer((current) => (current === o.id ? null : o.id))
-          }
-        >
-          <span className="tile-swatch" style={{ background: o.color }} />
-          {o.label}
-        </button>
-      ))}
+      {OWNERS.map((o) => {
+        const selected = myPlayer === o.id;
+        return (
+          <button
+            type="button"
+            key={o.id}
+            className={`player-identity-btn ${selected ? 'selected' : ''}`}
+            style={{
+              borderColor: o.color,
+              background: selected ? o.color : undefined,
+            }}
+            onClick={() =>
+              setMyPlayer((current) => (current === o.id ? null : o.id))
+            }
+          >
+            <span className="tile-swatch" style={{ background: o.color }} />
+            {o.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -97,16 +105,20 @@ function AppShell() {
           <a href="#map" className={page === 'map' ? 'active' : ''}>
             Map editor
           </a>
-          <a href="#battle" className={page === 'battle' ? 'active' : ''}>
-            Battle board
-          </a>
-          <a href="#connect" className={page === 'connect' ? 'active' : ''}>
-            Multiplayer
+          <a
+            href="#play"
+            className={
+              ['play', 'battle', 'connect'].includes(page) ? 'active' : ''
+            }
+          >
+            Play
           </a>
           <a href={DROPSHIP_BUILDER_URL} target="_blank" rel="noreferrer">
             Dropship Builder ↗
           </a>
-          <PlayerIdentityPicker />
+          {(page === 'battle' || page === 'connect') && (
+            <PlayerIdentityPicker />
+          )}
           <ConnectionBadge />
           <ThemeToggle />
         </div>
@@ -117,6 +129,8 @@ function AppShell() {
         <ConnectPage />
       ) : page === 'map' ? (
         <MapEditorPage />
+      ) : page === 'play' ? (
+        <PlayPage />
       ) : (
         <HomePage />
       )}

@@ -40,6 +40,7 @@ import ReserveRosterPanel from '../components/ReserveRosterPanel.jsx';
 import DestroyedList from '../components/DestroyedList.jsx';
 import TurnTracker from '../components/TurnTracker.jsx';
 import TurnOrder from '../components/TurnOrder.jsx';
+import TurnNotificationToast from '../components/TurnNotificationToast.jsx';
 import DiceRoller from '../components/DiceRoller.jsx';
 import GameLog from '../components/GameLog.jsx';
 import manufacturers from '../data/manufacturers.json';
@@ -116,6 +117,10 @@ function BattlePage() {
     null,
   );
   const deployEffectTimeoutRef = useRef(null);
+  const [turnNotice, setTurnNotice] = useSyncedTransientState(
+    'dropshipsimulator:battle:turnNotice',
+    null,
+  );
   const [hoverInfo, setHoverInfo] = useState(null);
 
   function handleHoverToken(tokenId, x, y) {
@@ -187,14 +192,16 @@ function BattlePage() {
 
   function endTurn() {
     const endingPlayer = turn.active;
-    setTurn((current) => {
-      const next =
-        current.active === 'p1'
-          ? { number: current.number, active: 'p2' }
-          : { number: current.number + 1, active: 'p1' };
-      appendLog(`${ownerLabel(current.active)} ended their turn`);
-      return next;
-    });
+    const next =
+      turn.active === 'p1'
+        ? { number: turn.number, active: 'p2' }
+        : { number: turn.number + 1, active: 'p1' };
+    setTurn(next);
+    appendLog(`${ownerLabel(endingPlayer)} ended their turn`);
+    // A ding + toast tells whoever's screen it now is that it's their turn
+    // (#131); `id` (not just `active`) so the toast re-triggers even though
+    // there are only two possible values to alternate between.
+    setTurnNotice({ id: makeKey('turn'), active: next.active });
     // Weapons (and Movement gear) cool by 1 heat for the player whose turn
     // just ended (#121).
     setTokens((current) =>
@@ -1006,6 +1013,7 @@ function BattlePage() {
 
   return (
     <div className="container-wide">
+      <TurnNotificationToast notice={turnNotice} myPlayer={myPlayer} />
       <div className="battle-header-row">
         <div>
           <h1 style={{ fontSize: 20, marginBottom: 4 }}>Battle board</h1>

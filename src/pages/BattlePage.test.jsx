@@ -198,6 +198,21 @@ describe('BattlePage', () => {
     expect(screen.getByText('▲ Player 1')).toBeDefined();
   });
 
+  it('shows a toast naming whose turn it now is, then auto-dismisses it (#131)', () => {
+    vi.useFakeTimers();
+    render(<BattlePage />);
+
+    expect(screen.queryByText(/turn/i, { selector: '.turn-toast' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+    expect(screen.getByText('Your turn — Player 2')).toBeDefined();
+
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(screen.queryByText('Your turn — Player 2')).toBeNull();
+  });
+
   it('imports a roster export into reserve and places a unit from it', () => {
     render(<BattlePage />);
     startDeploymentPhase();

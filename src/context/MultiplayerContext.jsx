@@ -29,6 +29,7 @@ const SYNCED_KEYS = [
   'dropshipsimulator:battle:deployEffect',
   'dropshipsimulator:battle:animatingToken',
   'dropshipsimulator:battle:diceResults',
+  'dropshipsimulator:battle:turnNotice',
 ];
 
 const MultiplayerContext = createContext(null);

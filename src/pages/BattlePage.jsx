@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocalStorageState, makeKey } from '../lib/storage.js';
 import { backgroundContainerStyle } from '../lib/mapBackground.js';
 import { formatRollLogMessage, parseHitDice } from '../lib/dice.js';
-import { hexLine } from '../lib/hex.js';
+import { hexLine, hexDistance, isInWeaponArc } from '../lib/hex.js';
 import {
   createToken,
   OWNERS,
@@ -10,7 +10,14 @@ import {
   sumDiceTotals,
   parseWeaponRange,
   parseHeatRating,
+  sizeNumber,
 } from '../lib/tokens.js';
+import {
+  parseArmor,
+  rollAttackDice,
+  countHits,
+  calculateDamage,
+} from '../lib/combat.js';
 import {
   resetActiveGame,
   DEFAULT_TURN,
@@ -20,6 +27,7 @@ import BattleBoard from '../components/BattleBoard.jsx';
 import TokenForm from '../components/TokenForm.jsx';
 import TokenCard from '../components/TokenCard.jsx';
 import UnitCardHeader from '../components/UnitCardHeader.jsx';
+import AttackModal from '../components/AttackModal.jsx';
 import RosterImport from '../components/RosterImport.jsx';
 import RosterList from '../components/RosterList.jsx';
 import ReserveList from '../components/ReserveList.jsx';
@@ -81,6 +89,12 @@ function BattlePage() {
   const [movingTokenId, setMovingTokenId] = useState(null);
   const [sidebarTab, setSidebarTab] = useState('add');
   const [rangeWeapon, setRangeWeapon] = useState(null);
+  // Attack workflow (#103): attackWeapon marks which weapon is armed for
+  // attacking (also drives the arc display via rangeWeapon); attackTarget +
+  // attackResult track the in-progress modal once a valid target is picked.
+  const [attackWeapon, setAttackWeapon] = useState(null);
+  const [attackTarget, setAttackTarget] = useState(null);
+  const [attackResult, setAttackResult] = useState(null);
   const [lastAction, setLastAction] = useState(null);
   const [zoom, setZoom] = useState(1);
   const diceRollerRef = useRef(null);
@@ -291,6 +305,152 @@ function BattlePage() {
       }
     : null;
 
+  function startAttack(instanceIndex, item) {
+    const isSame =
+      attackWeapon?.tokenId === selectedToken?.id &&
+      attackWeapon?.instanceIndex === instanceIndex;
+    if (isSame) {
+      setAttackWeapon(null);
+      setRangeWeapon(null);
+    } else {
+      setAttackWeapon({ tokenId: selectedToken.id, instanceIndex, item });
+      setRangeWeapon({
+        tokenId: selectedToken.id,
+        instanceIndex,
+        range: item.range,
+      });
+    }
+    setAttackTarget(null);
+    setAttackResult(null);
+  }
+
+  function cancelAttack() {
+    setAttackWeapon(null);
+    setRangeWeapon(null);
+    setAttackTarget(null);
+    setAttackResult(null);
+  }
+
+  function pickAttackSide(side) {
+    setAttackTarget((current) => (current ? { ...current, side } : current));
+  }
+
+  const attackTargetToken = attackTarget
+    ? tokens.find((t) => t.id === attackTarget.tokenId)
+    : null;
+  const attackTargetUnit = attackTargetToken
+    ? units.find((u) => Number(u.id) === Number(attackTargetToken.unitId))
+    : null;
+  const attackTargetNumber = attackTargetUnit
+    ? sizeNumber(attackTargetUnit.size)
+    : null;
+
+  // The attack roll is self-contained (its own dice, its own comparison to
+  // the target's size) rather than going through the shared dice pool, since
+  // that pool can hold unrelated Move/Action dice that a hit-vs-target-number
+  // comparison has no meaning for.
+  function rollAttack() {
+    if (!attackWeapon || !attackTarget?.side) return;
+    const attacker = tokens.find((t) => t.id === attackWeapon.tokenId);
+    const rolled = rollAttackDice(attackWeapon.item.hit_dice);
+    if (!attacker || !rolled) return;
+    const currentHeat =
+      attacker.weaponState[attackWeapon.instanceIndex]?.heat ?? 0;
+    setTokens((current) =>
+      current.map((t) =>
+        t.id === attackWeapon.tokenId
+          ? {
+              ...t,
+              weaponState: {
+                ...t.weaponState,
+                [attackWeapon.instanceIndex]: {
+                  ...t.weaponState[attackWeapon.instanceIndex],
+                  heat: currentHeat + 1,
+                },
+              },
+            }
+          : t,
+      ),
+    );
+    const armor = parseArmor(attackTargetUnit?.armor);
+    const sideArmor = armor?.[attackTarget.side] ?? 0;
+    const hits = countHits(rolled.rolls, attackTargetNumber ?? 0);
+    const damage = calculateDamage(rolled.sides, sideArmor, hits);
+    setAttackResult({
+      rolls: rolled.rolls,
+      sides: rolled.sides,
+      sideArmor,
+      hits,
+      damage,
+    });
+    appendLog(
+      `${unitName(attacker)}'s ${attackWeapon.item.name} rolled ${rolled.rolls.join(', ')} vs ${unitName(attackTargetToken)}'s ${attackTarget.side} (TN ${attackTargetNumber}) → ${hits} hit${hits === 1 ? '' : 's'}`,
+    );
+  }
+
+  function applyAttackDamage() {
+    if (!attackTarget || !attackResult || !attackTargetToken) return;
+    const { side } = attackTarget;
+    const { damage } = attackResult;
+    if (side === 'front' || side === 'rear') {
+      setTokens((current) =>
+        current.map((t) =>
+          t.id === attackTargetToken.id
+            ? { ...t, currentHp: Math.max(0, t.currentHp - damage) }
+            : t,
+        ),
+      );
+      appendLog(
+        `${unitName(attackTargetToken)} took ${damage} damage to the chassis`,
+      );
+    } else {
+      const slotIndex = attackTargetToken.equippedIds.findIndex((id, index) => {
+        if (attackTargetToken.weaponState[index]?.side !== side) return false;
+        const eqItem = equipment.find((e) => Number(e.id) === Number(id));
+        if (!eqItem) return false;
+        const maxHp = Number(eqItem.hp) || 0;
+        const hp = attackTargetToken.weaponState[index]?.hp ?? maxHp;
+        return hp > 0;
+      });
+      if (slotIndex === -1) {
+        appendLog(
+          `${unitName(attackTargetToken)} has no ${side} equipment left to damage`,
+        );
+      } else {
+        const eqItem = equipment.find(
+          (e) =>
+            Number(e.id) === Number(attackTargetToken.equippedIds[slotIndex]),
+        );
+        const maxHp = Number(eqItem.hp) || 0;
+        const hp = attackTargetToken.weaponState[slotIndex]?.hp ?? maxHp;
+        const nextHp = Math.max(0, hp - damage);
+        setTokens((current) =>
+          current.map((t) =>
+            t.id === attackTargetToken.id
+              ? {
+                  ...t,
+                  weaponState: {
+                    ...t.weaponState,
+                    [slotIndex]: {
+                      ...t.weaponState[slotIndex],
+                      hp: nextHp,
+                      broken:
+                        nextHp <= 0 ? true : t.weaponState[slotIndex]?.broken,
+                    },
+                  },
+                }
+              : t,
+          ),
+        );
+        appendLog(
+          `${unitName(attackTargetToken)}'s ${eqItem.name} took ${damage} damage to the ${side} slot` +
+            (nextHp <= 0 ? ' and broke' : ''),
+        );
+      }
+    }
+    cancelAttack();
+  }
+
   function movementForToken(token) {
     const movementItem = token.equippedIds
       .map((id) => equipment.find((e) => Number(e.id) === Number(id)))
@@ -433,6 +593,35 @@ function BattlePage() {
 
   function handleHexClick(key) {
     const [col, row] = key.split(',').map(Number);
+
+    if (attackWeapon) {
+      const attacker = tokens.find((t) => t.id === attackWeapon.tokenId);
+      const target = tokenAt(key);
+      const valid =
+        attacker &&
+        target &&
+        target.id !== attacker.id &&
+        !target.destroyed &&
+        target.owner !== attacker.owner &&
+        weaponRange &&
+        (() => {
+          const d = hexDistance(attacker.position, target.position);
+          if (d < weaponRange.min || d > weaponRange.max) return false;
+          if (!weaponRange.side) return true;
+          return isInWeaponArc(
+            attacker.position,
+            target.position,
+            attacker.facing,
+            weaponRange.side,
+          );
+        })();
+      if (valid) {
+        setAttackTarget({ tokenId: target.id, side: null });
+      } else {
+        cancelAttack();
+      }
+      return;
+    }
 
     if (draft) {
       if (tokenAt(key) || !canControl({ owner: draft.owner })) return;
@@ -712,6 +901,12 @@ function BattlePage() {
                     : null
                 }
                 onToggleRange={toggleWeaponRange}
+                onStartAttack={startAttack}
+                activeAttackIndex={
+                  attackWeapon?.tokenId === selectedToken.id
+                    ? attackWeapon.instanceIndex
+                    : null
+                }
                 onDestroy={destroySelected}
                 onReturnToReserve={returnSelectedToReserve}
                 onDeselect={() => setSelectedTokenId(null)}
@@ -821,6 +1016,24 @@ function BattlePage() {
                   </div>
                 );
               })()}
+            {attackTarget && attackWeapon && attackTargetToken && (
+              <AttackModal
+                attackerName={unitName(
+                  tokens.find((t) => t.id === attackWeapon.tokenId),
+                )}
+                weaponName={attackWeapon.item.name}
+                hitDice={attackWeapon.item.hit_dice}
+                targetName={unitName(attackTargetToken)}
+                targetSizeLabel={attackTargetUnit?.size}
+                targetNumber={attackTargetNumber}
+                side={attackTarget.side}
+                onPickSide={pickAttackSide}
+                result={attackResult}
+                onRoll={rollAttack}
+                onApply={applyAttackDamage}
+                onCancel={cancelAttack}
+              />
+            )}
           </div>
         </div>
         <div>

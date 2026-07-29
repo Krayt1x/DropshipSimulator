@@ -8,6 +8,10 @@ import {
   act,
 } from '@testing-library/react';
 import BattlePage from './BattlePage.jsx';
+import units from '../data/units.json';
+import equipment from '../data/equipment.json';
+import { sizeNumber } from '../lib/tokens.js';
+import { parseArmor, calculateDamage } from '../lib/combat.js';
 
 beforeEach(() => window.localStorage.clear());
 afterEach(() => {
@@ -539,5 +543,112 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Undo last move' }));
 
     expect(screen.getByText(/Heat 0 \/ 1/)).toBeDefined();
+  });
+
+  it('runs the automated attack workflow: arc target, side pick, roll, and damage application (#103)', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    // Derived from the live data files rather than hardcoded, since both are
+    // synced from DropshipBuilder daily and their values can drift.
+    const a20 = units.find((u) => u.name === 'A20');
+    const weapon = equipment.find((e) => e.name === 'Long Range Bolt');
+    expect(sizeNumber(a20.size)).toBeGreaterThanOrEqual(1);
+    const dieSides = Number(weapon.hit_dice.match(/d(\d+)/)[1]);
+    const rightArmor = parseArmor(a20.armor).right;
+    const hits = 2; // both dice mocked to roll a 1, which is <= any real TN.
+    const damage = calculateDamage(dieSides, rightArmor, hits);
+
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    // Player 1: A10 with a right-mounted Long Range Bolt (2d8, range 9).
+    fireEvent.click(screen.getByRole('button', { name: 'Import roster' }));
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: [
+          'Test List (Corp A)',
+          'Weight: 6t / 100t',
+          '',
+          'A10 - 6t',
+          '  Right: Long Range Bolt',
+        ].join('\n'),
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
+    );
+
+    // Player 2: A20 (Large, size 4, armor 2/2/2/1) with the same weapon in
+    // its right slot, so the attack has something to damage there.
+    fireEvent.click(screen.getByRole('button', { name: 'Import roster' }));
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: [
+          'Test List (Corp A)',
+          'Weight: 20t / 100t',
+          '',
+          'A20 - 20t',
+          '  Right: Long Range Bolt',
+        ].join('\n'),
+      },
+    });
+    const importPanel = screen
+      .getByRole('button', { name: 'Preview import' })
+      .closest('.token-form');
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(
+      within(importPanel).getByRole('button', { name: 'Player 2' }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'A20' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,6'));
+
+    // Re-select A10 (the attacker) and arm its weapon.
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+
+    // A20 sits directly in the arc at distance 1 — a valid target.
+    fireEvent.click(screen.getByTestId('hex-5,6'));
+    expect(
+      screen.getByText(new RegExp(`Target: A20 \\(${a20.size}\\)`)),
+    ).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll to Hit' }));
+
+    // Math.random mocked to 0 -> both dice roll a 1, which is <= any real
+    // target number -> 2 hits; (die size - right armor) * 2 hits = damage.
+    const modal = screen
+      .getByText(/Which side are you hitting/)
+      .closest('.attack-modal');
+    expect(within(modal).getByText(/2 hits/)).toBeDefined();
+    expect(
+      within(modal).getByText(new RegExp(`${damage} damage`)),
+    ).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply damage' }));
+    expect(screen.queryByText(/Which side are you hitting/)).toBeNull();
+
+    // The attacker's own weapon heated up by 1 from the roll.
+    expect(screen.getByText(/Heat 1 \/ 6/)).toBeDefined();
+
+    // The target's right-slot weapon took the computed damage on its 5 HP
+    // and broke once it hit 0.
+    fireEvent.click(screen.getByTestId('hex-5,6'));
+    expect(
+      screen.getByText(new RegExp(`HP ${Math.max(0, 5 - damage)} / 5`)),
+    ).toBeDefined();
+    if (damage >= 5) {
+      expect(screen.getByRole('checkbox').checked).toBe(true);
+    }
   });
 });

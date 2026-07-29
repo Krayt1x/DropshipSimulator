@@ -734,6 +734,121 @@ button.danger:hover {
   margin-left: auto;
 }
 
+/* Attack workflow (#103): arms a weapon's arc for target-picking on the
+   board, then walks through side/roll/damage in a modal. */
+.attack-btn {
+  background: #dc2626;
+  border: none;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+}
+
+.attack-btn.active {
+  background: #7f1d1d;
+}
+
+.attack-btn:disabled {
+  background: var(--border);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.attack-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 50;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 10vh;
+}
+
+.attack-modal {
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+.attack-modal-title {
+  font-weight: 700;
+  font-size: 14px;
+  margin: 0 0 4px;
+}
+
+.attack-modal-label {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 10px 0 6px;
+}
+
+.attack-side-picker {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.attack-side-picker button {
+  flex: 1;
+  background: var(--bg-page);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 0;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.attack-side-picker button.active {
+  background: #1c1917;
+  color: #fff;
+}
+
+.attack-side-picker button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.attack-roll-btn {
+  width: 100%;
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.attack-roll-btn:disabled {
+  background: var(--border);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.attack-result {
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.attack-result p {
+  margin: 0 0 8px;
+}
+
+.attack-cancel-btn {
+  width: 100%;
+  margin-top: 8px;
+}
+
 .workspace-tabs {
   display: flex;
   gap: 4px;

@@ -23,6 +23,8 @@ function TokenCard({
   onToggleBroken,
   onRollHitDice,
   onToggleRange,
+  onStartAttack,
+  activeAttackIndex,
   onDestroy,
   onReturnToReserve,
   onDeselect,
@@ -73,6 +75,7 @@ function TokenCard({
       broken: false,
     };
     const rangeActive = showRange && activeRangeIndex === item.instanceIndex;
+    const attackActive = showRange && activeAttackIndex === item.instanceIndex;
     const maxHp = Number(item.hp) || 0;
     const hp = state.hp ?? maxHp;
     return (
@@ -126,6 +129,17 @@ function TokenCard({
                   </button>
                 ) : (
                   '—'
+                )}
+                {item.hit_dice && (
+                  <button
+                    type="button"
+                    className={`attack-btn ${attackActive ? 'active' : ''}`}
+                    title="Show this weapon's arc and pick a target to attack"
+                    disabled={state.broken}
+                    onClick={() => onStartAttack(item.instanceIndex, item)}
+                  >
+                    {attackActive ? 'Attacking…' : 'Attack'}
+                  </button>
                 )}
               </>
             )}

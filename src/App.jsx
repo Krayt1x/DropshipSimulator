@@ -11,6 +11,7 @@ import {
 } from './context/MultiplayerContext.jsx';
 import { useLocalStorageState } from './lib/storage.js';
 import { OWNERS } from './lib/tokens.js';
+import { resetActiveGame } from './lib/gameState.js';
 
 const DROPSHIP_BUILDER_URL = 'https://Krayt1x.github.io/DropshipBuilder';
 
@@ -75,6 +76,30 @@ function ConnectionBadge() {
     <a href="#connect" className="connection-badge">
       ● {label}
     </a>
+  );
+}
+
+// Moved here from BattlePage (#132) so it's reachable from the top menu bar
+// rather than buried at the bottom of the sidebar. resetActiveGame() only
+// touches localStorage/syncBus directly, so it needs no BattlePage state —
+// navigating to #home afterward unmounts BattlePage either way.
+function EndGameButton() {
+  function endGame() {
+    if (
+      !window.confirm(
+        'End this game? This will delete all deployed units and reset the board.',
+      )
+    ) {
+      return;
+    }
+    resetActiveGame();
+    window.location.hash = '#home';
+  }
+
+  return (
+    <button type="button" className="danger topnav-end-game" onClick={endGame}>
+      End Game
+    </button>
   );
 }
 
@@ -155,6 +180,7 @@ function AppShell() {
               <PlayerIdentityPicker />
             )}
             <ConnectionBadge />
+            {page === 'battle' && <EndGameButton />}
             <a href={DROPSHIP_BUILDER_URL} target="_blank" rel="noreferrer">
               Dropship Builder ↗
             </a>

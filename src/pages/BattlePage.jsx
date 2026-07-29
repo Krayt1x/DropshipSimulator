@@ -29,11 +29,7 @@ import {
   countHits,
   calculateDamage,
 } from '../lib/combat.js';
-import {
-  resetActiveGame,
-  DEFAULT_TURN,
-  DEFAULT_BANKED_DICE,
-} from '../lib/gameState.js';
+import { DEFAULT_TURN, DEFAULT_BANKED_DICE } from '../lib/gameState.js';
 import BattleBoard from '../components/BattleBoard.jsx';
 import TokenCard from '../components/TokenCard.jsx';
 import UnitCardHeader from '../components/UnitCardHeader.jsx';
@@ -218,21 +214,6 @@ function BattlePage() {
     );
     setActionPool([]);
     setLastAction(null);
-  }
-
-  function endGame() {
-    if (
-      !window.confirm(
-        'End this game? This will delete all deployed units and reset the board.',
-      )
-    ) {
-      return;
-    }
-    resetActiveGame();
-    setSelectedTokenId(null);
-    setMovingTokenId(null);
-    setLastAction(null);
-    window.location.hash = '#home';
   }
 
   function handleDiceRoll(rolled) {
@@ -1294,16 +1275,6 @@ function BattlePage() {
             </button>
           </div>
           <GameLog entries={logEntries} />
-          <div className="card">
-            <button
-              type="button"
-              className="danger"
-              style={{ width: '100%' }}
-              onClick={endGame}
-            >
-              End Game
-            </button>
-          </div>
         </div>
       </div>
     </div>

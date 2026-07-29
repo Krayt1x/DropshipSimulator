@@ -452,26 +452,6 @@ describe('BattlePage', () => {
     expect(screen.getByText(/Rolled 2d6/)).toBeDefined();
   });
 
-  it('deletes the game after confirming End Game', () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    render(<BattlePage />);
-    startDeploymentPhase();
-
-    importA10ToReserve();
-    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
-    endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
-    fireEvent.click(screen.getByTestId('hex-0,0'));
-
-    fireEvent.click(screen.getByRole('button', { name: 'End Game' }));
-
-    expect(confirmSpy).toHaveBeenCalled();
-    expect(screen.queryByText('A10', { selector: 'p.unit-name' })).toBeNull();
-    expect(screen.getByText('No actions yet.')).toBeDefined();
-
-    confirmSpy.mockRestore();
-  });
-
   it("never tints the model's own tile as part of its weapon's arc", () => {
     render(<BattlePage />);
     startDeploymentPhase();

@@ -1284,6 +1284,47 @@ describe('BattlePage', () => {
     expect(within(tracker).getByText(/Player 2/)).toBeDefined();
   });
 
+  it('does not show a "Battle board" heading (#144)', () => {
+    render(<BattlePage />);
+    expect(screen.queryByText('Battle board')).toBeNull();
+  });
+
+  it('moves the deployment-phase toggle into the mobile action toolbar next to Move/Weapons (#143)', () => {
+    vi.stubGlobal('matchMedia', () => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+
+    render(<BattlePage />);
+    importA10ToReserve();
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+
+    const toolbar = document.querySelector('.mobile-action-toolbar');
+    expect(toolbar).not.toBeNull();
+
+    // Deployment phase starts active, so the toggle reads "End Deploy"; only
+    // one instance of it exists anywhere on screen — it's moved here, not
+    // duplicated alongside the (now desktop-only) top-of-page button.
+    expect(
+      within(toolbar).getByRole('button', { name: 'End Deploy' }),
+    ).toBeDefined();
+    expect(
+      screen.getAllByRole('button', { name: /^(End Deploy|Deploy Phase)$/ }),
+    ).toHaveLength(1);
+    expect(
+      within(toolbar).getByRole('button', { name: 'Deploy' }),
+    ).toBeDefined();
+
+    fireEvent.click(
+      within(toolbar).getByRole('button', { name: 'End Deploy' }),
+    );
+
+    expect(
+      within(toolbar).getByRole('button', { name: 'Deploy Phase' }),
+    ).toBeDefined();
+  });
+
   it('arms an attack from the Board tab via the Weapons FAB, without needing the Units tab (#138)', () => {
     render(<BattlePage />);
     startDeploymentPhase();

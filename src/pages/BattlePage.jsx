@@ -1162,9 +1162,6 @@ function BattlePage() {
           />,
           turnSlot,
         )}
-      <div className="battle-header-row">
-        <h1 style={{ fontSize: 20, marginBottom: 4 }}>Battle board</h1>
-      </div>
       {isMobile && (
         <div className="mobile-turn-tracker">
           <TurnTracker
@@ -1175,21 +1172,28 @@ function BattlePage() {
         </div>
       )}
 
-      <div className="deployment-controls">
-        <button
-          type="button"
-          className={deploymentPhase ? '' : 'ghost'}
-          disabled={!deploymentZonesValid}
-          onClick={() => setDeploymentPhase((current) => !current)}
-        >
-          {deploymentPhase ? 'End deployment phase' : 'Deployment Phase'}
-        </button>
-        {!deploymentZonesValid && (
-          <span className="unit-meta">
-            Board needs at least 7 rows for deployment zones.
-          </span>
-        )}
-      </div>
+      {(!isMobile || !deploymentZonesValid) && (
+        <div className="deployment-controls">
+          {/* On mobile this toggle moves into the bottom action toolbar next
+              to Move/Weapons instead (#143) — kept here for desktop, where
+              there's no such toolbar. */}
+          {!isMobile && (
+            <button
+              type="button"
+              className={deploymentPhase ? '' : 'ghost'}
+              disabled={!deploymentZonesValid}
+              onClick={() => setDeploymentPhase((current) => !current)}
+            >
+              {deploymentPhase ? 'End deployment phase' : 'Deployment Phase'}
+            </button>
+          )}
+          {!deploymentZonesValid && (
+            <span className="unit-meta">
+              Board needs at least 7 rows for deployment zones.
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="battle-layout">
         <div
@@ -1395,47 +1399,63 @@ function BattlePage() {
                 onCancel={cancelAttack}
               />
             )}
-            {selectedToken &&
-              !selectedToken.destroyed &&
-              canControl(selectedToken) && (
+            {/* Groups the deployment-phase toggle with the token action
+                buttons in one bar (#143) — it used to live in its own row at
+                the top of the page, disconnected from the board actions it's
+                closely related to. */}
+            <div className="mobile-action-toolbar">
+              {isMobile && (
                 <button
                   type="button"
-                  className="mobile-move-fab"
-                  onClick={() =>
-                    setMovingTokenId((current) =>
-                      current === selectedToken.id ? null : selectedToken.id,
-                    )
-                  }
+                  className="mobile-deploy-phase-btn"
+                  disabled={!deploymentZonesValid}
+                  onClick={() => setDeploymentPhase((current) => !current)}
                 >
-                  {movingTokenId === selectedToken.id
-                    ? 'Cancel'
-                    : selectedToken.position
-                      ? 'Move'
-                      : 'Deploy'}
+                  {deploymentPhase ? 'End Deploy' : 'Deploy Phase'}
                 </button>
               )}
-            {selectedToken &&
-              selectedToken.position &&
-              !selectedToken.destroyed &&
-              canControl(selectedToken) &&
-              selectedTokenWeapons.length > 0 && (
-                <button
-                  type="button"
-                  className="mobile-attack-fab"
-                  onClick={() => {
-                    if (attackWeapon?.tokenId === selectedToken.id) {
-                      cancelAttack();
-                      setAttackPickerOpen(false);
-                    } else {
-                      setAttackPickerOpen((current) => !current);
+              {selectedToken &&
+                !selectedToken.destroyed &&
+                canControl(selectedToken) && (
+                  <button
+                    type="button"
+                    className="mobile-move-fab"
+                    onClick={() =>
+                      setMovingTokenId((current) =>
+                        current === selectedToken.id ? null : selectedToken.id,
+                      )
                     }
-                  }}
-                >
-                  {attackWeapon?.tokenId === selectedToken.id
-                    ? 'Cancel attack'
-                    : 'Weapons'}
-                </button>
-              )}
+                  >
+                    {movingTokenId === selectedToken.id
+                      ? 'Cancel'
+                      : selectedToken.position
+                        ? 'Move'
+                        : 'Deploy'}
+                  </button>
+                )}
+              {selectedToken &&
+                selectedToken.position &&
+                !selectedToken.destroyed &&
+                canControl(selectedToken) &&
+                selectedTokenWeapons.length > 0 && (
+                  <button
+                    type="button"
+                    className="mobile-attack-fab"
+                    onClick={() => {
+                      if (attackWeapon?.tokenId === selectedToken.id) {
+                        cancelAttack();
+                        setAttackPickerOpen(false);
+                      } else {
+                        setAttackPickerOpen((current) => !current);
+                      }
+                    }}
+                  >
+                    {attackWeapon?.tokenId === selectedToken.id
+                      ? 'Cancel attack'
+                      : 'Weapons'}
+                  </button>
+                )}
+            </div>
             {attackPickerOpen && selectedToken && (
               <div className="mobile-attack-picker">
                 <p className="mobile-attack-picker-title">Choose a weapon</p>

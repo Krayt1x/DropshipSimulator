@@ -19,6 +19,7 @@ import {
 import BattleBoard from '../components/BattleBoard.jsx';
 import TokenForm from '../components/TokenForm.jsx';
 import TokenCard from '../components/TokenCard.jsx';
+import UnitCardHeader from '../components/UnitCardHeader.jsx';
 import RosterImport from '../components/RosterImport.jsx';
 import RosterList from '../components/RosterList.jsx';
 import ReserveList from '../components/ReserveList.jsx';
@@ -88,6 +89,11 @@ function BattlePage() {
   const moveTimeoutsRef = useRef([]);
   const [deployEffect, setDeployEffect] = useState(null);
   const deployEffectTimeoutRef = useRef(null);
+  const [hoverInfo, setHoverInfo] = useState(null);
+
+  function handleHoverToken(tokenId, x, y) {
+    setHoverInfo(tokenId ? { tokenId, x, y } : null);
+  }
 
   useEffect(() => {
     return () => moveTimeoutsRef.current.forEach(clearTimeout);
@@ -780,7 +786,41 @@ function BattlePage() {
               canControl={canControl}
               onHexClick={handleHexClick}
               onDropToken={handleDropToken}
+              onHoverToken={handleHoverToken}
             />
+            {hoverInfo &&
+              (() => {
+                const hoverToken = tokens.find(
+                  (t) => t.id === hoverInfo.tokenId,
+                );
+                const hoverUnit = hoverToken
+                  ? units.find(
+                      (u) => Number(u.id) === Number(hoverToken.unitId),
+                    )
+                  : null;
+                if (!hoverToken || !hoverUnit) return null;
+                const hoverEquippedItems = hoverToken.equippedIds
+                  .map((id, instanceIndex) => {
+                    const item = equipment.find(
+                      (e) => Number(e.id) === Number(id),
+                    );
+                    return item ? { ...item, instanceIndex } : null;
+                  })
+                  .filter(Boolean);
+                return (
+                  <div
+                    className="token-hover-card"
+                    style={{ left: hoverInfo.x + 16, top: hoverInfo.y + 16 }}
+                  >
+                    <p className="unit-name">{hoverUnit.name}</p>
+                    <UnitCardHeader
+                      unit={hoverUnit}
+                      token={hoverToken}
+                      equippedItems={hoverEquippedItems}
+                    />
+                  </div>
+                );
+              })()}
           </div>
         </div>
         <div>

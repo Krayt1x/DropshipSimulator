@@ -17,6 +17,7 @@ function TokenMarker({
   draggable,
   onSelect,
   onDrop,
+  onHover,
 }) {
   const { x, y } = hexToPixel(token.position.col, token.position.row, size);
   const radius = size * 0.62;
@@ -57,6 +58,9 @@ function TokenMarker({
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onClick={onSelect}
+      onMouseEnter={(e) => onHover?.(token.id, e.clientX, e.clientY)}
+      onMouseMove={(e) => onHover?.(token.id, e.clientX, e.clientY)}
+      onMouseLeave={() => onHover?.(null)}
       style={{
         cursor: draggable ? 'grab' : 'default',
         touchAction: 'none',
@@ -167,6 +171,7 @@ function BattleBoard({
   canControl,
   onHexClick,
   onDropToken,
+  onHoverToken,
 }) {
   const size = sizeProp ?? hexSize();
   const { width, height } = boardPixelSize(cols, rows, size);
@@ -300,6 +305,7 @@ function BattleBoard({
                 onHexClick(`${token.position.col},${token.position.row}`)
               }
               onDrop={(col, row) => onDropToken?.(token.id, col, row)}
+              onHover={onHoverToken}
             />
           );
         })}

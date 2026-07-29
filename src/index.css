@@ -408,6 +408,25 @@ button.danger:hover {
   }
 }
 
+/* Mini unit card shown while hovering a token on the board (#104). */
+.token-hover-card {
+  position: fixed;
+  z-index: 45;
+  width: 240px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .token-hover-card {
+    display: none;
+  }
+}
+
 .hex-grid {
   display: block;
   max-width: 100%;

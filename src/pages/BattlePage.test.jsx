@@ -10,7 +10,7 @@ import {
 import BattlePage from './BattlePage.jsx';
 import units from '../data/units.json';
 import equipment from '../data/equipment.json';
-import { sizeNumber } from '../lib/tokens.js';
+import { sizeNumber, parseHeatRating } from '../lib/tokens.js';
 import { parseArmor, calculateDamage } from '../lib/combat.js';
 
 beforeEach(() => window.localStorage.clear());
@@ -590,8 +590,14 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Apply damage' }));
     expect(screen.queryByText(/Which side are you hitting/)).toBeNull();
 
-    // The attacker's own weapon heated up by 1 from the roll.
-    expect(screen.getByText(/Heat 1 \/ 6/)).toBeDefined();
+    // The attacker's own weapon heated up by its heat_rating's generate
+    // amount from the roll (#124), not a flat 1.
+    const { generate: heatGenerate, max: heatMax } = parseHeatRating(
+      weapon.heat_rating,
+    );
+    expect(
+      screen.getByText(new RegExp(`Heat ${heatGenerate} / ${heatMax}`)),
+    ).toBeDefined();
 
     // The target's right-slot weapon took the computed damage on its 5 HP
     // and broke once it hit 0.
@@ -656,5 +662,152 @@ describe('BattlePage', () => {
         name: `${Number(countText) - 1} ${actionWord}`,
       }),
     ).toBeDefined();
+  });
+
+  it('rolls excess left/right attack damage onto another item on that side, then the chassis (#122)', () => {
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+    const weapon = equipment.find((e) => e.name === 'Long Range Bolt');
+    const a20 = units.find((u) => u.name === 'A20');
+    const lightAssault = equipment.find((e) => e.name === 'Light Assault');
+    const flameThrower = equipment.find((e) => e.name === 'Flame Thrower');
+    const dieSides = Number(weapon.hit_dice.match(/d(\d+)/)[1]);
+    const rightArmor = parseArmor(a20.armor).right;
+    const damage = calculateDamage(dieSides, rightArmor, 2); // 2 hits, TN always met
+
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve(['  Right: Long Range Bolt']);
+
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: [
+          'Test List (Corp A)',
+          'Weight: 20t / 100t',
+          '',
+          'A20 - 20t',
+          '  Right: Light Assault',
+          '  Right: Flame Thrower',
+        ].join('\n'),
+      },
+    });
+    const importPanel = screen
+      .getByRole('button', { name: 'Preview import' })
+      .closest('.token-form');
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(
+      within(importPanel).getByRole('button', { name: 'Player 2' }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'A20' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,6'));
+
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    fireEvent.click(screen.getByTestId('hex-5,6'));
+    fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll to Hit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Apply damage' }));
+    randomSpy.mockRestore();
+
+    const lightAssaultHp = Number(lightAssault.hp) || 0;
+    const flameThrowerHp = Number(flameThrower.hp) || 0;
+    const overflow = Math.max(0, damage - lightAssaultHp - flameThrowerHp);
+
+    expect(
+      screen.getByText(
+        new RegExp(
+          `Light Assault took ${Math.min(damage, lightAssaultHp)} damage and broke`,
+        ),
+      ),
+    ).toBeDefined();
+    if (damage > lightAssaultHp) {
+      expect(
+        screen.getByText(
+          new RegExp(
+            `Flame Thrower took ${Math.min(damage - lightAssaultHp, flameThrowerHp)} damage`,
+          ),
+        ),
+      ).toBeDefined();
+    }
+    if (overflow > 0) {
+      expect(
+        screen.getByText(
+          new RegExp(
+            `took ${overflow} damage to the chassis \\(no right equipment left to absorb it\\)`,
+          ),
+        ),
+      ).toBeDefined();
+    }
+  });
+
+  it('applies Flame Thrower damage as heat instead of HP loss (#125)', () => {
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+    const flameThrower = equipment.find((e) => e.name === 'Flame Thrower');
+    const a20 = units.find((u) => u.name === 'A20');
+    const dieSides = Number(flameThrower.hit_dice.match(/d(\d+)/)[1]);
+    const rightArmor = parseArmor(a20.armor).right;
+    const damage = calculateDamage(dieSides, rightArmor, 2);
+
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve(['  Right: Flame Thrower']);
+
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: [
+          'Test List (Corp A)',
+          'Weight: 20t / 100t',
+          '',
+          'A20 - 20t',
+          '  Right: Long Range Bolt',
+        ].join('\n'),
+      },
+    });
+    const importPanel = screen
+      .getByRole('button', { name: 'Preview import' })
+      .closest('.token-form');
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(
+      within(importPanel).getByRole('button', { name: 'Player 2' }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'A20' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,6'));
+
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    fireEvent.click(screen.getByTestId('hex-5,6'));
+    fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll to Hit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Apply damage' }));
+    randomSpy.mockRestore();
+
+    expect(
+      screen.getByText(new RegExp(`Long Range Bolt took ${damage} heat`)),
+    ).toBeDefined();
+
+    fireEvent.click(screen.getByTestId('hex-5,6'));
+    expect(screen.getByText(new RegExp(`Heat ${damage} /`))).toBeDefined();
+    expect(screen.queryByRole('checkbox').checked).toBe(false);
   });
 });

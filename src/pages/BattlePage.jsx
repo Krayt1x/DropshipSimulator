@@ -384,6 +384,9 @@ function BattlePage() {
     if (!attacker || !rolled) return;
     const currentHeat =
       attacker.weaponState[attackWeapon.instanceIndex]?.heat ?? 0;
+    // Firing generates whatever the weapon's own heat_rating stipulates
+    // (#124), not a flat +1.
+    const { generate } = parseHeatRating(attackWeapon.item.heat_rating);
     setTokens((current) =>
       current.map((t) =>
         t.id === attackWeapon.tokenId
@@ -393,7 +396,7 @@ function BattlePage() {
                 ...t.weaponState,
                 [attackWeapon.instanceIndex]: {
                   ...t.weaponState[attackWeapon.instanceIndex],
-                  heat: currentHeat + 1,
+                  heat: currentHeat + generate,
                 },
               },
             }
@@ -416,66 +419,112 @@ function BattlePage() {
     );
   }
 
+  function damageChassis(amount, note = '') {
+    setTokens((current) =>
+      current.map((t) =>
+        t.id === attackTargetToken.id
+          ? { ...t, currentHp: Math.max(0, t.currentHp - amount) }
+          : t,
+      ),
+    );
+    appendLog(
+      `${unitName(attackTargetToken)} took ${amount} damage to the chassis${note}`,
+    );
+  }
+
   function applyAttackDamage() {
     if (!attackTarget || !attackResult || !attackTargetToken) return;
     const { side } = attackTarget;
     const { damage } = attackResult;
+
     if (side === 'front' || side === 'rear') {
+      damageChassis(damage);
+      cancelAttack();
+      return;
+    }
+
+    const sideIndices = attackTargetToken.equippedIds
+      .map((id, index) => ({ id, index }))
+      .filter(
+        ({ index }) => attackTargetToken.weaponState[index]?.side === side,
+      );
+
+    // Some weapons (e.g. Flame Thrower) apply their damage as heat instead
+    // of HP loss (#125) — heat isn't a depleting resource, so there's no
+    // rollover to a second item the way HP damage has.
+    const damageAsHeat = /damage is applied as heat/i.test(
+      attackWeapon?.item?.effects ?? '',
+    );
+    if (damageAsHeat && sideIndices.length > 0) {
+      const { index, id } = sideIndices[0];
+      const eqItem = equipment.find((e) => Number(e.id) === Number(id));
+      const currentHeat = attackTargetToken.weaponState[index]?.heat ?? 0;
       setTokens((current) =>
         current.map((t) =>
           t.id === attackTargetToken.id
-            ? { ...t, currentHp: Math.max(0, t.currentHp - damage) }
+            ? {
+                ...t,
+                weaponState: {
+                  ...t.weaponState,
+                  [index]: {
+                    ...t.weaponState[index],
+                    heat: currentHeat + damage,
+                  },
+                },
+              }
             : t,
         ),
       );
       appendLog(
-        `${unitName(attackTargetToken)} took ${damage} damage to the chassis`,
+        `${unitName(attackTargetToken)}'s ${eqItem?.name ?? 'equipment'} took ${damage} heat`,
       );
-    } else {
-      const slotIndex = attackTargetToken.equippedIds.findIndex((id, index) => {
-        if (attackTargetToken.weaponState[index]?.side !== side) return false;
-        const eqItem = equipment.find((e) => Number(e.id) === Number(id));
-        if (!eqItem) return false;
-        const maxHp = Number(eqItem.hp) || 0;
-        const hp = attackTargetToken.weaponState[index]?.hp ?? maxHp;
-        return hp > 0;
-      });
-      if (slotIndex === -1) {
+      cancelAttack();
+      return;
+    }
+
+    // Excess damage rolls over to the next item on the same side, then to
+    // the chassis once that side has nothing left to absorb it (#122).
+    let remaining = damage;
+    const hits = [];
+    sideIndices.forEach(({ id, index }) => {
+      if (remaining <= 0) return;
+      const eqItem = equipment.find((e) => Number(e.id) === Number(id));
+      if (!eqItem) return;
+      const maxHp = Number(eqItem.hp) || 0;
+      const hp = attackTargetToken.weaponState[index]?.hp ?? maxHp;
+      if (hp <= 0) return;
+      const absorbed = Math.min(remaining, hp);
+      remaining -= absorbed;
+      hits.push({ index, name: eqItem.name, absorbed, nextHp: hp - absorbed });
+    });
+
+    if (hits.length > 0) {
+      setTokens((current) =>
+        current.map((t) => {
+          if (t.id !== attackTargetToken.id) return t;
+          const weaponState = { ...t.weaponState };
+          hits.forEach(({ index, nextHp }) => {
+            weaponState[index] = {
+              ...weaponState[index],
+              hp: nextHp,
+              broken: nextHp <= 0 ? true : weaponState[index]?.broken,
+            };
+          });
+          return { ...t, weaponState };
+        }),
+      );
+      hits.forEach(({ name, absorbed, nextHp }) => {
         appendLog(
-          `${unitName(attackTargetToken)} has no ${side} equipment left to damage`,
-        );
-      } else {
-        const eqItem = equipment.find(
-          (e) =>
-            Number(e.id) === Number(attackTargetToken.equippedIds[slotIndex]),
-        );
-        const maxHp = Number(eqItem.hp) || 0;
-        const hp = attackTargetToken.weaponState[slotIndex]?.hp ?? maxHp;
-        const nextHp = Math.max(0, hp - damage);
-        setTokens((current) =>
-          current.map((t) =>
-            t.id === attackTargetToken.id
-              ? {
-                  ...t,
-                  weaponState: {
-                    ...t.weaponState,
-                    [slotIndex]: {
-                      ...t.weaponState[slotIndex],
-                      hp: nextHp,
-                      broken:
-                        nextHp <= 0 ? true : t.weaponState[slotIndex]?.broken,
-                    },
-                  },
-                }
-              : t,
-          ),
-        );
-        appendLog(
-          `${unitName(attackTargetToken)}'s ${eqItem.name} took ${damage} damage to the ${side} slot` +
+          `${unitName(attackTargetToken)}'s ${name} took ${absorbed} damage` +
             (nextHp <= 0 ? ' and broke' : ''),
         );
-      }
+      });
     }
+
+    if (remaining > 0) {
+      damageChassis(remaining, ` (no ${side} equipment left to absorb it)`);
+    }
+
     cancelAttack();
   }
 
@@ -999,6 +1048,9 @@ function BattlePage() {
                 )}
                 weaponName={attackWeapon.item.name}
                 hitDice={attackWeapon.item.hit_dice}
+                heatGenerate={
+                  parseHeatRating(attackWeapon.item.heat_rating).generate
+                }
                 targetName={unitName(attackTargetToken)}
                 targetSizeLabel={attackTargetUnit?.size}
                 targetNumber={attackTargetNumber}

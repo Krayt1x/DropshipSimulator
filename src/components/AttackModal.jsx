@@ -9,6 +9,7 @@ function AttackModal({
   attackerName,
   weaponName,
   hitDice,
+  heatGenerate,
   targetName,
   targetSizeLabel,
   targetNumber,
@@ -46,7 +47,7 @@ function AttackModal({
         </div>
 
         <p className="unit-meta">
-          Hit dice: {hitDice || '—'} · Heat +1 on roll
+          Hit dice: {hitDice || '—'} · Heat +{heatGenerate ?? 0} on roll
         </p>
 
         {!result ? (

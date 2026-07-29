@@ -957,6 +957,44 @@ button.danger:hover {
   cursor: grab;
 }
 
+/* Jumps straight to the Board tab and arms placement (#142), instead of
+   requiring a manual tab switch after selecting a reserve unit. */
+.reserve-deploy-btn {
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 6px;
+  border: none;
+  background: #15803d;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.deploy-hint-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.deploy-hint-banner button {
+  background: rgba(255, 255, 255, 0.18);
+  border: none;
+  color: #fff;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .deployment-controls {
   display: flex;
   gap: 8px;
@@ -973,25 +1011,28 @@ button.danger:hover {
   flex-wrap: wrap;
 }
 
-/* Always-visible turn/active-player badge next to the "Battle board"
-   heading on mobile (#137) — the nav bar's own TurnTracker (portaled in by
-   BattlePage, see #136) is otherwise hidden behind the hamburger menu on
-   mobile, so this is the only turn indicator visible there. */
-.mobile-turn-indicator {
-  display: none;
+/* Full Player 1/Player 2/End Turn panel next to the "Battle board" heading
+   on mobile (#141, replacing the compact badge from #137) — the nav bar's
+   own copy (portaled in by BattlePage, see #136) is otherwise hidden behind
+   the hamburger menu on mobile, so this is the only way to end a turn there.
+   BattlePage only mounts this (via matchMedia, not CSS) below the same
+   900px breakpoint the mobile tab bar (#101) switches at, so no extra query
+   is needed here to hide/show it. */
+.mobile-turn-tracker {
+  margin-bottom: 12px;
 }
 
-@media (max-width: 900px) {
-  .mobile-turn-indicator {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 10px;
-    border-radius: 14px;
-    color: #fff;
-    font-size: 12px;
-    font-weight: 700;
-    white-space: nowrap;
-  }
+.mobile-turn-tracker .turn-tracker-row {
+  flex-wrap: wrap;
+}
+
+.mobile-turn-tracker .split-tracker {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-turn-tracker .turn-segment {
+  white-space: normal;
 }
 
 .turn-tracker-row {

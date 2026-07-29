@@ -27,6 +27,7 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   document.getElementById('topnav-turn-slot')?.remove();
 });
 
@@ -475,6 +476,41 @@ describe('BattlePage', () => {
       screen.getByText('D6', { selector: 'p.equipment-subheader' }),
     ).toBeDefined();
     expect(screen.getByText(/Rolled 2d6/)).toBeDefined();
+  });
+
+  it("rolls the deployed unit's action dice immediately via Roll Action Pool, once per turn (#140)", () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    // A10 has dice_red: 2, so once it's deployed the active player has 2 Red
+    // dice available to roll.
+    importA10ToReserve();
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    const rollActionPoolBtn = screen.getByRole('button', {
+      name: 'Roll Action Pool',
+    });
+    expect(rollActionPoolBtn.disabled).toBe(false);
+
+    fireEvent.click(rollActionPoolBtn);
+
+    expect(
+      screen.getByText('Red', { selector: 'p.equipment-subheader' }),
+    ).toBeDefined();
+    expect(screen.getByText(/Rolled 2 red/i)).toBeDefined();
+    expect(rollActionPoolBtn.disabled).toBe(true);
+
+    // Ending Player 1's turn hands it to Player 2, who has no deployed units
+    // (and so no action dice of their own); ending again comes back around
+    // to Player 1's next turn, where the gate should have reset.
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+    expect(
+      screen.getByRole('button', { name: 'Roll Action Pool' }).disabled,
+    ).toBe(false);
   });
 
   it("never tints the model's own tile as part of its weapon's arc", () => {
@@ -1198,15 +1234,54 @@ describe('BattlePage', () => {
     expect(screen.getByRole('button', { name: 'Move' })).toBeDefined();
   });
 
-  it('shows a turn/active-player indicator next to the heading that tracks End Turn (#137)', () => {
+  it('deploys a reserve token via its own Deploy to board button, jumping straight to the Board tab (#142)', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+    importA10ToReserve();
+
+    // Simulate actually being on the Units tab (mobile defaults to Board).
+    fireEvent.click(screen.getByRole('button', { name: /^Units$/i }));
+    expect(
+      document
+        .querySelector('.battle-board-column')
+        .className.includes('mobile-tab-panel-active'),
+    ).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy to board' }));
+
+    expect(
+      document
+        .querySelector('.battle-board-column')
+        .className.includes('mobile-tab-panel-active'),
+    ).toBe(true);
+    expect(screen.getByText(/Tap a tile to deploy A10/)).toBeDefined();
+
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+
+    expect(screen.queryByText(/Tap a tile to deploy/)).toBeNull();
+    expect(screen.getByText('Reserve (0)')).toBeDefined();
+  });
+
+  it('renders the full Player 1/Player 2/End Turn panel inline next to the heading on mobile (#141)', () => {
+    vi.stubGlobal('matchMedia', () => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+
     render(<BattlePage />);
 
-    expect(screen.getByText('Turn 1 · Player 1')).toBeDefined();
+    const tracker = document.querySelector('.mobile-turn-tracker');
+    expect(tracker).not.toBeNull();
+    expect(tracker.querySelector('.split-tracker')).not.toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+    // The nav-bar's own copy (#136) is skipped while this inline one is
+    // mounted, so there's never a duplicate "End Turn" button on screen.
+    expect(screen.getAllByRole('button', { name: 'End Turn' })).toHaveLength(1);
 
-    expect(screen.getByText('Turn 1 · Player 2')).toBeDefined();
-    expect(screen.queryByText('Turn 1 · Player 1')).toBeNull();
+    fireEvent.click(within(tracker).getByRole('button', { name: 'End Turn' }));
+
+    expect(within(tracker).getByText(/Player 2/)).toBeDefined();
   });
 
   it('arms an attack from the Board tab via the Weapons FAB, without needing the Units tab (#138)', () => {

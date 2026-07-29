@@ -14,6 +14,7 @@ function ReserveGroup({
   selectedTokenId,
   canControl,
   onSelect,
+  onDeploy,
 }) {
   if (tokens.length === 0) return null;
 
@@ -31,31 +32,44 @@ function ReserveGroup({
           const unit = units.find((u) => Number(u.id) === Number(token.unitId));
           const draggable = canControl(token);
           return (
-            <button
-              type="button"
-              key={token.id}
-              draggable={draggable}
-              title={
-                draggable
-                  ? 'Drag onto the board to deploy'
-                  : "You can't deploy another player's unit"
-              }
-              onDragStart={(e) => {
-                if (!draggable) {
-                  e.preventDefault();
-                  return;
+            <div className="tile-swatch-row" key={token.id}>
+              <button
+                type="button"
+                draggable={draggable}
+                title={
+                  draggable
+                    ? 'Drag onto the board to deploy'
+                    : "You can't deploy another player's unit"
                 }
-                e.dataTransfer.setData('text/plain', token.id);
-              }}
-              className={`tile-swatch-btn ${token.id === selectedTokenId ? 'selected' : ''} ${draggable ? 'reserve-draggable' : ''}`}
-              onClick={() => onSelect(token.id)}
-            >
-              <span
-                className="tile-swatch"
-                style={{ background: ownerColor(token.owner) }}
-              />
-              {unit?.name ?? 'Unknown unit'}
-            </button>
+                onDragStart={(e) => {
+                  if (!draggable) {
+                    e.preventDefault();
+                    return;
+                  }
+                  e.dataTransfer.setData('text/plain', token.id);
+                }}
+                className={`tile-swatch-btn ${token.id === selectedTokenId ? 'selected' : ''} ${draggable ? 'reserve-draggable' : ''}`}
+                onClick={() => onSelect(token.id)}
+              >
+                <span
+                  className="tile-swatch"
+                  style={{ background: ownerColor(token.owner) }}
+                />
+                {unit?.name ?? 'Unknown unit'}
+              </button>
+              {/* Selects, arms the move, and jumps straight to the Board tab
+                  (#142) — previously deploying on mobile meant selecting here
+                  then guessing you had to switch tabs yourself to place it. */}
+              {draggable && (
+                <button
+                  type="button"
+                  className="reserve-deploy-btn"
+                  onClick={() => onDeploy(token.id)}
+                >
+                  Deploy to board
+                </button>
+              )}
+            </div>
           );
         })}
       </div>
@@ -75,6 +89,7 @@ function ReserveRosterPanel({
   selectedTokenId,
   canControl,
   onSelect,
+  onDeploy,
 }) {
   const [tab, setTab] = useState('reserve');
   const [collapsed, setCollapsed] = useState(false);
@@ -133,6 +148,7 @@ function ReserveRosterPanel({
                   selectedTokenId={selectedTokenId}
                   canControl={canControl}
                   onSelect={onSelect}
+                  onDeploy={onDeploy}
                 />
               ))}
             </>

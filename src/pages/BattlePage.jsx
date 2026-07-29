@@ -147,6 +147,23 @@ function BattlePage() {
   useEffect(() => {
     setTurnSlot(document.getElementById('topnav-turn-slot'));
   }, []);
+  // On mobile the nav bar (and its portaled TurnTracker) is hidden behind
+  // the hamburger menu, so the full Player 1/Player 2/End Turn panel is
+  // rendered inline in the page instead of in the nav slot there (#141).
+  // Tracked via matchMedia rather than a CSS-only duplicate so only one
+  // TurnTracker (and one "End Turn" button) ever exists in the DOM at once.
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window.matchMedia === 'function'
+      ? window.matchMedia('(max-width: 900px)').matches
+      : false,
+  );
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return undefined;
+    const mql = window.matchMedia('(max-width: 900px)');
+    const handler = (e) => setIsMobile(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
   // Mirrors the Move/Deploy FAB (#101) — lets the Board tab arm a weapon
   // without switching to the Units tab first, since there was previously no
   // way back to the board to pick a target once you had (#138).
@@ -340,6 +357,13 @@ function BattlePage() {
   }
 
   const selectedToken = tokens.find((t) => t.id === selectedTokenId) ?? null;
+  const movingToken = movingTokenId
+    ? (tokens.find((t) => t.id === movingTokenId) ?? null)
+    : null;
+  // Powers the Board-tab hint banner (#142) — only shown for a fresh deploy
+  // (no position yet), not for repositioning an already-deployed token.
+  const deployingToken =
+    movingToken && !movingToken.position ? movingToken : null;
   const selectedUnit = selectedToken
     ? units.find((u) => Number(u.id) === Number(selectedToken.unitId))
     : null;
@@ -957,7 +981,6 @@ function BattlePage() {
     }
 
     if (movingTokenId) {
-      const movingToken = tokens.find((t) => t.id === movingTokenId);
       if (movingToken && canControl(movingToken)) {
         animateMove(movingToken, col, row);
       }
@@ -975,6 +998,17 @@ function BattlePage() {
     if (!token || !canControl(token)) return;
     animateMove(token, col, row);
     setSelectedTokenId(tokenId);
+  }
+
+  // Reserve list's own Deploy button (#142) — on mobile, reserve tokens are
+  // selected on the Units tab but placed by clicking a hex on the Board tab,
+  // which previously required manually switching tabs in between with no
+  // indication that was necessary. This selects, arms the move, and jumps to
+  // the Board tab in one tap.
+  function deployFromReserve(tokenId) {
+    setSelectedTokenId(tokenId);
+    setMovingTokenId(tokenId);
+    setMobileTab('board');
   }
 
   function updateSelected(patch) {
@@ -1118,7 +1152,8 @@ function BattlePage() {
   return (
     <div className="container-wide battle-page">
       <TurnNotificationToast notice={turnNotice} myPlayer={myPlayer} />
-      {turnSlot &&
+      {!isMobile &&
+        turnSlot &&
         createPortal(
           <TurnTracker
             turn={turn}
@@ -1129,13 +1164,16 @@ function BattlePage() {
         )}
       <div className="battle-header-row">
         <h1 style={{ fontSize: 20, marginBottom: 4 }}>Battle board</h1>
-        <span
-          className="mobile-turn-indicator"
-          style={{ background: ownerColor(turn.active) }}
-        >
-          Turn {turn.number} · {ownerLabel(turn.active)}
-        </span>
       </div>
+      {isMobile && (
+        <div className="mobile-turn-tracker">
+          <TurnTracker
+            turn={turn}
+            onEndTurn={endTurn}
+            playerDice={playerDice}
+          />
+        </div>
+      )}
 
       <div className="deployment-controls">
         <button
@@ -1210,6 +1248,7 @@ function BattlePage() {
             selectedTokenId={selectedTokenId}
             canControl={canControl}
             onSelect={setSelectedTokenId}
+            onDeploy={deployFromReserve}
           />
           <DestroyedList
             tokens={destroyedTokens}
@@ -1223,6 +1262,14 @@ function BattlePage() {
         <div
           className={`battle-board-column mobile-tab-panel ${mobileTab === 'board' ? 'mobile-tab-panel-active' : ''}`}
         >
+          {deployingToken && (
+            <div className="deploy-hint-banner">
+              Tap a tile to deploy {unitName(deployingToken)}
+              <button type="button" onClick={() => setMovingTokenId(null)}>
+                Cancel
+              </button>
+            </div>
+          )}
           <div className="zoom-controls">
             <button
               type="button"
@@ -1440,6 +1487,7 @@ function BattlePage() {
               onExchangeActionDice={exchangeActionDie}
               activeOwnerDice={activeOwnerDice}
               canRoll={!myPlayer || myPlayer === turn.active}
+              turn={turn}
             />
           </div>
           <div

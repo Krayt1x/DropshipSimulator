@@ -23,10 +23,18 @@ const DiceRoller = forwardRef(function DiceRoller(
     onExchangeActionDice,
     activeOwnerDice,
     canRoll = true,
+    turn,
   },
   ref,
 ) {
   const [pool, setPool] = useState({});
+  // Gates Roll Action Pool to once per active-player turn segment (#140) —
+  // derived from `turn` rather than a separate reset effect, since it
+  // naturally changes every time endTurn() advances the active player.
+  const [rolledActionPoolTurnKey, setRolledActionPoolTurnKey] = useState(null);
+  const turnKey = turn ? `${turn.active}:${turn.number}` : null;
+  const usedActionPoolThisTurn =
+    turnKey !== null && rolledActionPoolTurnKey === turnKey;
   // Mirrored to the other player over the multiplayer data channel (#119) —
   // without this, only the log's text summary of a roll reached the peer,
   // not the actual dice roller display.
@@ -55,10 +63,10 @@ const DiceRoller = forwardRef(function DiceRoller(
     },
   }));
 
-  function roll() {
+  function performRoll(sourcePool) {
     const rolled = [];
     DIE_TYPES.forEach((die) => {
-      const count = pool[die.id] ?? 0;
+      const count = sourcePool[die.id] ?? 0;
       for (let i = 0; i < count; i++) {
         rolled.push({
           id: makeKey('die'),
@@ -74,19 +82,27 @@ const DiceRoller = forwardRef(function DiceRoller(
     if (colored.length > 0) onRollToActionPool(colored);
   }
 
+  function roll() {
+    performRoll(pool);
+  }
+
   function clearPool() {
     setPool({});
     setResults(null);
   }
 
-  function addPlayerDiceToPool() {
-    setPool((current) => {
-      const next = { ...current };
-      DICE_COLORS.forEach((color) => {
-        next[color] = (current[color] ?? 0) + (activeOwnerDice?.[color] ?? 0);
-      });
-      return next;
+  // Adds the player's own action dice to the pool and rolls them immediately
+  // (#140) — replaces the old two-click "Add Action Pool" then "Roll" flow.
+  // Limited to once per turn since it's meant to represent that turn's single
+  // Action Pool roll, not a repeatable way to reroll it.
+  function rollActionPool() {
+    const merged = { ...pool };
+    DICE_COLORS.forEach((color) => {
+      merged[color] = (merged[color] ?? 0) + (activeOwnerDice?.[color] ?? 0);
     });
+    setPool(merged);
+    performRoll(merged);
+    setRolledActionPoolTurnKey(turnKey);
   }
 
   const playerDiceTotal = DICE_COLORS.reduce(
@@ -218,10 +234,10 @@ const DiceRoller = forwardRef(function DiceRoller(
         <button
           type="button"
           className="ghost"
-          disabled={playerDiceTotal === 0 || !canRoll}
-          onClick={addPlayerDiceToPool}
+          disabled={playerDiceTotal === 0 || !canRoll || usedActionPoolThisTurn}
+          onClick={rollActionPool}
         >
-          Add Action Pool
+          Roll Action Pool
         </button>
         <button
           type="button"

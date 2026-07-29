@@ -1363,6 +1363,31 @@ button.danger:hover {
   gap: 6px;
 }
 
+.dice-split-columns {
+  display: flex;
+  gap: 14px;
+}
+
+.dice-split-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.dice-split-col-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin: 0 0 6px;
+}
+
+.dice-split-divider {
+  width: 1px;
+  background: var(--border);
+  align-self: stretch;
+}
+
 .dice-pool-row {
   display: flex;
   align-items: center;

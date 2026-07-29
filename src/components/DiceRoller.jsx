@@ -9,6 +9,11 @@ import {
   isWordDie,
 } from '../lib/dice.js';
 
+// Colored action dice vs numerical hit dice, shown as two side-by-side
+// columns rather than one flat list (#139).
+const actionDieTypes = DIE_TYPES.filter((die) => die.faces);
+const hitDieTypes = DIE_TYPES.filter((die) => !die.faces);
+
 const DiceRoller = forwardRef(function DiceRoller(
   {
     onRoll,
@@ -137,33 +142,70 @@ const DiceRoller = forwardRef(function DiceRoller(
       {!canRoll && (
         <p className="unit-meta">Wait for your turn to roll dice.</p>
       )}
-      <div className="dice-pool-grid">
-        {DIE_TYPES.map((die) => (
-          <div className="dice-pool-row" key={die.id}>
-            <span className={`dice-pool-label dice-pool-label-${die.id}`}>
-              {die.label}
-            </span>
-            <button
-              type="button"
-              className="ghost"
-              aria-label={`Remove ${die.label} from pool`}
-              disabled={!pool[die.id] || !canRoll}
-              onClick={() => adjust(die.id, -1)}
-            >
-              −
-            </button>
-            <span className="dice-pool-count">{pool[die.id] ?? 0}</span>
-            <button
-              type="button"
-              className="ghost"
-              aria-label={`Add ${die.label} to pool`}
-              disabled={!canRoll}
-              onClick={() => adjust(die.id, 1)}
-            >
-              +
-            </button>
+      <div className="dice-split-columns">
+        <div className="dice-split-col">
+          <p className="dice-split-col-title">Action Dice</p>
+          <div className="dice-pool-grid">
+            {actionDieTypes.map((die) => (
+              <div className="dice-pool-row" key={die.id}>
+                <span className={`dice-pool-label dice-pool-label-${die.id}`}>
+                  {die.label}
+                </span>
+                <button
+                  type="button"
+                  className="ghost"
+                  aria-label={`Remove ${die.label} from pool`}
+                  disabled={!pool[die.id] || !canRoll}
+                  onClick={() => adjust(die.id, -1)}
+                >
+                  −
+                </button>
+                <span className="dice-pool-count">{pool[die.id] ?? 0}</span>
+                <button
+                  type="button"
+                  className="ghost"
+                  aria-label={`Add ${die.label} to pool`}
+                  disabled={!canRoll}
+                  onClick={() => adjust(die.id, 1)}
+                >
+                  +
+                </button>
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
+        <div className="dice-split-divider" />
+        <div className="dice-split-col">
+          <p className="dice-split-col-title">Hit Dice</p>
+          <div className="dice-pool-grid">
+            {hitDieTypes.map((die) => (
+              <div className="dice-pool-row" key={die.id}>
+                <span className={`dice-pool-label dice-pool-label-${die.id}`}>
+                  {die.label}
+                </span>
+                <button
+                  type="button"
+                  className="ghost"
+                  aria-label={`Remove ${die.label} from pool`}
+                  disabled={!pool[die.id] || !canRoll}
+                  onClick={() => adjust(die.id, -1)}
+                >
+                  −
+                </button>
+                <span className="dice-pool-count">{pool[die.id] ?? 0}</span>
+                <button
+                  type="button"
+                  className="ghost"
+                  aria-label={`Add ${die.label} to pool`}
+                  disabled={!canRoll}
+                  onClick={() => adjust(die.id, 1)}
+                >
+                  +
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
       <div className="token-owner-row" style={{ marginTop: 10 }}>
         <button

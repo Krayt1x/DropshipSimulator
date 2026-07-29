@@ -28,8 +28,7 @@ import TokenCard from '../components/TokenCard.jsx';
 import UnitCardHeader from '../components/UnitCardHeader.jsx';
 import AttackModal from '../components/AttackModal.jsx';
 import RosterImport from '../components/RosterImport.jsx';
-import RosterList from '../components/RosterList.jsx';
-import ReserveList from '../components/ReserveList.jsx';
+import ReserveRosterPanel from '../components/ReserveRosterPanel.jsx';
 import DestroyedList from '../components/DestroyedList.jsx';
 import TurnTracker from '../components/TurnTracker.jsx';
 import TurnOrder from '../components/TurnOrder.jsx';
@@ -880,18 +879,13 @@ function BattlePage() {
               />
             </div>
           )}
-          <ReserveList
-            tokens={reserveTokens}
-            units={units}
-            selectedTokenId={selectedTokenId}
-            canControl={canControl}
-            onSelect={setSelectedTokenId}
-          />
-          <RosterList
-            tokens={tokens}
+          <ReserveRosterPanel
+            reserveTokens={reserveTokens}
+            allTokens={tokens}
             units={units}
             myPlayer={myPlayer}
             selectedTokenId={selectedTokenId}
+            canControl={canControl}
             onSelect={setSelectedTokenId}
           />
           <DestroyedList

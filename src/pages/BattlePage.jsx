@@ -24,7 +24,6 @@ import {
   DEFAULT_BANKED_DICE,
 } from '../lib/gameState.js';
 import BattleBoard from '../components/BattleBoard.jsx';
-import TokenForm from '../components/TokenForm.jsx';
 import TokenCard from '../components/TokenCard.jsx';
 import UnitCardHeader from '../components/UnitCardHeader.jsx';
 import AttackModal from '../components/AttackModal.jsx';
@@ -85,9 +84,7 @@ function BattlePage() {
   );
   const [myPlayer] = useLocalStorageState('dropshipsimulator:myPlayer', null);
   const [selectedTokenId, setSelectedTokenId] = useState(null);
-  const [draft, setDraft] = useState(null);
   const [movingTokenId, setMovingTokenId] = useState(null);
-  const [sidebarTab, setSidebarTab] = useState('add');
   const [rangeWeapon, setRangeWeapon] = useState(null);
   // Attack workflow (#103): attackWeapon marks which weapon is armed for
   // attacking (also drives the arc display via rangeWeapon); attackTarget +
@@ -171,6 +168,7 @@ function BattlePage() {
   }
 
   function endTurn() {
+    const endingPlayer = turn.active;
     setTurn((current) => {
       const next =
         current.active === 'p1'
@@ -179,6 +177,23 @@ function BattlePage() {
       appendLog(`${ownerLabel(current.active)} ended their turn`);
       return next;
     });
+    // Weapons (and Movement gear) cool by 1 heat for the player whose turn
+    // just ended (#121).
+    setTokens((current) =>
+      current.map((t) =>
+        t.owner === endingPlayer
+          ? {
+              ...t,
+              weaponState: Object.fromEntries(
+                Object.entries(t.weaponState).map(([index, state]) => [
+                  index,
+                  { ...state, heat: Math.max(0, (state.heat ?? 0) - 1) },
+                ]),
+              ),
+            }
+          : t,
+      ),
+    );
     setActionPool([]);
     setLastAction(null);
   }
@@ -193,7 +208,6 @@ function BattlePage() {
     }
     resetActiveGame();
     setSelectedTokenId(null);
-    setDraft(null);
     setMovingTokenId(null);
     setLastAction(null);
     window.location.hash = '#home';
@@ -623,19 +637,6 @@ function BattlePage() {
       return;
     }
 
-    if (draft) {
-      if (tokenAt(key) || !canControl({ owner: draft.owner })) return;
-      const token = createToken({ ...draft, position: { col, row } });
-      setTokens((current) => [...current, token]);
-      appendLog(
-        `${ownerLabel(draft.owner)} deployed ${draft.unit.name} at (${col}, ${row})`,
-      );
-      setDraft(null);
-      setSelectedTokenId(token.id);
-      triggerDeployEffect(token.id, col, row);
-      return;
-    }
-
     if (movingTokenId) {
       const movingToken = tokens.find((t) => t.id === movingTokenId);
       if (movingToken && canControl(movingToken)) {
@@ -828,47 +829,13 @@ function BattlePage() {
       <div className="battle-layout">
         <div>
           {deploymentPhase && (
-            <>
-              <div className="workspace-tabs">
-                <button
-                  type="button"
-                  className={`workspace-tab ${sidebarTab === 'add' ? 'active' : ''}`}
-                  onClick={() => setSidebarTab('add')}
-                >
-                  Add unit
-                </button>
-                <button
-                  type="button"
-                  className={`workspace-tab ${sidebarTab === 'import' ? 'active' : ''}`}
-                  onClick={() => {
-                    setSidebarTab('import');
-                    setDraft(null);
-                  }}
-                >
-                  Import roster
-                </button>
-              </div>
-              {sidebarTab === 'import' ? (
-                <RosterImport
-                  manufacturers={manufacturers}
-                  units={units}
-                  equipment={equipment}
-                  myPlayer={myPlayer}
-                  onImport={importRoster}
-                />
-              ) : (
-                <TokenForm
-                  manufacturers={manufacturers}
-                  units={units}
-                  equipment={equipment}
-                  myPlayer={myPlayer}
-                  armed={Boolean(draft)}
-                  onArm={(next) =>
-                    setDraft((current) => (current ? null : next))
-                  }
-                />
-              )}
-            </>
+            <RosterImport
+              manufacturers={manufacturers}
+              units={units}
+              equipment={equipment}
+              myPlayer={myPlayer}
+              onImport={importRoster}
+            />
           )}
           {selectedToken && (
             <div

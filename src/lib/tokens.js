@@ -29,8 +29,8 @@ const DEFAULT_FACING_BY_OWNER = { p1: 3, p2: 0 };
 // track their own heat instead of sharing one. `equippedSides` (parallel to
 // equippedIds, 'left'/'right'/undefined) comes from a roster import's
 // "Left:"/"Right:" labels and drives the weapon arc restriction (#92) —
-// weapons added without that data (e.g. the manual Add unit form) simply
-// have no side and show their full range.
+// weapons imported without that label simply have no side and show their
+// full range.
 export function createToken({
   unit,
   equippedIds,

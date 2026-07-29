@@ -211,8 +211,8 @@ function BattleBoard({
             if (d < weaponRange.min || d > weaponRange.max) return false;
             // The model's own tile is never a valid target of its own weapon.
             if (d === 0) return false;
-            // Unknown weapon side (e.g. added via the manual Add unit form
-            // rather than a roster import) falls back to the full ring.
+            // A weapon imported without a "Left:"/"Right:" label has no
+            // known side, so it falls back to the full ring.
             if (!weaponRange.side) return true;
             return isInWeaponArc(
               weaponRange.origin,

@@ -24,6 +24,11 @@ const SYNCED_KEYS = [
   'dropshipsimulator:battle:log',
   'dropshipsimulator:battle:bankedDice',
   'dropshipsimulator:battle:actionPool',
+  // Transient (non-persisted) UI events (#117, #118, #119) — mirrored live
+  // via useSyncedTransientState rather than useLocalStorageState.
+  'dropshipsimulator:battle:deployEffect',
+  'dropshipsimulator:battle:animatingToken',
+  'dropshipsimulator:battle:diceResults',
 ];
 
 const MultiplayerContext = createContext(null);

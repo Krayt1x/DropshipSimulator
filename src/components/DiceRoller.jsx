@@ -1,5 +1,5 @@
 import { forwardRef, useImperativeHandle, useState } from 'react';
-import { makeKey } from '../lib/storage.js';
+import { makeKey, useSyncedTransientState } from '../lib/storage.js';
 import {
   DIE_TYPES,
   DICE_COLORS,
@@ -20,7 +20,13 @@ const DiceRoller = forwardRef(function DiceRoller(
   ref,
 ) {
   const [pool, setPool] = useState({});
-  const [results, setResults] = useState(null);
+  // Mirrored to the other player over the multiplayer data channel (#119) —
+  // without this, only the log's text summary of a roll reached the peer,
+  // not the actual dice roller display.
+  const [results, setResults] = useSyncedTransientState(
+    'dropshipsimulator:battle:diceResults',
+    null,
+  );
   const [selectedAction, setSelectedAction] = useState(null);
 
   function adjust(id, delta) {

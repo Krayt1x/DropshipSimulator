@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { useLocalStorageState, makeKey } from '../lib/storage.js';
+import {
+  useLocalStorageState,
+  useSyncedTransientState,
+  makeKey,
+} from '../lib/storage.js';
 import { backgroundContainerStyle } from '../lib/mapBackground.js';
 import { formatRollLogMessage, parseHitDice } from '../lib/dice.js';
 import { hexLine, hexDistance, isInWeaponArc } from '../lib/hex.js';
@@ -95,9 +99,18 @@ function BattlePage() {
   const [zoom, setZoom] = useState(1);
   const diceRollerRef = useRef(null);
   const [diceTrayOpen, setDiceTrayOpen] = useState(false);
-  const [animatingToken, setAnimatingToken] = useState(null);
+  // Mirrored to the other player over the multiplayer data channel (#117,
+  // #118) rather than just local state, since these are transient
+  // animations, not part of the persisted game state.
+  const [animatingToken, setAnimatingToken] = useSyncedTransientState(
+    'dropshipsimulator:battle:animatingToken',
+    null,
+  );
   const moveTimeoutsRef = useRef([]);
-  const [deployEffect, setDeployEffect] = useState(null);
+  const [deployEffect, setDeployEffect] = useSyncedTransientState(
+    'dropshipsimulator:battle:deployEffect',
+    null,
+  );
   const deployEffectTimeoutRef = useRef(null);
   const [hoverInfo, setHoverInfo] = useState(null);
 
@@ -113,13 +126,15 @@ function BattlePage() {
     return () => clearTimeout(deployEffectTimeoutRef.current);
   }, []);
 
-  // A brief puff-of-smoke effect where a token just landed (#112).
+  // A brief puff-of-smoke effect where a token just landed (#112), matching
+  // .deploy-smoke-puff's animation duration in index.css (#117).
+  const DEPLOY_SMOKE_DURATION_MS = 1400;
   function triggerDeployEffect(tokenId, col, row) {
     clearTimeout(deployEffectTimeoutRef.current);
     setDeployEffect({ tokenId, position: { col, row } });
     deployEffectTimeoutRef.current = setTimeout(
       () => setDeployEffect(null),
-      700,
+      DEPLOY_SMOKE_DURATION_MS,
     );
   }
   const [viewportHeight, setViewportHeight] = useState(

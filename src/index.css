@@ -448,7 +448,7 @@ button.danger:hover {
   opacity: 0.65;
   transform-box: fill-box;
   transform-origin: center;
-  animation: deploy-smoke-rise 0.7s ease-out forwards;
+  animation: deploy-smoke-rise 1.4s ease-out forwards;
 }
 
 @keyframes deploy-smoke-rise {

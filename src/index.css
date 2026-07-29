@@ -1312,6 +1312,11 @@ button.danger:hover {
   font-weight: 600;
 }
 
+.dice-pool-label-green {
+  color: #b45309;
+  font-weight: 600;
+}
+
 .dice-pool-row button {
   width: 28px;
   padding: 4px 0;

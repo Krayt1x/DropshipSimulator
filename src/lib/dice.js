@@ -1,20 +1,28 @@
+import actionDice from '../data/actionDice.json';
+
 export const DICE_COLORS = ['blue', 'red', 'green'];
+
+// The colored action dice's face layouts come from DropshipBuilder's Action
+// Dice Creator (synced daily into actionDice.json) rather than being
+// hardcoded here, so a manufacturer's custom die shows up automatically.
+const coloredDieTypes = DICE_COLORS.map((color) => {
+  const entry = actionDice.find((d) => d.color === color);
+  const faces = entry
+    ? [1, 2, 3, 4, 5, 6].map((side) => entry[`side${side}`])
+    : [];
+  return {
+    id: color,
+    label: color.charAt(0).toUpperCase() + color.slice(1),
+    faces,
+  };
+});
 
 export const DIE_TYPES = [
   { id: 'd4', label: 'D4', sides: 4 },
   { id: 'd6', label: 'D6', sides: 6 },
   { id: 'd8', label: 'D8', sides: 8 },
   { id: 'd10', label: 'D10', sides: 10 },
-  {
-    id: 'blue',
-    label: 'Blue',
-    faces: ['Attack', 'Attack', 'Action', 'Action', 'Move', 'Move'],
-  },
-  {
-    id: 'red',
-    label: 'Red',
-    faces: ['Attack', 'Attack', 'Attack', 'Attack', 'Action', 'Move'],
-  },
+  ...coloredDieTypes,
 ];
 
 export function rollDie(dieType) {

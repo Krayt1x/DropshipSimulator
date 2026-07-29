@@ -2,6 +2,7 @@ import { forwardRef, useImperativeHandle, useState } from 'react';
 import { makeKey } from '../lib/storage.js';
 import {
   DIE_TYPES,
+  DICE_COLORS,
   WORD_ORDER,
   rollDie,
   summarizeRollResults,
@@ -63,15 +64,19 @@ const DiceRoller = forwardRef(function DiceRoller(
   }
 
   function addPlayerDiceToPool() {
-    setPool((current) => ({
-      ...current,
-      blue: (current.blue ?? 0) + (activeOwnerDice?.blue ?? 0),
-      red: (current.red ?? 0) + (activeOwnerDice?.red ?? 0),
-    }));
+    setPool((current) => {
+      const next = { ...current };
+      DICE_COLORS.forEach((color) => {
+        next[color] = (current[color] ?? 0) + (activeOwnerDice?.[color] ?? 0);
+      });
+      return next;
+    });
   }
 
-  const playerDiceTotal =
-    (activeOwnerDice?.blue ?? 0) + (activeOwnerDice?.red ?? 0);
+  const playerDiceTotal = DICE_COLORS.reduce(
+    (sum, color) => sum + (activeOwnerDice?.[color] ?? 0),
+    0,
+  );
 
   // Counts of each action still unused in the pool (#120) — the player picks
   // an action type here rather than a specific die, and "Use Dice" spends

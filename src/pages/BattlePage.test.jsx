@@ -887,4 +887,112 @@ describe('BattlePage', () => {
     expect(screen.getByRole('button', { name: 'Right' }).disabled).toBe(true);
     expect(screen.getByRole('button', { name: 'Rear' }).disabled).toBe(true);
   });
+
+  it('splashes an Artillery blast across the targeted tile and its 6 neighbors, one roll checked against every model under it (#123)', () => {
+    const a20 = units.find((u) => u.name === 'A20');
+    const artillery = equipment.find((e) => e.name === 'Artillery');
+    const dieSides = Number(artillery.hit_dice.match(/d(\d+)/)[1]);
+    const armor = parseArmor(a20.armor);
+    const hits = 3; // all 3 dice mocked to roll a 1, always <= any target number
+
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve(['  Right: Artillery']);
+
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: [
+          'Test List (Corp A)',
+          'Weight: 40t / 100t',
+          '',
+          'A20 - 20t',
+          '  Right: Long Range Bolt',
+          '',
+          'A20 - 20t',
+          '  Right: Long Range Bolt',
+        ].join('\n'),
+      },
+    });
+    const importPanel = screen
+      .getByRole('button', { name: 'Preview import' })
+      .closest('.token-form');
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(
+      within(importPanel).getByRole('button', { name: 'Player 2' }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 2 units to reserve' }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    // Origin-tile model (5,9 — 4 hexes due south, within Artillery's 3-9
+    // range and its right-mounted arc): its side must be picked manually.
+    fireEvent.click(screen.getAllByRole('button', { name: 'A20' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,9'));
+
+    // Neighbor-tile model (6,9, one of the origin's 6 splash neighbors):
+    // its side is derived automatically from the blast's origin (#123),
+    // and works out to 'left' for this geometry (verified in hex.test.js).
+    fireEvent.click(screen.getByRole('button', { name: 'A20' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-6,9'));
+
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    fireEvent.click(screen.getByTestId('hex-5,9'));
+
+    const modal = screen.getByText(/blast at/).closest('.attack-modal');
+    expect(within(modal).getByText(/pick the side hit below/)).toBeDefined();
+    expect(within(modal).getByText(/left side/)).toBeDefined();
+
+    fireEvent.click(within(modal).getByRole('button', { name: 'Front' }));
+    // Mocked only for the roll itself — tokens are all already created by
+    // this point, so this can't collide two tokens' random-suffixed ids the
+    // way mocking it from the very start of the test would.
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+    fireEvent.click(within(modal).getByRole('button', { name: 'Roll to Hit' }));
+
+    const frontDamage = calculateDamage(dieSides, armor.front, hits);
+    const leftDamage = calculateDamage(dieSides, armor.left, hits);
+    // Per-target rows mix bold damage numbers with plain text ("... to the
+    // chassis"), so a plain getByText regex can't span that node boundary —
+    // read each row's own textContent instead. Rows render in the same
+    // order tokens were placed: origin (chassis) first, neighbor (left) second.
+    const resultRows = modal.querySelectorAll('.attack-result p');
+    expect(resultRows[1].textContent).toMatch(
+      new RegExp(`${frontDamage} damage`),
+    );
+    expect(resultRows[1].textContent).toMatch(/chassis/);
+    expect(resultRows[2].textContent).toMatch(
+      new RegExp(`${leftDamage} damage`),
+    );
+    expect(resultRows[2].textContent).toMatch(/left slot/);
+
+    fireEvent.click(
+      within(modal).getByRole('button', { name: 'Apply damage' }),
+    );
+    expect(screen.queryByText(/Which side/)).toBeNull();
+    randomSpy.mockRestore();
+
+    // The origin-tile model took its damage on the chassis (Front hit).
+    fireEvent.click(screen.getByTestId('hex-5,9'));
+    const originHp = Math.max(0, a20.hp - frontDamage);
+    expect(
+      screen.getByText(new RegExp(`${originHp} / ${a20.hp}`)),
+    ).toBeDefined();
+
+    // The neighbor-tile model has no left-slot equipment (only a Right
+    // weapon), so its left-side hit rolled over straight to its chassis too.
+    fireEvent.click(screen.getByTestId('hex-6,9'));
+    const neighborHp = Math.max(0, a20.hp - leftDamage);
+    expect(
+      screen.getByText(new RegExp(`${neighborHp} / ${a20.hp}`)),
+    ).toBeDefined();
+  });
 });

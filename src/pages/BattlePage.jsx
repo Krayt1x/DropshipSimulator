@@ -11,6 +11,8 @@ import {
   hexDistance,
   isInWeaponArc,
   visibleSides,
+  neighborHex,
+  nearestSide,
 } from '../lib/hex.js';
 import {
   createToken,
@@ -36,6 +38,7 @@ import BattleBoard from '../components/BattleBoard.jsx';
 import TokenCard from '../components/TokenCard.jsx';
 import UnitCardHeader from '../components/UnitCardHeader.jsx';
 import AttackModal from '../components/AttackModal.jsx';
+import SplashAttackModal from '../components/SplashAttackModal.jsx';
 import RosterImport from '../components/RosterImport.jsx';
 import ReserveRosterPanel from '../components/ReserveRosterPanel.jsx';
 import DestroyedList from '../components/DestroyedList.jsx';
@@ -391,6 +394,62 @@ function BattlePage() {
         )
       : null;
 
+  // Artillery-style weapons roll once against every model under a 7-tile
+  // splash template (the targeted tile plus its 6 neighbors) instead of a
+  // single chosen target (#123) — detected off the same `effects` text
+  // DropshipBuilder ships rather than hardcoding the weapon name.
+  const isSplashWeapon = Boolean(
+    attackWeapon &&
+    /target tile and all adjacent tiles/i.test(attackWeapon.item.effects ?? ''),
+  );
+  const attackOrigin = attackTarget?.origin ?? null;
+  const splashTemplate = attackOrigin
+    ? [
+        attackOrigin,
+        ...[0, 1, 2, 3, 4, 5].map((dir) =>
+          neighborHex(attackOrigin.col, attackOrigin.row, dir),
+        ),
+      ]
+    : [];
+  // Every model under the template is hit, friend or foe alike — a splash
+  // template doesn't distinguish sides, only the tile grid does.
+  const splashTargetTokens = attackOrigin
+    ? tokens.filter(
+        (t) =>
+          t.position &&
+          !t.destroyed &&
+          splashTemplate.some(
+            (tile) =>
+              tile.col === t.position.col && tile.row === t.position.row,
+          ),
+      )
+    : [];
+  // A model actually standing on the targeted tile has its side picked
+  // manually, same as a normal attack; every other model under the
+  // template gets the side nearest the blast's origin tile (#123).
+  const splashOriginToken =
+    splashTargetTokens.find(
+      (t) =>
+        t.position.col === attackOrigin?.col &&
+        t.position.row === attackOrigin?.row,
+    ) ?? null;
+  function splashSideFor(token) {
+    if (splashOriginToken && token.id === splashOriginToken.id) {
+      return attackTarget?.side ?? null;
+    }
+    return nearestSide(token.position, token.facing, attackOrigin);
+  }
+  const splashPreview = splashTargetTokens.map((token) => {
+    const unit = units.find((u) => Number(u.id) === Number(token.unitId));
+    return {
+      tokenId: token.id,
+      name: unitName(token),
+      sizeLabel: unit?.size,
+      side: splashSideFor(token),
+      isManualSide: splashOriginToken?.id === token.id,
+    };
+  });
+
   // The attack roll is self-contained (its own dice, its own comparison to
   // the target's size) rather than going through the shared dice pool, since
   // that pool can hold unrelated Move/Action dice that a hit-vs-target-number
@@ -437,49 +496,46 @@ function BattlePage() {
     );
   }
 
-  function damageChassis(amount, note = '') {
-    setTokens((current) =>
-      current.map((t) =>
-        t.id === attackTargetToken.id
-          ? { ...t, currentHp: Math.max(0, t.currentHp - amount) }
-          : t,
-      ),
-    );
-    appendLog(
-      `${unitName(attackTargetToken)} took ${amount} damage to the chassis${note}`,
-    );
-  }
-
-  function applyAttackDamage() {
-    if (!attackTarget || !attackResult || !attackTargetToken) return;
-    const { side } = attackTarget;
-    const { damage } = attackResult;
+  // Shared by both the single-target attack flow and the splash flow
+  // (#123) — everything about landing `damage` on one `token`'s `side` is
+  // identical either way, only how the side and damage were determined
+  // differs between the two callers.
+  function applyDamageToToken(token, side, damage, weaponItem) {
+    function damageChassis(amount, note = '') {
+      setTokens((current) =>
+        current.map((t) =>
+          t.id === token.id
+            ? { ...t, currentHp: Math.max(0, t.currentHp - amount) }
+            : t,
+        ),
+      );
+      appendLog(
+        `${unitName(token)} took ${amount} damage to the chassis${note}`,
+      );
+    }
 
     if (side === 'front' || side === 'rear') {
       damageChassis(damage);
-      cancelAttack();
       return;
     }
 
-    const sideIndices = attackTargetToken.equippedIds
+    const sideIndices = token.equippedIds
       .map((id, index) => ({ id, index }))
-      .filter(
-        ({ index }) => attackTargetToken.weaponState[index]?.side === side,
-      );
+      .filter(({ index }) => token.weaponState[index]?.side === side);
 
     // Some weapons (e.g. Flame Thrower) apply their damage as heat instead
     // of HP loss (#125) — heat isn't a depleting resource, so there's no
     // rollover to a second item the way HP damage has.
     const damageAsHeat = /damage is applied as heat/i.test(
-      attackWeapon?.item?.effects ?? '',
+      weaponItem?.effects ?? '',
     );
     if (damageAsHeat && sideIndices.length > 0) {
       const { index, id } = sideIndices[0];
       const eqItem = equipment.find((e) => Number(e.id) === Number(id));
-      const currentHeat = attackTargetToken.weaponState[index]?.heat ?? 0;
+      const currentHeat = token.weaponState[index]?.heat ?? 0;
       setTokens((current) =>
         current.map((t) =>
-          t.id === attackTargetToken.id
+          t.id === token.id
             ? {
                 ...t,
                 weaponState: {
@@ -494,9 +550,8 @@ function BattlePage() {
         ),
       );
       appendLog(
-        `${unitName(attackTargetToken)}'s ${eqItem?.name ?? 'equipment'} took ${damage} heat`,
+        `${unitName(token)}'s ${eqItem?.name ?? 'equipment'} took ${damage} heat`,
       );
-      cancelAttack();
       return;
     }
 
@@ -509,7 +564,7 @@ function BattlePage() {
       const eqItem = equipment.find((e) => Number(e.id) === Number(id));
       if (!eqItem) return;
       const maxHp = Number(eqItem.hp) || 0;
-      const hp = attackTargetToken.weaponState[index]?.hp ?? maxHp;
+      const hp = token.weaponState[index]?.hp ?? maxHp;
       if (hp <= 0) return;
       const absorbed = Math.min(remaining, hp);
       remaining -= absorbed;
@@ -519,7 +574,7 @@ function BattlePage() {
     if (hits.length > 0) {
       setTokens((current) =>
         current.map((t) => {
-          if (t.id !== attackTargetToken.id) return t;
+          if (t.id !== token.id) return t;
           const weaponState = { ...t.weaponState };
           hits.forEach(({ index, nextHp }) => {
             weaponState[index] = {
@@ -533,7 +588,7 @@ function BattlePage() {
       );
       hits.forEach(({ name, absorbed, nextHp }) => {
         appendLog(
-          `${unitName(attackTargetToken)}'s ${name} took ${absorbed} damage` +
+          `${unitName(token)}'s ${name} took ${absorbed} damage` +
             (nextHp <= 0 ? ' and broke' : ''),
         );
       });
@@ -542,7 +597,76 @@ function BattlePage() {
     if (remaining > 0) {
       damageChassis(remaining, ` (no ${side} equipment left to absorb it)`);
     }
+  }
 
+  function applyAttackDamage() {
+    if (!attackTarget || !attackResult || !attackTargetToken) return;
+    applyDamageToToken(
+      attackTargetToken,
+      attackTarget.side,
+      attackResult.damage,
+      attackWeapon?.item,
+    );
+    cancelAttack();
+  }
+
+  // One roll of the weapon's dice is checked against every model under the
+  // splash template, each against its own target number and armor (#123).
+  function rollSplashAttack() {
+    if (!attackWeapon || !attackOrigin) return;
+    if (splashOriginToken && !attackTarget?.side) return;
+    const attacker = tokens.find((t) => t.id === attackWeapon.tokenId);
+    const rolled = rollAttackDice(attackWeapon.item.hit_dice);
+    if (!attacker || !rolled) return;
+    const currentHeat =
+      attacker.weaponState[attackWeapon.instanceIndex]?.heat ?? 0;
+    const { generate } = parseHeatRating(attackWeapon.item.heat_rating);
+    setTokens((current) =>
+      current.map((t) =>
+        t.id === attackWeapon.tokenId
+          ? {
+              ...t,
+              weaponState: {
+                ...t.weaponState,
+                [attackWeapon.instanceIndex]: {
+                  ...t.weaponState[attackWeapon.instanceIndex],
+                  heat: currentHeat + generate,
+                },
+              },
+            }
+          : t,
+      ),
+    );
+
+    const perTarget = splashTargetTokens.map((token) => {
+      const unit = units.find((u) => Number(u.id) === Number(token.unitId));
+      const side = splashSideFor(token);
+      const targetNumber = sizeNumber(unit?.size);
+      const sideArmor = parseArmor(unit?.armor)?.[side] ?? 0;
+      const hits = countHits(rolled.rolls, targetNumber);
+      const damage = calculateDamage(rolled.sides, sideArmor, hits);
+      return {
+        tokenId: token.id,
+        name: unitName(token),
+        side,
+        targetNumber,
+        hits,
+        damage,
+      };
+    });
+
+    setAttackResult({ rolls: rolled.rolls, sides: rolled.sides, perTarget });
+    appendLog(
+      `${unitName(attacker)}'s ${attackWeapon.item.name} hit the blast template at (${attackOrigin.col}, ${attackOrigin.row}), rolling ${rolled.rolls.join(', ')} against ${perTarget.length} target${perTarget.length === 1 ? '' : 's'}`,
+    );
+  }
+
+  function applySplashDamage() {
+    if (!attackResult?.perTarget) return;
+    attackResult.perTarget.forEach(({ tokenId, side, damage }) => {
+      const token = tokens.find((t) => t.id === tokenId);
+      if (token) applyDamageToToken(token, side, damage, attackWeapon?.item);
+    });
     cancelAttack();
   }
 
@@ -691,6 +815,28 @@ function BattlePage() {
 
     if (attackWeapon) {
       const attacker = tokens.find((t) => t.id === attackWeapon.tokenId);
+      if (isSplashWeapon) {
+        const validOrigin =
+          attacker?.position &&
+          weaponRange &&
+          (() => {
+            const d = hexDistance(attacker.position, { col, row });
+            if (d < weaponRange.min || d > weaponRange.max) return false;
+            if (!weaponRange.side) return true;
+            return isInWeaponArc(
+              attacker.position,
+              { col, row },
+              attacker.facing,
+              weaponRange.side,
+            );
+          })();
+        if (validOrigin) {
+          setAttackTarget({ origin: { col, row }, side: null });
+        } else {
+          cancelAttack();
+        }
+        return;
+      }
       const target = tokenAt(key);
       const valid =
         attacker &&
@@ -1078,6 +1224,26 @@ function BattlePage() {
                 result={attackResult}
                 onRoll={rollAttack}
                 onApply={applyAttackDamage}
+                onCancel={cancelAttack}
+              />
+            )}
+            {attackTarget && attackWeapon && attackOrigin && (
+              <SplashAttackModal
+                attackerName={unitName(
+                  tokens.find((t) => t.id === attackWeapon.tokenId),
+                )}
+                weaponName={attackWeapon.item.name}
+                hitDice={attackWeapon.item.hit_dice}
+                heatGenerate={
+                  parseHeatRating(attackWeapon.item.heat_rating).generate
+                }
+                origin={attackOrigin}
+                targets={splashPreview}
+                side={attackTarget.side}
+                onPickSide={pickAttackSide}
+                result={attackResult}
+                onRoll={rollSplashAttack}
+                onApply={applySplashDamage}
                 onCancel={cancelAttack}
               />
             )}

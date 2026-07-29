@@ -75,4 +75,18 @@ describe('App', () => {
 
     confirmSpy.mockRestore();
   });
+
+  it('portals the turn tracker into the top menu bar and drops the battle board blurb (#136)', () => {
+    window.location.hash = '#battle';
+    const { container } = render(<App />);
+
+    const slot = container.querySelector('#topnav-turn-slot');
+    expect(slot).not.toBeNull();
+    expect(slot.querySelector('.split-tracker')).not.toBeNull();
+    expect(
+      slot.contains(screen.getByRole('button', { name: 'End Turn' })),
+    ).toBe(true);
+
+    expect(screen.queryByText(/Place units from the catalogue/)).toBeNull();
+  });
 });

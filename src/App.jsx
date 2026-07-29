@@ -175,6 +175,12 @@ function AppShell() {
           <a href="#map" className={page === 'map' ? 'active' : ''}>
             Map editor
           </a>
+          {/* BattlePage portals its TurnTracker in here (#136) so the turn
+              counter + End Turn button live in the menu bar instead of the
+              page body, without lifting all of BattlePage's turn state up. */}
+          {page === 'battle' && (
+            <div id="topnav-turn-slot" className="topnav-turn-slot" />
+          )}
           <div className="topnav-right">
             {(page === 'battle' || page === 'connect') && (
               <PlayerIdentityPicker />

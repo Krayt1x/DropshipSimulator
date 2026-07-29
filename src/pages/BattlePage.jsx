@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   useLocalStorageState,
   useSyncedTransientState,
@@ -138,6 +139,14 @@ function BattlePage() {
     {},
   );
   const [hoverInfo, setHoverInfo] = useState(null);
+  // The turn tracker portals into a slot App.jsx renders in the top menu
+  // bar (#136) rather than lifting turn/endTurn/playerDice state up there —
+  // grabbed after mount since the DOM node doesn't exist during this
+  // component's own first render.
+  const [turnSlot, setTurnSlot] = useState(null);
+  useEffect(() => {
+    setTurnSlot(document.getElementById('topnav-turn-slot'));
+  }, []);
 
   function handleHoverToken(tokenId, x, y) {
     setHoverInfo(tokenId ? { tokenId, x, y } : null);
@@ -1093,16 +1102,17 @@ function BattlePage() {
   return (
     <div className="container-wide battle-page">
       <TurnNotificationToast notice={turnNotice} myPlayer={myPlayer} />
+      {turnSlot &&
+        createPortal(
+          <TurnTracker
+            turn={turn}
+            onEndTurn={endTurn}
+            playerDice={playerDice}
+          />,
+          turnSlot,
+        )}
       <div className="battle-header-row">
-        <div>
-          <h1 style={{ fontSize: 20, marginBottom: 4 }}>Battle board</h1>
-          <p className="unit-meta" style={{ marginBottom: 20 }}>
-            Place units from the catalogue, move them around, and track HP and
-            weapon heat as you play. This tool manages state only — it's on you
-            and your opponent to know and apply the rules.
-          </p>
-        </div>
-        <TurnTracker turn={turn} onEndTurn={endTurn} playerDice={playerDice} />
+        <h1 style={{ fontSize: 20, marginBottom: 4 }}>Battle board</h1>
       </div>
 
       <div className="deployment-controls">

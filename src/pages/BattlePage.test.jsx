@@ -14,11 +14,20 @@ import { sizeNumber, parseHeatRating } from '../lib/tokens.js';
 import { parseArmor, calculateDamage } from '../lib/combat.js';
 import { publish, subscribe } from '../lib/syncBus.js';
 
-beforeEach(() => window.localStorage.clear());
+// BattlePage portals its TurnTracker into a slot App.jsx normally renders in
+// the top menu bar (#136); standing this element in manually here since
+// these tests render BattlePage on its own, without App around it.
+beforeEach(() => {
+  window.localStorage.clear();
+  const slot = document.createElement('div');
+  slot.id = 'topnav-turn-slot';
+  document.body.appendChild(slot);
+});
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
   vi.restoreAllMocks();
+  document.getElementById('topnav-turn-slot')?.remove();
 });
 
 // Deployment phase now defaults to on (#75), so tests that used to need

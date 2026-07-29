@@ -114,14 +114,16 @@ function AppShell() {
           <a href="#map" className={page === 'map' ? 'active' : ''}>
             Map editor
           </a>
-          <a href={DROPSHIP_BUILDER_URL} target="_blank" rel="noreferrer">
-            Dropship Builder ↗
-          </a>
-          {(page === 'battle' || page === 'connect') && (
-            <PlayerIdentityPicker />
-          )}
-          <ConnectionBadge />
-          <ThemeToggle />
+          <div className="topnav-right">
+            {(page === 'battle' || page === 'connect') && (
+              <PlayerIdentityPicker />
+            )}
+            <ConnectionBadge />
+            <a href={DROPSHIP_BUILDER_URL} target="_blank" rel="noreferrer">
+              Dropship Builder ↗
+            </a>
+            <ThemeToggle />
+          </div>
         </div>
       </nav>
       {page === 'battle' ? (

@@ -90,8 +90,14 @@ body {
   font-weight: 600;
 }
 
-.player-identity-picker {
+.topnav-right {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.player-identity-picker {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -120,8 +126,11 @@ body {
     display: flex;
   }
 
-  .player-identity-picker {
+  .topnav-right {
     margin-left: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
   }
 }
 

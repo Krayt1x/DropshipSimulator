@@ -995,4 +995,34 @@ describe('BattlePage', () => {
       screen.getByText(new RegExp(`${neighborHp} / ${a20.hp}`)),
     ).toBeDefined();
   });
+
+  it('only lets the active player use the dice roller once an identity is chosen (#130)', () => {
+    window.localStorage.setItem(
+      'dropshipsimulator:myPlayer',
+      JSON.stringify('p2'),
+    );
+    render(<BattlePage />);
+
+    // Turn 1 starts with Player 1 active, so Player 2 can't roll yet.
+    expect(screen.getByText('Wait for your turn to roll dice.')).toBeDefined();
+    expect(
+      screen.getByRole('button', { name: 'Add Blue to pool' }).disabled,
+    ).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+
+    expect(screen.queryByText('Wait for your turn to roll dice.')).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Add Blue to pool' }).disabled,
+    ).toBe(false);
+  });
+
+  it('lets either player use the dice roller with no identity chosen (hotseat play)', () => {
+    render(<BattlePage />);
+
+    expect(screen.queryByText('Wait for your turn to roll dice.')).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Add Blue to pool' }).disabled,
+    ).toBe(false);
+  });
 });

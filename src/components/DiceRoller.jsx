@@ -16,6 +16,7 @@ const DiceRoller = forwardRef(function DiceRoller(
     onRollToActionPool,
     onUseActionPoolDie,
     activeOwnerDice,
+    canRoll = true,
   },
   ref,
 ) {
@@ -104,6 +105,9 @@ const DiceRoller = forwardRef(function DiceRoller(
   return (
     <div className="card">
       <p className="unit-name">Dice roller</p>
+      {!canRoll && (
+        <p className="unit-meta">Wait for your turn to roll dice.</p>
+      )}
       <div className="dice-pool-grid">
         {DIE_TYPES.map((die) => (
           <div className="dice-pool-row" key={die.id}>
@@ -114,7 +118,7 @@ const DiceRoller = forwardRef(function DiceRoller(
               type="button"
               className="ghost"
               aria-label={`Remove ${die.label} from pool`}
-              disabled={!pool[die.id]}
+              disabled={!pool[die.id] || !canRoll}
               onClick={() => adjust(die.id, -1)}
             >
               −
@@ -124,6 +128,7 @@ const DiceRoller = forwardRef(function DiceRoller(
               type="button"
               className="ghost"
               aria-label={`Add ${die.label} to pool`}
+              disabled={!canRoll}
               onClick={() => adjust(die.id, 1)}
             >
               +
@@ -132,13 +137,17 @@ const DiceRoller = forwardRef(function DiceRoller(
         ))}
       </div>
       <div className="token-owner-row" style={{ marginTop: 10 }}>
-        <button type="button" disabled={poolTotal === 0} onClick={roll}>
+        <button
+          type="button"
+          disabled={poolTotal === 0 || !canRoll}
+          onClick={roll}
+        >
           Roll{poolTotal > 0 ? ` (${poolTotal})` : ''}
         </button>
         <button
           type="button"
           className="ghost"
-          disabled={playerDiceTotal === 0}
+          disabled={playerDiceTotal === 0 || !canRoll}
           onClick={addPlayerDiceToPool}
         >
           Add Action Pool
@@ -146,7 +155,7 @@ const DiceRoller = forwardRef(function DiceRoller(
         <button
           type="button"
           className="ghost"
-          disabled={poolTotal === 0 && !results}
+          disabled={(poolTotal === 0 && !results) || !canRoll}
           onClick={clearPool}
         >
           Clear
@@ -202,7 +211,7 @@ const DiceRoller = forwardRef(function DiceRoller(
                 type="button"
                 key={value}
                 className={`dice-summary-chip pooled ${value === selectedAction ? 'selected' : ''}`}
-                disabled={count === 0}
+                disabled={count === 0 || !canRoll}
                 onClick={() =>
                   setSelectedAction((current) =>
                     current === value ? null : value,
@@ -215,7 +224,11 @@ const DiceRoller = forwardRef(function DiceRoller(
           </div>
           {selectedAction && (
             <div className="token-owner-row" style={{ marginTop: 8 }}>
-              <button type="button" onClick={useSelectedAction}>
+              <button
+                type="button"
+                disabled={!canRoll}
+                onClick={useSelectedAction}
+              >
                 Use Dice
               </button>
             </div>

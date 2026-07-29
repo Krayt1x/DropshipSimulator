@@ -1267,6 +1267,7 @@ function BattlePage() {
               onRollToActionPool={rollToActionPool}
               onUseActionPoolDie={useActionPoolDie}
               activeOwnerDice={activeOwnerDice}
+              canRoll={!myPlayer || myPlayer === turn.active}
             />
           </div>
           <button

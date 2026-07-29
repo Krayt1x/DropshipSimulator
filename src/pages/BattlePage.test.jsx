@@ -12,6 +12,7 @@ import units from '../data/units.json';
 import equipment from '../data/equipment.json';
 import { sizeNumber, parseHeatRating } from '../lib/tokens.js';
 import { parseArmor, calculateDamage } from '../lib/combat.js';
+import { publish, subscribe } from '../lib/syncBus.js';
 
 beforeEach(() => window.localStorage.clear());
 afterEach(() => {
@@ -1054,5 +1055,83 @@ describe('BattlePage', () => {
     expect(
       screen.getByRole('button', { name: 'Add Blue to pool' }).disabled,
     ).toBe(false);
+  });
+
+  it("broadcasts my selection and shows the peer's selected token and weapon range (#135)", () => {
+    // Import/deploy both sides first, while no identity is locked yet (so
+    // both owners are still offered) — then lock in "I'm Player 1" the same
+    // way the real app does it live, over the same sync channel
+    // useLocalStorageState already subscribes to, rather than needing a
+    // remount.
+    const { container } = render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve(['  Right: Long Range Bolt']);
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: [
+          'Test List (Corp A)',
+          'Weight: 20t / 100t',
+          '',
+          'A20 - 20t',
+        ].join('\n'),
+      },
+    });
+    const importPanel = screen
+      .getByRole('button', { name: 'Preview import' })
+      .closest('.token-form');
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(
+      within(importPanel).getByRole('button', { name: 'Player 2' }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'A20' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,6'));
+
+    act(() => {
+      publish('dropshipsimulator:myPlayer', 'p1');
+    });
+
+    const markers = container.querySelectorAll('[data-testid^="token-"]');
+    const a20TokenId = markers[1]
+      .getAttribute('data-testid')
+      .replace('token-', '');
+
+    // Selecting my (p1's) own token publishes my focus for p2 to see.
+    let published = null;
+    const unsubscribe = subscribe(
+      'dropshipsimulator:battle:peerFocus',
+      (value) => {
+        published = value;
+      },
+    );
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+    expect(published?.p1?.selectedTokenId).toBeTruthy();
+    unsubscribe();
+
+    // Simulate p2 (a peer, over the sync channel) having A20 selected.
+    act(() => {
+      publish('dropshipsimulator:battle:peerFocus', {
+        p2: {
+          selectedTokenId: a20TokenId,
+          isMoving: false,
+          weaponRange: null,
+        },
+      });
+    });
+
+    const a20Marker = markers[1];
+    expect(a20Marker.querySelector('.peer-focus-ring')).not.toBeNull();
+    const a10Marker = markers[0];
+    expect(a10Marker.querySelector('.peer-focus-ring')).toBeNull();
   });
 });

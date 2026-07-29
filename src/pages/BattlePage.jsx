@@ -22,6 +22,7 @@ import {
   parseWeaponRange,
   parseHeatRating,
   sizeNumber,
+  ownerColor,
 } from '../lib/tokens.js';
 import {
   parseArmor,
@@ -120,6 +121,14 @@ function BattlePage() {
   const [turnNotice, setTurnNotice] = useSyncedTransientState(
     'dropshipsimulator:battle:turnNotice',
     null,
+  );
+  // Lets each player see roughly what the other has in focus — their
+  // selected token, whether they've armed it to move, and any weapon range
+  // they're viewing (#135) — keyed by owner so each player's slot doesn't
+  // clobber the other's.
+  const [peerFocus, setPeerFocus] = useSyncedTransientState(
+    'dropshipsimulator:battle:peerFocus',
+    {},
   );
   const [hoverInfo, setHoverInfo] = useState(null);
 
@@ -359,6 +368,26 @@ function BattlePage() {
             : selectedToken.weaponState[rangeWeapon.instanceIndex]?.side,
       }
     : null;
+
+  // Broadcasts my own current focus so the other player can see it (#135).
+  // Depends on the raw range-toggle state (rangeWeapon), not the `weaponRange`
+  // object above — that's rebuilt fresh every render, so depending on it
+  // directly would re-publish (and re-render) on every render forever.
+  useEffect(() => {
+    if (!myPlayer) return;
+    setPeerFocus((current) => ({
+      ...current,
+      [myPlayer]: {
+        selectedTokenId,
+        isMoving: Boolean(movingTokenId),
+        weaponRange,
+      },
+    }));
+  }, [myPlayer, selectedTokenId, movingTokenId, rangeWeapon]);
+
+  const otherPlayerId =
+    myPlayer === 'p1' ? 'p2' : myPlayer === 'p2' ? 'p1' : null;
+  const theirFocus = otherPlayerId ? peerFocus?.[otherPlayerId] : null;
 
   function startAttack(instanceIndex, item) {
     const isSame =
@@ -1191,6 +1220,10 @@ function BattlePage() {
               onHexClick={handleHexClick}
               onDropToken={handleDropToken}
               onHoverToken={handleHoverToken}
+              peerSelectedTokenId={theirFocus?.selectedTokenId ?? null}
+              peerIsMoving={Boolean(theirFocus?.isMoving)}
+              peerWeaponRange={theirFocus?.weaponRange ?? null}
+              peerColor={otherPlayerId ? ownerColor(otherPlayerId) : null}
             />
             {hoverInfo &&
               (() => {

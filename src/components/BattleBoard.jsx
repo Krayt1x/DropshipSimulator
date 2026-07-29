@@ -18,6 +18,8 @@ function TokenMarker({
   onSelect,
   onDrop,
   onHover,
+  peerHighlight,
+  peerMoving,
 }) {
   const { x, y } = hexToPixel(token.position.col, token.position.row, size);
   const radius = size * 0.62;
@@ -74,6 +76,22 @@ function TokenMarker({
         stroke={selected ? '#fff' : 'rgba(0,0,0,0.35)'}
         strokeWidth={selected ? 3 : 1.5}
       />
+      {peerHighlight && (
+        <circle
+          className={
+            peerMoving
+              ? 'peer-focus-ring peer-focus-ring-moving'
+              : 'peer-focus-ring'
+          }
+          cx={0}
+          cy={0}
+          r={radius + 6}
+          fill="none"
+          stroke={peerHighlight}
+          strokeWidth={2.5}
+          strokeDasharray="5 4"
+        />
+      )}
       <polygon
         points="0,-8 6,4 -6,4"
         fill="#fff"
@@ -154,6 +172,21 @@ function DeploySmoke({ position, size }) {
   );
 }
 
+// Shared by both the local weapon-range highlight and the peer's (#135) —
+// same "is this hex within range and arc" test, just against whichever range
+// spec is passed in.
+function hexInWeaponRange(range, col, row) {
+  if (!range) return false;
+  const d = hexDistance(range.origin, { col, row });
+  if (d < range.min || d > range.max) return false;
+  // The model's own tile is never a valid target of its own weapon.
+  if (d === 0) return false;
+  // A weapon imported without a "Left:"/"Right:" label has no known side, so
+  // it falls back to the full ring.
+  if (!range.side) return true;
+  return isInWeaponArc(range.origin, { col, row }, range.facing, range.side);
+}
+
 function BattleBoard({
   cols,
   rows,
@@ -174,6 +207,10 @@ function BattleBoard({
   onHexClick,
   onDropToken,
   onHoverToken,
+  peerSelectedTokenId,
+  peerIsMoving,
+  peerWeaponRange,
+  peerColor,
 }) {
   const size = sizeProp ?? hexSize();
   const { width, height } = boardPixelSize(cols, rows, size);
@@ -206,23 +243,8 @@ function BattleBoard({
               ? 'rgba(220,38,38,0.35)'
               : null
           : null;
-        const inWeaponRange =
-          weaponRange &&
-          (() => {
-            const d = hexDistance(weaponRange.origin, { col, row });
-            if (d < weaponRange.min || d > weaponRange.max) return false;
-            // The model's own tile is never a valid target of its own weapon.
-            if (d === 0) return false;
-            // A weapon imported without a "Left:"/"Right:" label has no
-            // known side, so it falls back to the full ring.
-            if (!weaponRange.side) return true;
-            return isInWeaponArc(
-              weaponRange.origin,
-              { col, row },
-              weaponRange.facing,
-              weaponRange.side,
-            );
-          })();
+        const inWeaponRange = hexInWeaponRange(weaponRange, col, row);
+        const inPeerWeaponRange = hexInWeaponRange(peerWeaponRange, col, row);
         const inMoveRange =
           moveRange &&
           hexDistance(moveRange.origin, { col, row }) <= moveRange.max;
@@ -270,6 +292,16 @@ function BattleBoard({
                 style={{ pointerEvents: 'none' }}
               />
             )}
+            {inPeerWeaponRange && (
+              <polygon
+                points={hexPointsAttr(x, y, size)}
+                fill="none"
+                stroke={peerColor ?? '#f59e0b'}
+                strokeWidth={2}
+                strokeDasharray="4 3"
+                style={{ pointerEvents: 'none' }}
+              />
+            )}
             {distance !== null && distance > 0 && (
               <text
                 x={x}
@@ -308,6 +340,12 @@ function BattleBoard({
               }
               onDrop={(col, row) => onDropToken?.(token.id, col, row)}
               onHover={onHoverToken}
+              peerHighlight={
+                token.id === peerSelectedTokenId
+                  ? (peerColor ?? '#f59e0b')
+                  : null
+              }
+              peerMoving={token.id === peerSelectedTokenId && peerIsMoving}
             />
           );
         })}

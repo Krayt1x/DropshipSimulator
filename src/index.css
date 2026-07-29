@@ -543,6 +543,26 @@ button.danger:hover {
   }
 }
 
+/* Shows which token/weapon-range the other player currently has in focus
+   (#135), separate from your own selection so the two never look alike. */
+.peer-focus-ring {
+  pointer-events: none;
+}
+
+.peer-focus-ring-moving {
+  animation: peer-focus-pulse 1s ease-in-out infinite;
+}
+
+@keyframes peer-focus-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 .battle-board-column {
   display: flex;
   flex-direction: column;

@@ -41,6 +41,7 @@ import ReserveRosterPanel from '../components/ReserveRosterPanel.jsx';
 import DestroyedList from '../components/DestroyedList.jsx';
 import TurnTracker from '../components/TurnTracker.jsx';
 import TurnOrder from '../components/TurnOrder.jsx';
+import MobileTabBar from '../components/MobileTabBar.jsx';
 import TurnNotificationToast from '../components/TurnNotificationToast.jsx';
 import DiceRoller from '../components/DiceRoller.jsx';
 import GameLog from '../components/GameLog.jsx';
@@ -65,6 +66,9 @@ const BOARD_PADDING = 34;
 // page header, turn tracker, deployment controls, zoom controls) so the
 // auto-fit zoom keeps the whole board on screen without vertical scrolling.
 const BOARD_CHROME_HEIGHT = 300;
+// .container-wide's own 1.5rem padding on each side (#101) — the only other
+// horizontal chrome around the board once it's narrower than BOARD_WIDTH.
+const CONTAINER_PADDING = 48;
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2;
 const ZOOM_STEP = 0.25;
@@ -104,7 +108,10 @@ function BattlePage() {
   const [lastAction, setLastAction] = useState(null);
   const [zoom, setZoom] = useState(1);
   const diceRollerRef = useRef(null);
-  const [diceTrayOpen, setDiceTrayOpen] = useState(false);
+  // Which of the 4 panels is showing on narrow (mobile) viewports (#101) —
+  // replaces the old slide-in overlay/tray approach. Irrelevant on desktop,
+  // where all 4 panels render at once in the existing 3-column layout.
+  const [mobileTab, setMobileTab] = useState('board');
   // Mirrored to the other player over the multiplayer data channel (#117,
   // #118) rather than just local state, since these are transient
   // animations, not part of the persisted game state.
@@ -158,10 +165,16 @@ function BattlePage() {
   const [viewportHeight, setViewportHeight] = useState(
     () => window.innerHeight,
   );
+  // Tracked alongside viewportHeight (#101) so the board's auto-fit sizing
+  // actually shrinks to fit a narrow phone screen instead of always fitting
+  // to a desktop-width assumption and relying on the viewport's own
+  // overflow-scroll to hide the rest.
+  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
 
   useEffect(() => {
     function onResize() {
       setViewportHeight(window.innerHeight);
+      setViewportWidth(window.innerWidth);
     }
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
@@ -738,8 +751,14 @@ function BattlePage() {
     return !myPlayer || token.owner === myPlayer;
   }
 
+  // Capped at BOARD_WIDTH (desktop's fixed board width) but shrinks below
+  // that on a narrow phone screen instead of overflowing it (#101).
+  const availableWidth = Math.min(
+    BOARD_WIDTH,
+    viewportWidth - CONTAINER_PADDING,
+  );
   const fitWidth =
-    (BOARD_WIDTH - BOARD_PADDING) / (1.5 * (dimensions.cols + 1));
+    (availableWidth - BOARD_PADDING) / (1.5 * (dimensions.cols + 1));
   const availableHeight = Math.max(200, viewportHeight - BOARD_CHROME_HEIGHT);
   const fitHeight =
     (availableHeight - BOARD_PADDING) / (Math.sqrt(3) * (dimensions.rows + 1));
@@ -1072,7 +1091,7 @@ function BattlePage() {
   }
 
   return (
-    <div className="container-wide">
+    <div className="container-wide battle-page">
       <TurnNotificationToast notice={turnNotice} myPlayer={myPlayer} />
       <div className="battle-header-row">
         <div>
@@ -1103,7 +1122,9 @@ function BattlePage() {
       </div>
 
       <div className="battle-layout">
-        <div>
+        <div
+          className={`mobile-tab-panel ${mobileTab === 'units' ? 'mobile-tab-panel-active' : ''}`}
+        >
           {deploymentPhase && (
             <RosterImport
               manufacturers={manufacturers}
@@ -1113,48 +1134,41 @@ function BattlePage() {
               onImport={importRoster}
             />
           )}
-          {selectedToken && (
-            <div
-              className={`token-card-mobile-overlay ${deploymentPhase ? 'token-card-overlay-deployment' : ''}`}
-              onClick={(e) => {
-                if (e.target === e.currentTarget) setSelectedTokenId(null);
-              }}
-            >
-              <TokenCard
-                key={selectedToken.id}
-                token={selectedToken}
-                unit={selectedUnit}
-                equipment={equipment}
-                moving={movingTokenId === selectedToken.id}
-                canControl={canControl(selectedToken)}
-                onAdjustHp={adjustHp}
-                onRotate={rotate}
-                onArmMove={() =>
-                  setMovingTokenId((current) =>
-                    current === selectedToken.id ? null : selectedToken.id,
-                  )
-                }
-                onSetHeat={setHeat}
-                onSetWeaponHp={setWeaponHp}
-                onToggleBroken={toggleBroken}
-                onRollHitDice={rollHitDice}
-                activeRangeIndex={
-                  rangeWeapon?.tokenId === selectedToken.id
-                    ? rangeWeapon.instanceIndex
-                    : null
-                }
-                onToggleRange={toggleWeaponRange}
-                onStartAttack={startAttack}
-                activeAttackIndex={
-                  attackWeapon?.tokenId === selectedToken.id
-                    ? attackWeapon.instanceIndex
-                    : null
-                }
-                onDestroy={destroySelected}
-                onReturnToReserve={returnSelectedToReserve}
-                onDeselect={() => setSelectedTokenId(null)}
-              />
-            </div>
+          {selectedToken && !deploymentPhase && (
+            <TokenCard
+              key={selectedToken.id}
+              token={selectedToken}
+              unit={selectedUnit}
+              equipment={equipment}
+              moving={movingTokenId === selectedToken.id}
+              canControl={canControl(selectedToken)}
+              onAdjustHp={adjustHp}
+              onRotate={rotate}
+              onArmMove={() =>
+                setMovingTokenId((current) =>
+                  current === selectedToken.id ? null : selectedToken.id,
+                )
+              }
+              onSetHeat={setHeat}
+              onSetWeaponHp={setWeaponHp}
+              onToggleBroken={toggleBroken}
+              onRollHitDice={rollHitDice}
+              activeRangeIndex={
+                rangeWeapon?.tokenId === selectedToken.id
+                  ? rangeWeapon.instanceIndex
+                  : null
+              }
+              onToggleRange={toggleWeaponRange}
+              onStartAttack={startAttack}
+              activeAttackIndex={
+                attackWeapon?.tokenId === selectedToken.id
+                  ? attackWeapon.instanceIndex
+                  : null
+              }
+              onDestroy={destroySelected}
+              onReturnToReserve={returnSelectedToReserve}
+              onDeselect={() => setSelectedTokenId(null)}
+            />
           )}
           <ReserveRosterPanel
             reserveTokens={reserveTokens}
@@ -1174,7 +1188,9 @@ function BattlePage() {
             onReturnToReserve={returnDestroyedToReserve}
           />
         </div>
-        <div className="battle-board-column">
+        <div
+          className={`battle-board-column mobile-tab-panel ${mobileTab === 'board' ? 'mobile-tab-panel-active' : ''}`}
+        >
           <div className="zoom-controls">
             <button
               type="button"
@@ -1300,18 +1316,30 @@ function BattlePage() {
                 onCancel={cancelAttack}
               />
             )}
+            {selectedToken &&
+              !selectedToken.destroyed &&
+              canControl(selectedToken) && (
+                <button
+                  type="button"
+                  className="mobile-move-fab"
+                  onClick={() =>
+                    setMovingTokenId((current) =>
+                      current === selectedToken.id ? null : selectedToken.id,
+                    )
+                  }
+                >
+                  {movingTokenId === selectedToken.id
+                    ? 'Cancel'
+                    : selectedToken.position
+                      ? 'Move'
+                      : 'Deploy'}
+                </button>
+              )}
           </div>
         </div>
         <div>
-          <TurnOrder />
-          {diceTrayOpen && (
-            <div
-              className="dice-tray-backdrop"
-              onClick={() => setDiceTrayOpen(false)}
-            />
-          )}
           <div
-            className={`dice-tray-wrapper ${diceTrayOpen ? 'dice-tray-open' : ''}`}
+            className={`mobile-tab-panel ${mobileTab === 'dice' ? 'mobile-tab-panel-active' : ''}`}
           >
             <DiceRoller
               ref={diceRollerRef}
@@ -1324,34 +1352,32 @@ function BattlePage() {
               canRoll={!myPlayer || myPlayer === turn.active}
             />
           </div>
-          <button
-            type="button"
-            className="dice-tray-toggle"
-            aria-label={diceTrayOpen ? 'Close dice tray' : 'Open dice tray'}
-            onClick={() => setDiceTrayOpen((current) => !current)}
+          <div
+            className={`mobile-tab-panel ${mobileTab === 'log' ? 'mobile-tab-panel-active' : ''}`}
           >
-            🎲
-          </button>
-          <div className="card">
-            <button
-              type="button"
-              className="ghost"
-              style={{ width: '100%' }}
-              disabled={!lastAction}
-              onClick={undoLastAction}
-            >
-              {lastAction?.type === 'rollToPool'
-                ? 'Undo dice roll'
-                : lastAction?.type === 'useDie'
-                  ? 'Undo used die'
-                  : lastAction?.type === 'exchange'
-                    ? 'Undo exchange'
-                    : 'Undo last move'}
-            </button>
+            <TurnOrder />
+            <div className="card">
+              <button
+                type="button"
+                className="ghost"
+                style={{ width: '100%' }}
+                disabled={!lastAction}
+                onClick={undoLastAction}
+              >
+                {lastAction?.type === 'rollToPool'
+                  ? 'Undo dice roll'
+                  : lastAction?.type === 'useDie'
+                    ? 'Undo used die'
+                    : lastAction?.type === 'exchange'
+                      ? 'Undo exchange'
+                      : 'Undo last move'}
+              </button>
+            </div>
+            <GameLog entries={logEntries} />
           </div>
-          <GameLog entries={logEntries} />
         </div>
       </div>
+      <MobileTabBar activeTab={mobileTab} onSelectTab={setMobileTab} />
     </div>
   );
 }

@@ -365,91 +365,6 @@ button.danger:hover {
   .map-editor-layout {
     grid-template-columns: minmax(0, 1fr);
   }
-
-  .token-card-mobile-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    display: flex;
-    justify-content: flex-start;
-    z-index: 40;
-  }
-
-  .token-card-mobile-overlay .card.token-card {
-    width: 82%;
-    max-width: 360px;
-    height: 100%;
-    margin: 0;
-    border-radius: 0;
-    overflow-y: auto;
-    animation: token-card-slide-in 0.2s ease-out;
-  }
-
-  @keyframes token-card-slide-in {
-    from {
-      transform: translateX(-100%);
-    }
-    to {
-      transform: translateX(0);
-    }
-  }
-}
-
-@media (min-width: 901px) {
-  .token-card-mobile-overlay.token-card-overlay-deployment {
-    display: none;
-  }
-}
-
-.dice-tray-toggle {
-  display: none;
-}
-
-@media (max-width: 900px) {
-  .dice-tray-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: fixed;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 40px;
-    height: 56px;
-    border: none;
-    border-radius: 8px 0 0 8px;
-    background: var(--accent);
-    color: #fff;
-    font-size: 20px;
-    box-shadow: -1px 0 4px rgba(0, 0, 0, 0.25);
-    z-index: 41;
-  }
-
-  .dice-tray-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    z-index: 39;
-  }
-
-  .dice-tray-wrapper {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 82%;
-    max-width: 360px;
-    background: var(--bg-page);
-    padding: 1rem;
-    overflow-y: auto;
-    z-index: 40;
-    transform: translateX(100%);
-    transition: transform 0.2s ease-out;
-  }
-
-  .dice-tray-wrapper.dice-tray-open {
-    transform: translateX(0);
-  }
 }
 
 /* Mini unit card shown while hovering a token on the board (#104). */
@@ -588,6 +503,17 @@ button.danger:hover {
 
 .battle-board-viewport .hex-grid {
   max-width: none;
+}
+
+/* Their 1000px width above is a desktop preference; overridden here (after
+   that base rule, so source order lets it win with matching specificity)
+   since it would otherwise pressure the single-column mobile layout wider
+   than the actual viewport, overflowing a narrow phone screen (#101). */
+@media (max-width: 1100px) {
+  .battle-board-column,
+  .battle-board-viewport {
+    width: 100%;
+  }
 }
 
 .zoom-controls {
@@ -1555,4 +1481,76 @@ button.danger:hover {
 .game-log-entry:last-child {
   border-bottom: none;
   padding-bottom: 0;
+}
+
+/* Bottom app-style tab bar (Board/Units/Dice/Log) replacing the old
+   slide-in unit-card overlay and dice tray (#101) — those made sense one
+   at a time but didn't fix the underlying cramped/small-touch-target
+   scaling everywhere else on mobile. On desktop .mobile-tab-panel has no
+   display rule at all, so every panel still shows at once as before.
+   Placed at the very end of this file (rather than near the other mobile
+   media queries above) so its ties with every component's own unconditional
+   `display` rule resolve by source order in this block's favor. */
+.mobile-tab-bar {
+  display: none;
+}
+
+.mobile-move-fab {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .mobile-tab-panel {
+    display: none;
+  }
+
+  .mobile-tab-panel.mobile-tab-panel-active {
+    display: block;
+  }
+
+  .battle-page {
+    padding-bottom: 70px;
+  }
+
+  .mobile-tab-bar {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 56px;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border);
+    z-index: 40;
+  }
+
+  .mobile-tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px 0;
+  }
+
+  .mobile-tab-btn.active {
+    color: var(--accent);
+  }
+
+  .mobile-move-fab {
+    display: block;
+    position: fixed;
+    right: 16px;
+    bottom: 72px;
+    z-index: 41;
+    border-radius: 24px;
+    padding: 12px 22px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
 }

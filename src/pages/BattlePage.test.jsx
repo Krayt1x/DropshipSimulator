@@ -1134,4 +1134,58 @@ describe('BattlePage', () => {
     const a10Marker = markers[0];
     expect(a10Marker.querySelector('.peer-focus-ring')).toBeNull();
   });
+
+  it('shows a mobile tab bar and toggles which panel is active (#101)', () => {
+    const { container } = render(<BattlePage />);
+
+    expect(screen.getByRole('button', { name: 'Board' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Units' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Dice' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Log' })).toBeDefined();
+
+    const boardPanel = container.querySelector('.battle-board-column');
+    expect(boardPanel.classList.contains('mobile-tab-panel-active')).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Units' }));
+    expect(boardPanel.classList.contains('mobile-tab-panel-active')).toBe(
+      false,
+    );
+    expect(
+      screen
+        .getByRole('button', { name: 'Units' })
+        .classList.contains('active'),
+    ).toBe(true);
+  });
+
+  it('hides the TokenCard while deployment phase is active, shows it once ended (#101)', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve();
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+
+    expect(document.querySelector('.card.token-card')).toBeNull();
+
+    endDeploymentPhase();
+    expect(document.querySelector('.card.token-card')).not.toBeNull();
+  });
+
+  it('shows a Deploy/Move floating action button for the selected controllable token (#101)', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve();
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+
+    // Works even before ending deployment phase (bypasses the hidden
+    // TokenCard entirely, same movingTokenId toggle its own button uses).
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+
+    expect(screen.getByText('Reserve (0)')).toBeDefined();
+
+    endDeploymentPhase();
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+    expect(screen.getByRole('button', { name: 'Move' })).toBeDefined();
+  });
 });

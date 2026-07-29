@@ -37,7 +37,7 @@ const DEFAULT_TILE_TYPES = [
   { id: 'forest', name: 'Forest', color: '#14532d' },
   { id: 'objective', name: 'Objective', color: '#f97316' },
 ];
-const DEFAULT_DIMENSIONS = { cols: 14, rows: 10 };
+const DEFAULT_DIMENSIONS = { cols: 14, rows: 20 };
 // Must match .battle-board-viewport's width in index.css.
 const BOARD_WIDTH = 1000;
 // .battle-board-viewport's own padding (1rem each side) + border (1px each
@@ -196,10 +196,16 @@ function BattlePage() {
       );
       appendLog('Undid using a die from the Action Pool');
     } else if (lastAction.type === 'move') {
-      const { tokenId, position } = lastAction;
+      const { tokenId, position, previousWeaponState } = lastAction;
       const occupant = tokenAt(`${position.col},${position.row}`);
       if (!occupant || occupant.id === tokenId) {
-        placeTokenAt(tokenId, position.col, position.row);
+        setTokens((current) =>
+          current.map((t) =>
+            t.id === tokenId
+              ? { ...t, position, weaponState: previousWeaponState }
+              : t,
+          ),
+        );
       }
       const token = tokens.find((t) => t.id === tokenId);
       appendLog(`Undid ${token ? unitName(token) + "'s" : 'the'} last move`);
@@ -322,22 +328,46 @@ function BattlePage() {
     );
   }
 
+  // Moving heats up a token's Movement gear by 1 (#102) — the heat display
+  // itself turning orange at its stat and red/bold past it is handled in
+  // TokenCard's renderGearRow, shared with weapon heat.
+  function bumpMovementHeat(token) {
+    const weaponState = { ...token.weaponState };
+    token.equippedIds.forEach((id, index) => {
+      const item = equipment.find((e) => Number(e.id) === Number(id));
+      if (item?.type === 'Movement') {
+        weaponState[index] = {
+          ...weaponState[index],
+          heat: (weaponState[index]?.heat ?? 0) + 1,
+        };
+      }
+    });
+    return weaponState;
+  }
+
   function moveTokenTo(token, col, row) {
     if (token.position) {
       setLastAction({
         type: 'move',
         tokenId: token.id,
         position: token.position,
+        previousWeaponState: token.weaponState,
       });
       appendLog(
         `${ownerLabel(token.owner)} moved ${unitName(token)} to (${col}, ${row})`,
+      );
+      const weaponState = bumpMovementHeat(token);
+      setTokens((current) =>
+        current.map((t) =>
+          t.id === token.id ? { ...t, position: { col, row }, weaponState } : t,
+        ),
       );
     } else {
       appendLog(
         `${ownerLabel(token.owner)} deployed ${unitName(token)} at (${col}, ${row})`,
       );
+      placeTokenAt(token.id, col, row);
     }
-    placeTokenAt(token.id, col, row);
   }
 
   // Steps a moving token through each hex between its old and new position

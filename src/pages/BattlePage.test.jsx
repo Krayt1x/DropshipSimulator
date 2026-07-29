@@ -501,4 +501,43 @@ describe('BattlePage', () => {
       ownHexGroup.querySelector('polygon[fill="rgba(220,38,38,0.4)"]'),
     ).toBeNull();
   });
+
+  it("heats up a token's movement gear by 1 when it moves, and undo reverts it (#102)", () => {
+    vi.useFakeTimers();
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Import roster' }));
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: [
+          'Test List (Corp A)',
+          'Weight: 6t / 100t',
+          '',
+          'A10 - 6t',
+          '  Movement: Chicken Legs',
+        ].join('\n'),
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
+    );
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    expect(screen.getByText(/Heat 0 \/ 1/)).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Move token' }));
+    fireEvent.click(screen.getByTestId('hex-8,8'));
+    finishMoveAnimation();
+
+    expect(screen.getByText(/Heat 1 \/ 1/)).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo last move' }));
+
+    expect(screen.getByText(/Heat 0 \/ 1/)).toBeDefined();
+  });
 });

@@ -145,7 +145,9 @@ function TokenCard({
             style={
               max && state.heat > max
                 ? { color: '#dc2626', fontWeight: 700 }
-                : undefined
+                : max && state.heat === max
+                  ? { color: '#f59e0b' }
+                  : undefined
             }
           >
             Heat {state.heat}
@@ -270,31 +272,30 @@ function TokenCard({
         </div>
       </div>
 
-      {!token.destroyed && (
-        <div className="token-card-section">
-          {!canControl && (
-            <p className="unit-meta">
-              This unit belongs to another player — you can't move or deploy it.
-            </p>
-          )}
-          <button
-            type="button"
-            className={moving ? '' : 'ghost'}
-            disabled={!canControl}
-            onClick={onArmMove}
-          >
-            {moving
-              ? 'Click a hex to place'
-              : token.position
-                ? 'Move token'
-                : 'Place on board'}
-          </button>
-        </div>
-      )}
-
-      {(weapons.length > 0 || movementItems.length > 0) && (
+      {(augments.length > 0 ||
+        weapons.length > 0 ||
+        movementItems.length > 0) && (
         <div className="token-card-section">
           <label>Equipment</label>
+          {augments.length > 0 && (
+            <>
+              <p className="equipment-subheader">Head</p>
+              {augments.map((item) => (
+                <div className="token-weapon-row" key={item.instanceIndex}>
+                  <b>{item.name}</b>
+                  <span className="unit-meta">
+                    {' '}
+                    · Slot {slotForType(item.type)}
+                  </span>
+                  {item.effects && (
+                    <p className="unit-meta" style={{ marginTop: 2 }}>
+                      {item.effects}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </>
+          )}
           {weapons.length > 0 && (
             <>
               <p className="equipment-subheader">Weapon</p>
@@ -314,15 +315,25 @@ function TokenCard({
         </div>
       )}
 
-      {augments.length > 0 && (
+      {!token.destroyed && (
         <div className="token-card-section">
-          <label>Augments</label>
-          {augments.map((item) => (
-            <p key={item.instanceIndex} className="unit-meta">
-              <b>{item.name}</b> · Slot {slotForType(item.type)}
-              {item.effects ? `: ${item.effects}` : ''}
+          {!canControl && (
+            <p className="unit-meta">
+              This unit belongs to another player — you can't move or deploy it.
             </p>
-          ))}
+          )}
+          <button
+            type="button"
+            className={moving ? '' : 'ghost'}
+            disabled={!canControl}
+            onClick={onArmMove}
+          >
+            {moving
+              ? 'Click a hex to place'
+              : token.position
+                ? 'Move token'
+                : 'Place on board'}
+          </button>
         </div>
       )}
 

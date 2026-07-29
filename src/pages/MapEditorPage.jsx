@@ -11,7 +11,7 @@ const DEFAULT_TILE_TYPES = [
   { id: 'forest', name: 'Forest', color: '#14532d' },
   { id: 'objective', name: 'Objective', color: '#f97316' },
 ];
-const DEFAULT_DIMENSIONS = { cols: 14, rows: 10 };
+const DEFAULT_DIMENSIONS = { cols: 14, rows: 20 };
 const MIN_DIMENSION = 1;
 const MAX_DIMENSION = 40;
 // Must match .battle-board-viewport's width in index.css.

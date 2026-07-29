@@ -15,6 +15,7 @@ const DiceRoller = forwardRef(function DiceRoller(
     actionPool,
     onRollToActionPool,
     onUseActionPoolDie,
+    onExchangeActionDice,
     activeOwnerDice,
     canRoll = true,
   },
@@ -29,6 +30,9 @@ const DiceRoller = forwardRef(function DiceRoller(
     null,
   );
   const [selectedAction, setSelectedAction] = useState(null);
+  const [exchangeOpen, setExchangeOpen] = useState(false);
+  const [spendId, setSpendId] = useState('');
+  const [targetId, setTargetId] = useState('');
 
   function adjust(id, delta) {
     setPool((current) => ({
@@ -98,6 +102,31 @@ const DiceRoller = forwardRef(function DiceRoller(
     const match = actionPool.find((d) => !d.used && d.value === selectedAction);
     if (match) onUseActionPoolDie(match.id);
     setSelectedAction(null);
+  }
+
+  // Only unused colored (action) dice can take part in an Exchange (#134) —
+  // spending one re-rolls a different one's outcome.
+  const unusedActionDice = actionPool.filter((d) => !d.used);
+
+  function toggleExchange() {
+    if (exchangeOpen) {
+      setExchangeOpen(false);
+      return;
+    }
+    setSpendId(unusedActionDice[0]?.id ?? '');
+    setTargetId(unusedActionDice[1]?.id ?? '');
+    setExchangeOpen(true);
+  }
+
+  function confirmExchange() {
+    const targetDie = actionPool.find((d) => d.id === targetId);
+    if (!targetDie) return;
+    const dieType = DIE_TYPES.find((dt) => dt.label === targetDie.label);
+    const newValue = dieType ? rollDie(dieType) : targetDie.value;
+    onExchangeActionDice(spendId, targetId, newValue);
+    setExchangeOpen(false);
+    setSpendId('');
+    setTargetId('');
   }
 
   const poolTotal = Object.values(pool).reduce((sum, n) => sum + n, 0);
@@ -230,6 +259,53 @@ const DiceRoller = forwardRef(function DiceRoller(
                 onClick={useSelectedAction}
               >
                 Use Dice
+              </button>
+            </div>
+          )}
+          <div className="token-owner-row" style={{ marginTop: 8 }}>
+            <button
+              type="button"
+              className="ghost"
+              disabled={unusedActionDice.length < 2 || !canRoll}
+              onClick={toggleExchange}
+            >
+              Exchange
+            </button>
+          </div>
+          {exchangeOpen && (
+            <div className="dice-exchange-panel">
+              <label className="field">
+                Spend
+                <select
+                  value={spendId}
+                  onChange={(e) => setSpendId(e.target.value)}
+                >
+                  {unusedActionDice.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.label}: {d.value}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                Change
+                <select
+                  value={targetId}
+                  onChange={(e) => setTargetId(e.target.value)}
+                >
+                  {unusedActionDice.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.label}: {d.value}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                disabled={!spendId || !targetId || spendId === targetId}
+                onClick={confirmExchange}
+              >
+                Exchange
               </button>
             </div>
           )}

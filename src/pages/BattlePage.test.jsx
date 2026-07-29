@@ -660,6 +660,40 @@ describe('BattlePage', () => {
     ).toBeDefined();
   });
 
+  it("spends one action die to change a different one's rolled outcome (#134)", () => {
+    // Real randomness here (not mocked) — the two Blue dice need distinct
+    // ids, and mocking Math.random to a fixed value would collide the
+    // random-suffixed ids makeKey() generates for both, same as the
+    // Math.random-mock pitfall documented elsewhere in this file.
+    render(<BattlePage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Blue to pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Blue to pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll (2)' }));
+
+    const exchangeToggle = screen.getByRole('button', { name: 'Exchange' });
+    expect(exchangeToggle.disabled).toBe(false);
+    fireEvent.click(exchangeToggle);
+
+    const selects = screen.getAllByRole('combobox');
+    expect(selects).toHaveLength(2);
+    expect(within(selects[0]).getAllByRole('option')).toHaveLength(2);
+    expect(within(selects[1]).getAllByRole('option')).toHaveLength(2);
+
+    const confirmBtn = screen.getAllByRole('button', { name: 'Exchange' })[1];
+    expect(confirmBtn.disabled).toBe(false);
+    fireEvent.click(confirmBtn);
+
+    // One of the two unused Blue dice was spent, so a further Exchange isn't
+    // possible until another unused die is rolled.
+    expect(screen.getByRole('button', { name: 'Exchange' }).disabled).toBe(
+      true,
+    );
+    expect(
+      screen.getByText(/Exchanged a blue die to change Blue's roll from/),
+    ).toBeDefined();
+  });
+
   it('rolls excess left/right attack damage onto another item on that side, then the chassis (#122)', () => {
     const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
     const weapon = equipment.find((e) => e.name === 'Long Range Bolt');

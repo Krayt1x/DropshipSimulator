@@ -241,6 +241,27 @@ function BattlePage() {
     if (die) appendLog(`Used a ${die.label.toLowerCase()} die: ${die.value}`);
   }
 
+  // Spends one unused action die to re-roll a different unused action die's
+  // outcome (#134) — DiceRoller picks the new value (it already has the
+  // die-type/face data) and hands it up here to apply + log.
+  function exchangeActionDie(spendId, targetId, newValue) {
+    const spendDie = actionPool.find((d) => d.id === spendId);
+    const targetDie = actionPool.find((d) => d.id === targetId);
+    if (!spendDie || !targetDie) return;
+    const previousValue = targetDie.value;
+    setActionPool((current) =>
+      current.map((d) => {
+        if (d.id === spendId) return { ...d, used: true };
+        if (d.id === targetId) return { ...d, value: newValue };
+        return d;
+      }),
+    );
+    setLastAction({ type: 'exchange', spendId, targetId, previousValue });
+    appendLog(
+      `Exchanged a ${spendDie.label.toLowerCase()} die to change ${targetDie.label}'s roll from ${previousValue} to ${newValue}`,
+    );
+  }
+
   function undoLastAction() {
     if (!lastAction) return;
     if (lastAction.type === 'rollToPool') {
@@ -255,6 +276,16 @@ function BattlePage() {
         ),
       );
       appendLog('Undid using a die from the Action Pool');
+    } else if (lastAction.type === 'exchange') {
+      const { spendId, targetId, previousValue } = lastAction;
+      setActionPool((current) =>
+        current.map((d) => {
+          if (d.id === spendId) return { ...d, used: false };
+          if (d.id === targetId) return { ...d, value: previousValue };
+          return d;
+        }),
+      );
+      appendLog('Undid an Exchange');
     } else if (lastAction.type === 'move') {
       const { tokenId, position, previousWeaponState } = lastAction;
       const occupant = tokenAt(`${position.col},${position.row}`);
@@ -1255,6 +1286,7 @@ function BattlePage() {
               actionPool={actionPool}
               onRollToActionPool={rollToActionPool}
               onUseActionPoolDie={useActionPoolDie}
+              onExchangeActionDice={exchangeActionDie}
               activeOwnerDice={activeOwnerDice}
               canRoll={!myPlayer || myPlayer === turn.active}
             />
@@ -1279,7 +1311,9 @@ function BattlePage() {
                 ? 'Undo dice roll'
                 : lastAction?.type === 'useDie'
                   ? 'Undo used die'
-                  : 'Undo last move'}
+                  : lastAction?.type === 'exchange'
+                    ? 'Undo exchange'
+                    : 'Undo last move'}
             </button>
           </div>
           <GameLog entries={logEntries} />

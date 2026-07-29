@@ -1503,6 +1503,16 @@ button.danger:hover {
   cursor: not-allowed;
 }
 
+.dice-exchange-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px;
+  background: var(--bg-track);
+  border-radius: 8px;
+}
+
 .game-log-list {
   list-style: none;
   margin: 0;

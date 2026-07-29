@@ -17,6 +17,7 @@ beforeEach(() => window.localStorage.clear());
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 // Deployment phase now defaults to on (#75), so tests that used to need
@@ -622,5 +623,36 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
 
     expect(screen.getByText(/Heat 1/)).toBeDefined();
+  });
+
+  it('shows an action-pool summary and consumes a matching die when used (#120)', () => {
+    render(<BattlePage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Blue to pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Blue to pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll (2)' }));
+
+    // Don't assume which 2 of Move/Action/Attack got rolled (that depends on
+    // real randomness) — just check the pool's total count is 2, then use
+    // whichever action has a nonzero count and confirm it drops by 1.
+    const summary = document.querySelector('.dice-action-pool .dice-summary');
+    const chips = within(summary).getAllByRole('button');
+    const totalBefore = chips.reduce(
+      (sum, btn) => sum + Number(btn.textContent.split(' ')[0]),
+      0,
+    );
+    expect(totalBefore).toBe(2);
+
+    const activeChip = chips.find((btn) => !btn.disabled);
+    const [countText, actionWord] = activeChip.textContent.split(' ');
+
+    fireEvent.click(activeChip);
+    fireEvent.click(screen.getByRole('button', { name: 'Use Dice' }));
+
+    expect(
+      screen.getByRole('button', {
+        name: `${Number(countText) - 1} ${actionWord}`,
+      }),
+    ).toBeDefined();
   });
 });

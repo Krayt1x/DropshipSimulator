@@ -1382,6 +1382,22 @@ button.danger:hover {
   font-weight: 600;
 }
 
+.dice-summary-chip.pooled {
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.dice-summary-chip.pooled.selected {
+  background: #f59e0b;
+  border-color: #fff;
+}
+
+.dice-summary-chip.pooled:disabled {
+  background: var(--bg-track);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
 .game-log-list {
   list-style: none;
   margin: 0;

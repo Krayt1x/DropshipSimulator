@@ -2,6 +2,7 @@ import { forwardRef, useImperativeHandle, useState } from 'react';
 import { makeKey } from '../lib/storage.js';
 import {
   DIE_TYPES,
+  WORD_ORDER,
   rollDie,
   summarizeRollResults,
   isWordDie,
@@ -19,7 +20,7 @@ const DiceRoller = forwardRef(function DiceRoller(
 ) {
   const [pool, setPool] = useState({});
   const [results, setResults] = useState(null);
-  const [selectedPoolId, setSelectedPoolId] = useState(null);
+  const [selectedAction, setSelectedAction] = useState(null);
 
   function adjust(id, delta) {
     setPool((current) => ({
@@ -72,10 +73,19 @@ const DiceRoller = forwardRef(function DiceRoller(
   const playerDiceTotal =
     (activeOwnerDice?.blue ?? 0) + (activeOwnerDice?.red ?? 0);
 
-  function useSelectedPoolDie() {
-    if (!selectedPoolId) return;
-    onUseActionPoolDie(selectedPoolId);
-    setSelectedPoolId(null);
+  // Counts of each action still unused in the pool (#120) — the player picks
+  // an action type here rather than a specific die, and "Use Dice" spends
+  // whichever pooled die of that type comes first.
+  const actionCounts = WORD_ORDER.map((value) => ({
+    value,
+    count: actionPool.filter((d) => !d.used && d.value === value).length,
+  }));
+
+  function useSelectedAction() {
+    if (!selectedAction) return;
+    const match = actionPool.find((d) => !d.used && d.value === selectedAction);
+    if (match) onUseActionPoolDie(match.id);
+    setSelectedAction(null);
   }
 
   const poolTotal = Object.values(pool).reduce((sum, n) => sum + n, 0);
@@ -175,25 +185,26 @@ const DiceRoller = forwardRef(function DiceRoller(
           <p className="unit-meta" style={{ marginBottom: 6 }}>
             Action Pool
           </p>
-          <div className="dice-results">
-            {actionPool.map((r) => (
+          <div className="dice-summary">
+            {actionCounts.map(({ value, count }) => (
               <button
                 type="button"
-                key={r.id}
-                className={`dice-result-chip pooled ${r.used ? 'spent' : ''} ${r.id === selectedPoolId ? 'selected' : ''}`}
+                key={value}
+                className={`dice-summary-chip pooled ${value === selectedAction ? 'selected' : ''}`}
+                disabled={count === 0}
                 onClick={() =>
-                  setSelectedPoolId((current) =>
-                    current === r.id ? null : r.id,
+                  setSelectedAction((current) =>
+                    current === value ? null : value,
                   )
                 }
               >
-                {r.label}: {r.value}
+                {count} {value}
               </button>
             ))}
           </div>
-          {selectedPoolId && (
+          {selectedAction && (
             <div className="token-owner-row" style={{ marginTop: 8 }}>
-              <button type="button" onClick={useSelectedPoolDie}>
+              <button type="button" onClick={useSelectedAction}>
                 Use Dice
               </button>
             </div>

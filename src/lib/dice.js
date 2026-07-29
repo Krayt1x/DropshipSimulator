@@ -57,7 +57,7 @@ export function countRollsByLabel(rolled) {
   return counts;
 }
 
-const WORD_ORDER = ['Move', 'Action', 'Attack'];
+export const WORD_ORDER = ['Move', 'Action', 'Attack'];
 
 // Summarizes roll outcomes by value — colored (word) dice grouped separately
 // from numerical dice, since "3 Move" and "3 x 6's" read very differently.

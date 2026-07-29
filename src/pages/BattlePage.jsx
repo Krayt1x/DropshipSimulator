@@ -86,10 +86,26 @@ function BattlePage() {
   const [diceTrayOpen, setDiceTrayOpen] = useState(false);
   const [animatingToken, setAnimatingToken] = useState(null);
   const moveTimeoutsRef = useRef([]);
+  const [deployEffect, setDeployEffect] = useState(null);
+  const deployEffectTimeoutRef = useRef(null);
 
   useEffect(() => {
     return () => moveTimeoutsRef.current.forEach(clearTimeout);
   }, []);
+
+  useEffect(() => {
+    return () => clearTimeout(deployEffectTimeoutRef.current);
+  }, []);
+
+  // A brief puff-of-smoke effect where a token just landed (#112).
+  function triggerDeployEffect(tokenId, col, row) {
+    clearTimeout(deployEffectTimeoutRef.current);
+    setDeployEffect({ tokenId, position: { col, row } });
+    deployEffectTimeoutRef.current = setTimeout(
+      () => setDeployEffect(null),
+      700,
+    );
+  }
   const [viewportHeight, setViewportHeight] = useState(
     () => window.innerHeight,
   );
@@ -367,6 +383,7 @@ function BattlePage() {
         `${ownerLabel(token.owner)} deployed ${unitName(token)} at (${col}, ${row})`,
       );
       placeTokenAt(token.id, col, row);
+      triggerDeployEffect(token.id, col, row);
     }
   }
 
@@ -420,6 +437,7 @@ function BattlePage() {
       );
       setDraft(null);
       setSelectedTokenId(token.id);
+      triggerDeployEffect(token.id, col, row);
       return;
     }
 
@@ -751,6 +769,7 @@ function BattlePage() {
               tokens={tokens}
               units={units}
               animatingToken={animatingToken}
+              deployEffect={deployEffect}
               selectedTokenId={selectedTokenId}
               rangeOrigin={selectedToken?.position ?? null}
               weaponRange={weaponRange}

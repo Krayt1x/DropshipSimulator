@@ -411,6 +411,29 @@ button.danger:hover {
   transition: transform 0.15s ease;
 }
 
+/* A brief puff of smoke under a token as it's deployed (#112). */
+.deploy-smoke {
+  pointer-events: none;
+}
+
+.deploy-smoke-puff {
+  opacity: 0.65;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: deploy-smoke-rise 0.7s ease-out forwards;
+}
+
+@keyframes deploy-smoke-rise {
+  from {
+    opacity: 0.65;
+    transform: scale(0.4) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.5) translateY(-10px);
+  }
+}
+
 .battle-board-column {
   display: flex;
   flex-direction: column;

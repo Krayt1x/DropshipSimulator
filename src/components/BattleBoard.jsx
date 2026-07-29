@@ -115,6 +115,39 @@ function TokenMarker({
   );
 }
 
+function DeploySmoke({ position, size }) {
+  const { x, y } = hexToPixel(position.col, position.row, size);
+  // Token markers have radius size*0.62 and are drawn on top of this, so
+  // these need to sit further out/below to actually peek out from under it
+  // instead of being fully hidden behind its opaque circle.
+  return (
+    <g className="deploy-smoke" transform={`translate(${x},${y})`}>
+      <circle
+        className="deploy-smoke-puff"
+        cy={size * 0.15}
+        r={size * 0.55}
+        fill="#a8a29e"
+      />
+      <circle
+        className="deploy-smoke-puff"
+        style={{ animationDelay: '0.08s' }}
+        cx={-size * 0.55}
+        cy={size * 0.4}
+        r={size * 0.32}
+        fill="#a8a29e"
+      />
+      <circle
+        className="deploy-smoke-puff"
+        style={{ animationDelay: '0.14s' }}
+        cx={size * 0.55}
+        cy={size * 0.4}
+        r={size * 0.32}
+        fill="#a8a29e"
+      />
+    </g>
+  );
+}
+
 function BattleBoard({
   cols,
   rows,
@@ -123,6 +156,7 @@ function BattleBoard({
   tokens,
   units,
   animatingToken,
+  deployEffect,
   selectedTokenId,
   rangeOrigin,
   weaponRange,
@@ -244,6 +278,9 @@ function BattleBoard({
           </g>
         );
       })}
+      {deployEffect && (
+        <DeploySmoke position={deployEffect.position} size={size} />
+      )}
       {tokens
         .filter((token) => token.position)
         .map((token) => {

@@ -367,14 +367,15 @@ describe('BattlePage', () => {
   it('toggles the deployment phase and tints the top/bottom 3 rows of tiles', () => {
     const { container } = render(<BattlePage />);
 
-    // deployment phase now defaults to on: default board is 14 cols x 10
-    // rows, giving 3 tinted rows per zone x 14 cols
+    // deployment phase now defaults to on: default board is 24 cols x 24
+    // rows, giving 3 tinted rows per zone x 24 cols (#129)
+    const tintedPerZone = 3 * 24;
     expect(container.querySelectorAll('polygon[fill^="rgba(37"]')).toHaveLength(
-      42,
+      tintedPerZone,
     );
     expect(
       container.querySelectorAll('polygon[fill^="rgba(220"]'),
-    ).toHaveLength(42);
+    ).toHaveLength(tintedPerZone);
 
     fireEvent.click(
       screen.getByRole('button', { name: 'End deployment phase' }),
@@ -388,11 +389,11 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Deployment Phase' }));
     expect(container.querySelectorAll('polygon[fill^="rgba(37"]')).toHaveLength(
-      42,
+      tintedPerZone,
     );
     expect(
       container.querySelectorAll('polygon[fill^="rgba(220"]'),
-    ).toHaveLength(42);
+    ).toHaveLength(tintedPerZone);
   });
 
   it('deploys a reserve unit onto the board via drag and drop', () => {

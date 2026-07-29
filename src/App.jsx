@@ -23,20 +23,56 @@ function currentPage() {
   return 'home';
 }
 
+// Once connected, this expands in place into a small pill (role +
+// Disconnect) instead of linking out to the full Connect page (#115) — the
+// permanent "Multiplayer" card there is gone once connected, so this badge
+// is the only way to see status or disconnect.
 function ConnectionBadge() {
   const mp = useMultiplayer();
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    if (mp?.phase !== 'connected') setExpanded(false);
+  }, [mp?.phase]);
+
   if (!mp || mp.phase === 'idle') return null;
+
+  if (mp.phase === 'connected') {
+    if (expanded) {
+      return (
+        <div className="connection-badge-expanded">
+          <button
+            type="button"
+            className="connection-badge-role"
+            onClick={() => setExpanded(false)}
+          >
+            ● {mp.role === 'host' ? 'Host' : 'Guest'}
+          </button>
+          <button
+            type="button"
+            className="connection-badge-disconnect"
+            onClick={mp.disconnect}
+          >
+            Disconnect
+          </button>
+        </div>
+      );
+    }
+    return (
+      <button
+        type="button"
+        className="connection-badge connection-badge-live"
+        onClick={() => setExpanded(true)}
+      >
+        ● Connected ({mp.role})
+      </button>
+    );
+  }
+
   const label =
-    mp.phase === 'connected'
-      ? `Connected (${mp.role})`
-      : mp.phase === 'offer-ready'
-        ? 'Waiting for peer…'
-        : 'Connecting…';
+    mp.phase === 'offer-ready' ? 'Waiting for peer…' : 'Connecting…';
   return (
-    <a
-      href="#connect"
-      className={`connection-badge ${mp.phase === 'connected' ? 'connection-badge-live' : ''}`}
-    >
+    <a href="#connect" className="connection-badge">
       ● {label}
     </a>
   );

@@ -738,6 +738,25 @@ button.danger:hover {
   border-bottom: 1px dashed var(--border-input);
 }
 
+/* An overheated weapon (heat > its max) can't be fired (#127). */
+.token-weapon-row.overheated {
+  background: rgba(220, 38, 38, 0.08);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.badge-overheated {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
 .weapon-name-btn {
   background: transparent;
   border: none;

@@ -810,4 +810,31 @@ describe('BattlePage', () => {
     expect(screen.getByText(new RegExp(`Heat ${damage} /`))).toBeDefined();
     expect(screen.queryByRole('checkbox').checked).toBe(false);
   });
+
+  it('disables Attack and shows an OVERHEATED badge once heat exceeds max (#127)', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    const weapon = equipment.find((e) => e.name === 'Long Range Bolt');
+    const { max: heatMax } = parseHeatRating(weapon.heat_rating);
+
+    importA10ToReserve(['  Right: Long Range Bolt']);
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    expect(screen.queryByText('OVERHEATED')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Attack' }).disabled).toBe(false);
+
+    // Order in the card: chassis HP +, weapon heat +, weapon HP +.
+    const heatPlusButton = () =>
+      screen.getAllByRole('button', { name: '+' })[1];
+    for (let i = 0; i <= heatMax; i++) {
+      fireEvent.click(heatPlusButton());
+    }
+
+    expect(screen.getByText('OVERHEATED')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Attack' }).disabled).toBe(true);
+  });
 });

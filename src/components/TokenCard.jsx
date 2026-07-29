@@ -76,10 +76,14 @@ function TokenCard({
     };
     const rangeActive = showRange && activeRangeIndex === item.instanceIndex;
     const attackActive = showRange && activeAttackIndex === item.instanceIndex;
+    const overheated = showRange && Boolean(max) && state.heat > max;
     const maxHp = Number(item.hp) || 0;
     const hp = state.hp ?? maxHp;
     return (
-      <div className="token-weapon-row" key={item.instanceIndex}>
+      <div
+        className={`token-weapon-row ${overheated ? 'overheated' : ''}`}
+        key={item.instanceIndex}
+      >
         <div>
           {showRange ? (
             <button
@@ -102,6 +106,7 @@ function TokenCard({
               {item.name}
             </b>
           )}
+          {overheated && <span className="badge-overheated">OVERHEATED</span>}
           <span className="unit-meta">
             {' '}
             · Slot{' '}
@@ -134,8 +139,12 @@ function TokenCard({
                   <button
                     type="button"
                     className={`attack-btn ${attackActive ? 'active' : ''}`}
-                    title="Show this weapon's arc and pick a target to attack"
-                    disabled={state.broken}
+                    title={
+                      overheated
+                        ? 'Overheated — let it cool down before firing again'
+                        : "Show this weapon's arc and pick a target to attack"
+                    }
+                    disabled={state.broken || overheated}
                     onClick={() => onStartAttack(item.instanceIndex, item)}
                   >
                     {attackActive ? 'Attacking…' : 'Attack'}

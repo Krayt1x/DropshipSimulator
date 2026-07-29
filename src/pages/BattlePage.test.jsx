@@ -562,14 +562,14 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
-    fireEvent.click(screen.getByTestId('hex-5,6'));
+    fireEvent.click(screen.getByTestId('hex-4,6'));
 
     // Re-select A10 (the attacker) and arm its weapon.
     fireEvent.click(screen.getByTestId('hex-5,5'));
     fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
 
     // A20 sits directly in the arc at distance 1 — a valid target.
-    fireEvent.click(screen.getByTestId('hex-5,6'));
+    fireEvent.click(screen.getByTestId('hex-4,6'));
     expect(
       screen.getByText(new RegExp(`Target: A20 \\(${a20.size}\\)`)),
     ).toBeDefined();
@@ -601,7 +601,7 @@ describe('BattlePage', () => {
 
     // The target's right-slot weapon took the computed damage on its 5 HP
     // and broke once it hit 0.
-    fireEvent.click(screen.getByTestId('hex-5,6'));
+    fireEvent.click(screen.getByTestId('hex-4,6'));
     expect(
       screen.getByText(new RegExp(`HP ${Math.max(0, 5 - damage)} / 5`)),
     ).toBeDefined();
@@ -709,11 +709,11 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
-    fireEvent.click(screen.getByTestId('hex-5,6'));
+    fireEvent.click(screen.getByTestId('hex-4,6'));
 
     fireEvent.click(screen.getByTestId('hex-5,5'));
     fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
-    fireEvent.click(screen.getByTestId('hex-5,6'));
+    fireEvent.click(screen.getByTestId('hex-4,6'));
     fireEvent.click(screen.getByRole('button', { name: 'Right' }));
     fireEvent.click(screen.getByRole('button', { name: 'Roll to Hit' }));
     fireEvent.click(screen.getByRole('button', { name: 'Apply damage' }));
@@ -792,11 +792,11 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
-    fireEvent.click(screen.getByTestId('hex-5,6'));
+    fireEvent.click(screen.getByTestId('hex-4,6'));
 
     fireEvent.click(screen.getByTestId('hex-5,5'));
     fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
-    fireEvent.click(screen.getByTestId('hex-5,6'));
+    fireEvent.click(screen.getByTestId('hex-4,6'));
     fireEvent.click(screen.getByRole('button', { name: 'Right' }));
     fireEvent.click(screen.getByRole('button', { name: 'Roll to Hit' }));
     fireEvent.click(screen.getByRole('button', { name: 'Apply damage' }));
@@ -806,7 +806,7 @@ describe('BattlePage', () => {
       screen.getByText(new RegExp(`Long Range Bolt took ${damage} heat`)),
     ).toBeDefined();
 
-    fireEvent.click(screen.getByTestId('hex-5,6'));
+    fireEvent.click(screen.getByTestId('hex-4,6'));
     expect(screen.getByText(new RegExp(`Heat ${damage} /`))).toBeDefined();
     expect(screen.queryByRole('checkbox').checked).toBe(false);
   });
@@ -836,5 +836,55 @@ describe('BattlePage', () => {
 
     expect(screen.getByText('OVERHEATED')).toBeDefined();
     expect(screen.getByRole('button', { name: 'Attack' }).disabled).toBe(true);
+  });
+
+  it('only allows picking sides visible to the attacker (#126)', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve(['  Right: Long Range Bolt']);
+
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: [
+          'Test List (Corp A)',
+          'Weight: 20t / 100t',
+          '',
+          'A20 - 20t',
+          '  Right: Long Range Bolt',
+        ].join('\n'),
+      },
+    });
+    const importPanel = screen
+      .getByRole('button', { name: 'Preview import' })
+      .closest('.token-form');
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(
+      within(importPanel).getByRole('button', { name: 'Player 2' }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'A20' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    // A20 defaults to facing north (p2), so sitting directly north of it
+    // (A10's spot) puts the attacker in A20's front-left visibility cone —
+    // Front and Left should be pickable, Right and Rear should not (#126).
+    fireEvent.click(screen.getByTestId('hex-5,6'));
+
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    fireEvent.click(screen.getByTestId('hex-5,6'));
+
+    expect(screen.getByRole('button', { name: 'Front' }).disabled).toBe(false);
+    expect(screen.getByRole('button', { name: 'Left' }).disabled).toBe(false);
+    expect(screen.getByRole('button', { name: 'Right' }).disabled).toBe(true);
+    expect(screen.getByRole('button', { name: 'Rear' }).disabled).toBe(true);
   });
 });

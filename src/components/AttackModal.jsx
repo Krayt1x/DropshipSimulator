@@ -13,6 +13,7 @@ function AttackModal({
   targetName,
   targetSizeLabel,
   targetNumber,
+  visibleSides,
   side,
   onPickSide,
   result,
@@ -33,17 +34,21 @@ function AttackModal({
 
         <p className="attack-modal-label">Which side are you hitting?</p>
         <div className="attack-side-picker">
-          {SIDES.map((s) => (
-            <button
-              type="button"
-              key={s.id}
-              className={side === s.id ? 'active' : ''}
-              disabled={Boolean(result)}
-              onClick={() => onPickSide(s.id)}
-            >
-              {s.label}
-            </button>
-          ))}
+          {SIDES.map((s) => {
+            const notVisible = visibleSides && !visibleSides.includes(s.id);
+            return (
+              <button
+                type="button"
+                key={s.id}
+                className={side === s.id ? 'active' : ''}
+                disabled={Boolean(result) || notVisible}
+                title={notVisible ? "Can't see this side from here" : undefined}
+                onClick={() => onPickSide(s.id)}
+              >
+                {s.label}
+              </button>
+            );
+          })}
         </div>
 
         <p className="unit-meta">

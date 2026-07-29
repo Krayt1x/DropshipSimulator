@@ -179,3 +179,55 @@ export function isInWeaponArc(origin, target, facing, side, size = hexSize()) {
     return rel > -150 + EPSILON_DEG && rel < 150 - EPSILON_DEG;
   return true;
 }
+
+// Clockwise order of a chassis's 4 named sides, matching how positive
+// (clockwise) relative angles are measured throughout this file.
+const SIDES_CW = ['front', 'right', 'rear', 'left'];
+
+// Which quadrant (front/right/rear/left, each a 90° wedge centered on that
+// side) a relative angle falls into. Boundaries sit at ±45°/±135°, which
+// never coincide with a hex's 60°-spaced directions, so — unlike the arc
+// boundaries in isInWeaponArc — there's no on-grid tie to worry about here.
+function sideQuadrant(rel) {
+  if (rel > -45 && rel <= 45) return { side: 'front', lo: -45, hi: 45 };
+  if (rel > 45 && rel <= 135) return { side: 'right', lo: 45, hi: 135 };
+  if (rel > -135 && rel <= -45) return { side: 'left', lo: -135, hi: -45 };
+  // Rear wraps across the ±180 seam; unwrap so its span (135..225) is
+  // contiguous instead of split across the boundary.
+  const unwrapped = rel > 135 ? rel : rel + 360;
+  return { side: 'rear', lo: 135, hi: 225, rel: unwrapped };
+}
+
+// The side of `target` (given its facing) nearest the direction toward
+// `from` — used both for "which side did the blast hit" (#123, with `from`
+// being the origin tile of a splash template) and as the basis for "which
+// sides can the attacker even see" (#126, with `from` being the attacker).
+export function nearestSide(target, facing, from, size = hexSize()) {
+  const t = hexToPixel(target.col, target.row, size);
+  const f = hexToPixel(from.col, from.row, size);
+  const angle = (Math.atan2(f.y - t.y, f.x - t.x) * 180) / Math.PI;
+  const facingAngle = directionAngleDeg(target, facing, size);
+  const rel = normalizeAngle(angle - facingAngle);
+  return sideQuadrant(rel).side;
+}
+
+// The 1-2 sides of `target` visible from `from`'s position (#126): the
+// nearest side, plus whichever of its two neighbors `from` leans toward
+// within that side's own 90° quadrant — a ~180° visibility cone rather than
+// either "only the exact nearest side" or "everything but the far side".
+export function visibleSides(target, facing, from, size = hexSize()) {
+  const t = hexToPixel(target.col, target.row, size);
+  const f = hexToPixel(from.col, from.row, size);
+  const angle = (Math.atan2(f.y - t.y, f.x - t.x) * 180) / Math.PI;
+  const facingAngle = directionAngleDeg(target, facing, size);
+  const rel = normalizeAngle(angle - facingAngle);
+  const quadrant = sideQuadrant(rel);
+  const r = quadrant.rel ?? rel;
+  const idx = SIDES_CW.indexOf(quadrant.side);
+  const ccwNeighbor = SIDES_CW[(idx + 3) % 4];
+  const cwNeighbor = SIDES_CW[(idx + 1) % 4];
+  const distLo = r - quadrant.lo;
+  const distHi = quadrant.hi - r;
+  const leaning = distLo <= distHi ? ccwNeighbor : cwNeighbor;
+  return [quadrant.side, leaning];
+}

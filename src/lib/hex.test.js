@@ -8,6 +8,8 @@ import {
   neighborHex,
   isInWeaponArc,
   hexLine,
+  nearestSide,
+  visibleSides,
 } from './hex.js';
 
 describe('hex', () => {
@@ -111,6 +113,94 @@ describe('hex', () => {
     [0, 1, 2, 4, 5].forEach((dir) => {
       const target = neighborHex(origin.col, origin.row, dir);
       expect(isInWeaponArc(origin, target, 0, 'both')).toBe(true);
+    });
+  });
+
+  describe('nearestSide (#123, #126)', () => {
+    const target = { col: 6, row: 6 };
+    const facing = 0;
+
+    it('picks front/rear for the hex directly ahead/behind the facing', () => {
+      expect(
+        nearestSide(target, facing, neighborHex(target.col, target.row, 0)),
+      ).toBe('front');
+      expect(
+        nearestSide(target, facing, neighborHex(target.col, target.row, 3)),
+      ).toBe('rear');
+    });
+
+    it('picks right/left for hexes on those sides regardless of exact angle', () => {
+      [1, 2].forEach((dir) => {
+        expect(
+          nearestSide(target, facing, neighborHex(target.col, target.row, dir)),
+        ).toBe('right');
+      });
+      [4, 5].forEach((dir) => {
+        expect(
+          nearestSide(target, facing, neighborHex(target.col, target.row, dir)),
+        ).toBe('left');
+      });
+    });
+
+    it('is symmetric under a 180° facing flip', () => {
+      const from = neighborHex(target.col, target.row, 1);
+      const side = nearestSide(target, 0, from);
+      const opposite = nearestSide(target, 3, from);
+      expect([side, opposite].sort()).toEqual(['left', 'right']);
+    });
+  });
+
+  describe('visibleSides (#126)', () => {
+    const target = { col: 6, row: 6 };
+    const facing = 0;
+
+    it('always includes the nearest side', () => {
+      [0, 1, 2, 3, 4, 5].forEach((dir) => {
+        const from = neighborHex(target.col, target.row, dir);
+        const sides = visibleSides(target, facing, from);
+        expect(sides).toContain(nearestSide(target, facing, from));
+      });
+    });
+
+    it('returns exactly 2 distinct sides for every direction', () => {
+      [0, 1, 2, 3, 4, 5].forEach((dir) => {
+        const from = neighborHex(target.col, target.row, dir);
+        const sides = visibleSides(target, facing, from);
+        expect(sides).toHaveLength(2);
+        expect(new Set(sides).size).toBe(2);
+      });
+    });
+
+    it('leans toward whichever neighbor is angularly closer within the nearest quadrant', () => {
+      // dir 1 sits nearer the front/right boundary than the right/rear one.
+      const leansFront = visibleSides(
+        target,
+        facing,
+        neighborHex(target.col, target.row, 1),
+      );
+      expect(leansFront).toEqual(['right', 'front']);
+
+      // dir 2 sits nearer the right/rear boundary than the front/right one.
+      const leansRear = visibleSides(
+        target,
+        facing,
+        neighborHex(target.col, target.row, 2),
+      );
+      expect(leansRear).toEqual(['right', 'rear']);
+    });
+
+    it('never includes the side directly opposite the nearest one', () => {
+      [0, 1, 2, 3, 4, 5].forEach((dir) => {
+        const from = neighborHex(target.col, target.row, dir);
+        const sides = visibleSides(target, facing, from);
+        const opposite = {
+          front: 'rear',
+          rear: 'front',
+          left: 'right',
+          right: 'left',
+        };
+        expect(sides).not.toContain(opposite[sides[0]]);
+      });
     });
   });
 

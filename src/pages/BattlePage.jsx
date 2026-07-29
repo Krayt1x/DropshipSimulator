@@ -6,7 +6,12 @@ import {
 } from '../lib/storage.js';
 import { backgroundContainerStyle } from '../lib/mapBackground.js';
 import { formatRollLogMessage, parseHitDice } from '../lib/dice.js';
-import { hexLine, hexDistance, isInWeaponArc } from '../lib/hex.js';
+import {
+  hexLine,
+  hexDistance,
+  isInWeaponArc,
+  visibleSides,
+} from '../lib/hex.js';
 import {
   createToken,
   OWNERS,
@@ -372,6 +377,19 @@ function BattlePage() {
   const attackTargetNumber = attackTargetUnit
     ? sizeNumber(attackTargetUnit.size)
     : null;
+  // Only sides actually visible from where the attacker is standing can be
+  // picked (#126) — the target's own body blocks the rest.
+  const attackerToken = attackWeapon
+    ? tokens.find((t) => t.id === attackWeapon.tokenId)
+    : null;
+  const attackVisibleSides =
+    attackTargetToken?.position && attackerToken?.position
+      ? visibleSides(
+          attackTargetToken.position,
+          attackTargetToken.facing,
+          attackerToken.position,
+        )
+      : null;
 
   // The attack roll is self-contained (its own dice, its own comparison to
   // the target's size) rather than going through the shared dice pool, since
@@ -1054,6 +1072,7 @@ function BattlePage() {
                 targetName={unitName(attackTargetToken)}
                 targetSizeLabel={attackTargetUnit?.size}
                 targetNumber={attackTargetNumber}
+                visibleSides={attackVisibleSides}
                 side={attackTarget.side}
                 onPickSide={pickAttackSide}
                 result={attackResult}

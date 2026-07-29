@@ -1197,4 +1197,41 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByTestId('hex-0,0'));
     expect(screen.getByRole('button', { name: 'Move' })).toBeDefined();
   });
+
+  it('shows a turn/active-player indicator next to the heading that tracks End Turn (#137)', () => {
+    render(<BattlePage />);
+
+    expect(screen.getByText('Turn 1 · Player 1')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+
+    expect(screen.getByText('Turn 1 · Player 2')).toBeDefined();
+    expect(screen.queryByText('Turn 1 · Player 1')).toBeNull();
+  });
+
+  it('arms an attack from the Board tab via the Weapons FAB, without needing the Units tab (#138)', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve(['  Right: Long Range Bolt']);
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Weapons' }));
+    const picker = screen
+      .getByText('Choose a weapon')
+      .closest('.mobile-attack-picker');
+    expect(picker).not.toBeNull();
+
+    fireEvent.click(
+      within(picker).getByRole('button', { name: 'Long Range Bolt' }),
+    );
+
+    // Picker closes and the FAB now reads "Cancel attack" — same armed
+    // state the TokenCard's own per-weapon Attack button drives.
+    expect(screen.queryByText('Choose a weapon')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Cancel attack' })).toBeDefined();
+  });
 });

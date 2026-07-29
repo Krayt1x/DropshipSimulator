@@ -967,10 +967,31 @@ button.danger:hover {
 
 .battle-header-row {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+/* Always-visible turn/active-player badge next to the "Battle board"
+   heading on mobile (#137) — the nav bar's own TurnTracker (portaled in by
+   BattlePage, see #136) is otherwise hidden behind the hamburger menu on
+   mobile, so this is the only turn indicator visible there. */
+.mobile-turn-indicator {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .mobile-turn-indicator {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 14px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
 }
 
 .turn-tracker-row {
@@ -1504,6 +1525,14 @@ button.danger:hover {
   display: none;
 }
 
+.mobile-attack-fab {
+  display: none;
+}
+
+.mobile-attack-picker {
+  display: none;
+}
+
 @media (max-width: 900px) {
   .mobile-tab-panel {
     display: none;
@@ -1557,5 +1586,62 @@ button.danger:hover {
     font-size: 14px;
     border: none;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Sits left of the Move/Deploy FAB (#138) — arms a weapon without
+     leaving the Board tab, so there's still a target to click afterward. */
+  .mobile-attack-fab {
+    display: block;
+    position: fixed;
+    right: 108px;
+    bottom: 72px;
+    z-index: 41;
+    border-radius: 24px;
+    padding: 12px 22px;
+    background: #b91c1c;
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .mobile-attack-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: fixed;
+    right: 16px;
+    bottom: 130px;
+    z-index: 42;
+    min-width: 200px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .mobile-attack-picker-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin: 0 0 2px;
+  }
+
+  .mobile-attack-picker-item {
+    text-align: left;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: var(--bg-track);
+    border: none;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .mobile-attack-picker-item:disabled {
+    color: var(--text-muted);
+    cursor: not-allowed;
   }
 }

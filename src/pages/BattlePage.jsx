@@ -147,6 +147,10 @@ function BattlePage() {
   useEffect(() => {
     setTurnSlot(document.getElementById('topnav-turn-slot'));
   }, []);
+  // Mirrors the Move/Deploy FAB (#101) — lets the Board tab arm a weapon
+  // without switching to the Units tab first, since there was previously no
+  // way back to the board to pick a target once you had (#138).
+  const [attackPickerOpen, setAttackPickerOpen] = useState(false);
 
   function handleHoverToken(tokenId, x, y) {
     setHoverInfo(tokenId ? { tokenId, x, y } : null);
@@ -339,6 +343,18 @@ function BattlePage() {
   const selectedUnit = selectedToken
     ? units.find((u) => Number(u.id) === Number(selectedToken.unitId))
     : null;
+  // Powers the Attack FAB's weapon picker (#138) — same "is this equipped
+  // item actually a fireable weapon" test TokenCard uses per weapon row.
+  const selectedTokenWeapons = selectedToken
+    ? selectedToken.equippedIds
+        .map((id, instanceIndex) => {
+          const item = equipment.find((e) => Number(e.id) === Number(id));
+          return item?.type === 'Weapon' && item.hit_dice
+            ? { ...item, instanceIndex }
+            : null;
+        })
+        .filter(Boolean)
+    : [];
   const reserveTokens = tokens.filter((t) => !t.position && !t.destroyed);
   const destroyedTokens = tokens.filter((t) => t.destroyed);
   const playerDice = sumDiceTotals(
@@ -1113,6 +1129,12 @@ function BattlePage() {
         )}
       <div className="battle-header-row">
         <h1 style={{ fontSize: 20, marginBottom: 4 }}>Battle board</h1>
+        <span
+          className="mobile-turn-indicator"
+          style={{ background: ownerColor(turn.active) }}
+        >
+          Turn {turn.number} · {ownerLabel(turn.active)}
+        </span>
       </div>
 
       <div className="deployment-controls">
@@ -1345,6 +1367,64 @@ function BattlePage() {
                       : 'Deploy'}
                 </button>
               )}
+            {selectedToken &&
+              selectedToken.position &&
+              !selectedToken.destroyed &&
+              canControl(selectedToken) &&
+              selectedTokenWeapons.length > 0 && (
+                <button
+                  type="button"
+                  className="mobile-attack-fab"
+                  onClick={() => {
+                    if (attackWeapon?.tokenId === selectedToken.id) {
+                      cancelAttack();
+                      setAttackPickerOpen(false);
+                    } else {
+                      setAttackPickerOpen((current) => !current);
+                    }
+                  }}
+                >
+                  {attackWeapon?.tokenId === selectedToken.id
+                    ? 'Cancel attack'
+                    : 'Weapons'}
+                </button>
+              )}
+            {attackPickerOpen && selectedToken && (
+              <div className="mobile-attack-picker">
+                <p className="mobile-attack-picker-title">Choose a weapon</p>
+                {selectedTokenWeapons.map((item) => {
+                  const { max } = parseHeatRating(item.heat_rating);
+                  const state = selectedToken.weaponState[
+                    item.instanceIndex
+                  ] ?? { heat: 0, broken: false };
+                  const overheated = Boolean(max) && state.heat > max;
+                  return (
+                    <button
+                      type="button"
+                      key={item.instanceIndex}
+                      className="mobile-attack-picker-item"
+                      disabled={state.broken || overheated}
+                      onClick={() => {
+                        startAttack(item.instanceIndex, item);
+                        setAttackPickerOpen(false);
+                      }}
+                    >
+                      {item.name}
+                      {overheated && (
+                        <span className="badge-overheated">OVERHEATED</span>
+                      )}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={() => setAttackPickerOpen(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
         </div>
         <div>

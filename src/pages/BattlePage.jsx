@@ -148,7 +148,9 @@ function BattlePage() {
   // Which of the 4 panels is showing on narrow (mobile) viewports (#101) —
   // replaces the old slide-in overlay/tray approach. Irrelevant on desktop,
   // where all 4 panels render at once in the existing 3-column layout.
-  const [mobileTab, setMobileTab] = useState('board');
+  // Defaults to Units (which itself opens on its Import sub-tab while
+  // reserve is empty) so a fresh mobile game starts on roster import (#165).
+  const [mobileTab, setMobileTab] = useState('units');
   // Mirrored to the other player over the multiplayer data channel (#117,
   // #118) rather than just local state, since these are transient
   // animations, not part of the persisted game state.

@@ -1346,10 +1346,9 @@ describe('BattlePage', () => {
     expect(screen.getByRole('button', { name: 'Dice' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Log' })).toBeDefined();
 
+    // Mobile starts on the Units tab (its Import sub-tab) rather than Board
+    // (#165), so Units is active and Board isn't until a tab switch.
     const boardPanel = container.querySelector('.battle-board-column');
-    expect(boardPanel.classList.contains('mobile-tab-panel-active')).toBe(true);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Units' }));
     expect(boardPanel.classList.contains('mobile-tab-panel-active')).toBe(
       false,
     );
@@ -1358,6 +1357,11 @@ describe('BattlePage', () => {
         .getByRole('button', { name: 'Units' })
         .classList.contains('active'),
     ).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Board' }));
+    expect(boardPanel.classList.contains('mobile-tab-panel-active')).toBe(
+      true,
+    );
   });
 
   it('hides the TokenCard while deployment phase is active, shows it once ended (#101)', () => {
@@ -1397,7 +1401,7 @@ describe('BattlePage', () => {
     startDeploymentPhase();
     importA10ToReserve();
 
-    // Simulate actually being on the Units tab (mobile defaults to Board).
+    // Explicitly select the Units tab (already the mobile default, #165).
     fireEvent.click(screen.getByRole('button', { name: /^Units$/i }));
     expect(
       document

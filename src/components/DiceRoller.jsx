@@ -101,8 +101,11 @@ const DiceRoller = forwardRef(function DiceRoller(
     DICE_COLORS.forEach((color) => {
       merged[color] = (merged[color] ?? 0) + (activeOwnerDice?.[color] ?? 0);
     });
-    setPool(merged);
     performRoll(merged);
+    // Reset rather than persist `merged` — otherwise next turn's action dice
+    // would stack on top of this turn's already-rolled counts instead of
+    // rolling just that turn's pool (#156).
+    setPool({});
     setRolledActionPoolTurnKey(turnKey);
   }
 
@@ -348,7 +351,20 @@ const DiceRoller = forwardRef(function DiceRoller(
                 Spend
                 <select
                   value={spendId}
-                  onChange={(e) => setSpendId(e.target.value)}
+                  onChange={(e) => {
+                    const nextSpendId = e.target.value;
+                    setSpendId(nextSpendId);
+                    // The die just chosen to spend can no longer also be the
+                    // Change target (#152) — reassign to the next available
+                    // one instead of leaving Change pointed at a now-hidden
+                    // option.
+                    if (targetId === nextSpendId) {
+                      pickTarget(
+                        unusedActionDice.find((d) => d.id !== nextSpendId)
+                          ?.id ?? '',
+                      );
+                    }
+                  }}
                 >
                   {unusedActionDice.map((d) => (
                     <option key={d.id} value={d.id}>
@@ -363,11 +379,13 @@ const DiceRoller = forwardRef(function DiceRoller(
                   value={targetId}
                   onChange={(e) => pickTarget(e.target.value)}
                 >
-                  {unusedActionDice.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.label}: {d.value}
-                    </option>
-                  ))}
+                  {unusedActionDice
+                    .filter((d) => d.id !== spendId)
+                    .map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.label}: {d.value}
+                      </option>
+                    ))}
                 </select>
               </label>
               <label className="field">

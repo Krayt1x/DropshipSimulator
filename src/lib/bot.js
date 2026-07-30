@@ -4,9 +4,14 @@
 // The actual state mutation happens in BattlePage.jsx, which calls these in
 // a loop and applies whatever they return.
 import { hexDistance, isInWeaponArc, neighborHex, visibleSides } from './hex.js';
-import { parseWeaponRange, parseHeatRating, sizeNumber } from './tokens.js';
+import {
+  parseWeaponRange,
+  parseHeatRating,
+  sizeNumber,
+  isDropPodUnit,
+} from './tokens.js';
 import { parseArmor } from './combat.js';
-import { parseHitDice } from './dice.js';
+import { parseHitDice, DICE_COLORS } from './dice.js';
 
 export function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -169,10 +174,34 @@ function findAttackOptions({ tokens, units, equipment, botOwner, difficulty }) {
 }
 
 function movementForToken(token, equipment) {
-  const movementItem = token.equippedIds
-    .map((id) => equipment.find((e) => Number(e.id) === Number(id)))
-    .find((item) => item?.type === 'Movement');
+  const movementIndex = token.equippedIds.findIndex((id) => {
+    const item = equipment.find((e) => Number(e.id) === Number(id));
+    return item?.type === 'Movement';
+  });
+  if (movementIndex === -1) return 0;
+  const movementItem = equipment.find(
+    (e) => Number(e.id) === Number(token.equippedIds[movementIndex]),
+  );
+  // A broken or overheated movement item can't move the token at all (#153),
+  // same as a broken/overheated weapon can't fire.
+  if (!isWeaponUsable(token.weaponState[movementIndex], movementItem)) return 0;
   return Number(movementItem?.movement) || 0;
+}
+
+// A destroyed-eligible token (0 HP, not yet marked destroyed) blocks the rest
+// of the bot's turn the same way it would block a human — you clean up your
+// own wrecked model before doing anything else with it. Only the owning
+// player's client ever handles this (`canControl` gates the human's "Model
+// Destroyed" button the same way), so the bot only looks at its own tokens.
+function findDestroyAction({ tokens, units, botOwner }) {
+  const wreck = tokens.find(
+    (t) => t.owner === botOwner && !t.destroyed && (t.currentHp ?? 0) <= 0,
+  );
+  if (!wreck) return null;
+  const unit = unitFor(wreck, units);
+  const dieColor =
+    DICE_COLORS.find((color) => Number(unit?.[`dice_${color}`]) > 0) ?? null;
+  return { type: 'destroy', tokenId: wreck.id, dieColor };
 }
 
 function closestToken(position, candidates) {
@@ -182,6 +211,33 @@ function closestToken(position, candidates) {
       ? t
       : closest;
   }, null);
+}
+
+// Brings a reserve drop pod in with a spare Action die (#157, #158) — aimed
+// at whichever enemy is closest to the bot's own front line (or the first
+// enemy, if nothing's deployed yet), matching a human reinforcing near where
+// the fight already is rather than picking a spot at random.
+function findDropPodAction({ tokens, units, botOwner, actionPool, enemyTokens }) {
+  if (enemyTokens.length === 0) return null;
+  const actionDie = actionPool.find((d) => !d.used && d.value === 'Action');
+  if (!actionDie) return null;
+
+  const podToken = tokens.find(
+    (t) =>
+      t.owner === botOwner &&
+      !t.position &&
+      !t.destroyed &&
+      isDropPodUnit(unitFor(t, units)),
+  );
+  if (!podToken) return null;
+
+  const myDeployed = tokens.filter(
+    (t) => t.owner === botOwner && t.position && !t.destroyed,
+  );
+  const anchor = myDeployed[0]?.position ?? enemyTokens[0].position;
+  const aim = (closestToken(anchor, enemyTokens) ?? enemyTokens[0]).position;
+
+  return { type: 'dropPod', dieId: actionDie.id, tokenId: podToken.id, aim };
 }
 
 // Greedy hex walk from `from` toward `to`, taking at most `maxSteps`,
@@ -210,7 +266,14 @@ export function stepToward(from, to, maxSteps, stopDistance, isBlocked) {
   return current;
 }
 
-function findMoveAction({ tokens, equipment, botOwner, actionPool, difficulty }) {
+function findMoveAction({
+  tokens,
+  equipment,
+  botOwner,
+  actionPool,
+  difficulty,
+  dimensions,
+}) {
   const moveDie = pickDie(actionPool, 'Move');
   if (!moveDie) return null;
 
@@ -227,6 +290,13 @@ function findMoveAction({ tokens, equipment, botOwner, actionPool, difficulty })
       .filter((t) => t.position && !t.destroyed)
       .map((t) => `${t.position.col},${t.position.row}`),
   );
+  const isBlocked = (hex) =>
+    occupied.has(`${hex.col},${hex.row}`) ||
+    (Boolean(dimensions) &&
+      (hex.col < 0 ||
+        hex.row < 0 ||
+        hex.col >= dimensions.cols ||
+        hex.row >= dimensions.rows));
 
   for (const token of myTokens) {
     const maxMove = movementForToken(token, equipment);
@@ -249,7 +319,7 @@ function findMoveAction({ tokens, equipment, botOwner, actionPool, difficulty })
       nearestEnemy.position,
       maxMove,
       stopDistance,
-      (hex) => occupied.has(`${hex.col},${hex.row}`),
+      isBlocked,
     );
     if (
       destination.col === token.position.col &&
@@ -272,14 +342,27 @@ export function chooseBotAction({
   botOwner,
   actionPool,
   difficulty,
+  dimensions,
 }) {
+  // Clean up a wrecked model before doing anything else with it (#154) —
+  // doesn't need an enemy on the board or spend an action-pool die, matching
+  // the human "Model Destroyed" button, which is always available and free.
+  const destroyAction = findDestroyAction({ tokens, units, botOwner });
+  if (destroyAction) return destroyAction;
+
   const myTokens = tokens.filter(
     (t) => t.owner === botOwner && t.position && !t.destroyed,
   );
   const enemyTokens = tokens.filter(
     (t) => t.owner !== botOwner && t.position && !t.destroyed,
   );
-  if (myTokens.length === 0 || enemyTokens.length === 0) return null;
+
+  // With nothing deployed to attack or move with, reinforcing via a reserve
+  // drop pod is the only thing left to try (#157, #158).
+  if (myTokens.length === 0) {
+    return findDropPodAction({ tokens, units, botOwner, actionPool, enemyTokens });
+  }
+  if (enemyTokens.length === 0) return null;
 
   const attackDie = pickDie(actionPool, 'Attack');
   if (attackDie) {
@@ -306,7 +389,25 @@ export function chooseBotAction({
     }
   }
 
-  return findMoveAction({ tokens, equipment, botOwner, actionPool, difficulty });
+  // Weapons in range get priority; otherwise use a spare Action die to bring
+  // in a reserve drop pod before falling back to repositioning (#157, #158).
+  const dropPodAction = findDropPodAction({
+    tokens,
+    units,
+    botOwner,
+    actionPool,
+    enemyTokens,
+  });
+  if (dropPodAction) return dropPodAction;
+
+  return findMoveAction({
+    tokens,
+    equipment,
+    botOwner,
+    actionPool,
+    difficulty,
+    dimensions,
+  });
 }
 
 // Spreads `count` reserve tokens across empty hexes inside the bot's

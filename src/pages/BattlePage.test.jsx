@@ -743,10 +743,13 @@ describe('BattlePage', () => {
 
     // Spend, Change, and Into (#147) — the third lets the player pick what
     // the changed die's new outcome actually is, rather than rerolling it.
+    // Change (#152) excludes whichever die Spend has selected, so with only
+    // 2 unused dice total it's left with 1 option once Spend claims the
+    // other.
     const selects = screen.getAllByRole('combobox');
     expect(selects).toHaveLength(3);
     expect(within(selects[0]).getAllByRole('option')).toHaveLength(2);
-    expect(within(selects[1]).getAllByRole('option')).toHaveLength(2);
+    expect(within(selects[1]).getAllByRole('option')).toHaveLength(1);
     expect(within(selects[2]).getAllByRole('option')).toHaveLength(3);
 
     const confirmBtn = screen.getAllByRole('button', { name: 'Exchange' })[1];
@@ -1475,7 +1478,9 @@ describe('BattlePage', () => {
 
     render(<BattlePage />);
 
-    // The bot equips and deploys its own roster without any input.
+    // The bot equips and deploys its own roster without any input — except
+    // its drop pods (Delivery Capsule), which stay in reserve until played
+    // in with an Action die during the game (#157).
     await vi.waitFor(
       () => {
         const currentTokens = JSON.parse(
@@ -1483,8 +1488,22 @@ describe('BattlePage', () => {
             '[]',
         );
         const botTokens = currentTokens.filter((t) => t.owner === 'p2');
-        expect(botTokens.length).toBeGreaterThan(0);
-        expect(botTokens.every((t) => t.position)).toBe(true);
+        const nonPodBotTokens = botTokens.filter((t) => {
+          const unit = units.find((u) => Number(u.id) === Number(t.unitId));
+          return unit?.size !== 'Drop Pod';
+        });
+        expect(nonPodBotTokens.length).toBeGreaterThan(0);
+        expect(nonPodBotTokens.every((t) => t.position)).toBe(true);
+        expect(
+          botTokens
+            .filter((t) => {
+              const unit = units.find(
+                (u) => Number(u.id) === Number(t.unitId),
+              );
+              return unit?.size === 'Drop Pod';
+            })
+            .every((t) => !t.position),
+        ).toBe(true);
       },
       { timeout: 15000, interval: 100 },
     );
@@ -1503,10 +1522,20 @@ describe('BattlePage', () => {
       { timeout: 15000, interval: 100 },
     );
 
-    const turn = JSON.parse(
-      window.localStorage.getItem('dropshipsimulator:battle:turn') ?? '{}',
+    // `turn` syncs to localStorage via its own passive effect (useLocalStorageState),
+    // one render tick behind the DOM update the assertion above already
+    // waited for — so this needs its own wait rather than a synchronous read
+    // right after, or it can catch localStorage a beat before that effect
+    // flushes.
+    await vi.waitFor(
+      () => {
+        const turn = JSON.parse(
+          window.localStorage.getItem('dropshipsimulator:battle:turn') ?? '{}',
+        );
+        expect(turn.active).toBe('p1');
+      },
+      { timeout: 5000, interval: 50 },
     );
-    expect(turn.active).toBe('p1');
   });
 
   it('does not run any bot logic in sandbox mode', async () => {

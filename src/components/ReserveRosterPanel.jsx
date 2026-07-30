@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react';
-import { OWNERS, ownerColor, withTokenLabel } from '../lib/tokens.js';
+import {
+  OWNERS,
+  ownerColor,
+  withTokenLabel,
+  isDropPodUnit,
+} from '../lib/tokens.js';
 
 function statusLabel(token) {
   if (token.destroyed) return 'Destroyed';
@@ -15,6 +20,9 @@ function ReserveGroup({
   canControl,
   onSelect,
   onDeploy,
+  deploymentPhase,
+  hasActionDie,
+  onDropPod,
 }) {
   if (tokens.length === 0) return null;
 
@@ -30,7 +38,10 @@ function ReserveGroup({
       <div className="tile-palette-list">
         {tokens.map((token) => {
           const unit = units.find((u) => Number(u.id) === Number(token.unitId));
-          const draggable = canControl(token);
+          const isPod = isDropPodUnit(unit);
+          // Drop pods deploy mid-game via an Action die instead of a plain
+          // placement click or drag (#157, #158).
+          const draggable = canControl(token) && !isPod;
           return (
             <div className="tile-swatch-row" key={token.id}>
               <button
@@ -39,7 +50,9 @@ function ReserveGroup({
                 title={
                   draggable
                     ? 'Drag onto the board to deploy'
-                    : "You can't deploy another player's unit"
+                    : isPod
+                      ? 'Drop pods are deployed during the game, not now'
+                      : "You can't deploy another player's unit"
                 }
                 onDragStart={(e) => {
                   if (!draggable) {
@@ -60,6 +73,24 @@ function ReserveGroup({
               {/* Selects, arms the move, and jumps straight to the Board tab
                   (#142) — previously deploying on mobile meant selecting here
                   then guessing you had to switch tabs yourself to place it. */}
+              {canControl(token) && isPod && !deploymentPhase && (
+                <button
+                  type="button"
+                  className="reserve-deploy-btn"
+                  disabled={!hasActionDie}
+                  title={
+                    hasActionDie
+                      ? 'Aim it at a hex, then roll its deviation'
+                      : 'Needs an unused Action die'
+                  }
+                  onClick={() => onDropPod(token.id)}
+                >
+                  Drop Pod
+                </button>
+              )}
+              {canControl(token) && isPod && deploymentPhase && (
+                <span className="unit-meta">Deploys during the game</span>
+              )}
               {draggable && (
                 <button
                   type="button"
@@ -91,6 +122,9 @@ function ReserveRosterPanel({
   onSelect,
   onDeploy,
   importPanel,
+  deploymentPhase,
+  hasActionDie,
+  onDropPod,
 }) {
   // Defaults to the Import tab when it's offered (#146, mobile only — see
   // BattlePage) and nothing's been imported yet, so it's still the first
@@ -181,6 +215,9 @@ function ReserveRosterPanel({
                   canControl={canControl}
                   onSelect={onSelect}
                   onDeploy={onDeploy}
+                  deploymentPhase={deploymentPhase}
+                  hasActionDie={hasActionDie}
+                  onDropPod={onDropPod}
                 />
               ))}
             </>

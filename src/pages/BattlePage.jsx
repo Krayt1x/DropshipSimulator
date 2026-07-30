@@ -31,6 +31,7 @@ import {
   sizeNumber,
   ownerColor,
   withTokenLabel,
+  isDropPodUnit,
 } from '../lib/tokens.js';
 import {
   parseArmor,
@@ -45,6 +46,7 @@ import {
   pickDeploymentHexes,
   sleep,
 } from '../lib/bot.js';
+import { resolveDropPod } from '../lib/dropPod.js';
 import BattleBoard from '../components/BattleBoard.jsx';
 import TokenCard from '../components/TokenCard.jsx';
 import UnitCardHeader from '../components/UnitCardHeader.jsx';
@@ -125,6 +127,9 @@ function BattlePage() {
       : null;
   const [selectedTokenId, setSelectedTokenId] = useState(null);
   const [movingTokenId, setMovingTokenId] = useState(null);
+  // Drop pod flow (#158): tokenId of a reserve drop pod armed and waiting
+  // for a hex click to aim at, before its deviation roll resolves.
+  const [dropPodArmed, setDropPodArmed] = useState(null);
   const [rangeWeapon, setRangeWeapon] = useState(null);
   // Attack workflow (#103): attackWeapon marks which weapon is armed for
   // attacking (also drives the arc display via rangeWeapon); attackTarget +
@@ -278,6 +283,13 @@ function BattlePage() {
 
   function ownerLabel(ownerId) {
     return OWNERS.find((o) => o.id === ownerId)?.label ?? ownerId;
+  }
+
+  // Drop pods (e.g. "Delivery Capsule") play in during the game via an
+  // Action die instead of being placed at deployment (#157, #158).
+  function isDropPodToken(token) {
+    const unit = units.find((u) => Number(u.id) === Number(token?.unitId));
+    return isDropPodUnit(unit);
   }
 
   function endTurn() {
@@ -967,6 +979,11 @@ function BattlePage() {
   function handleHexClick(key) {
     const [col, row] = key.split(',').map(Number);
 
+    if (dropPodArmed) {
+      resolveDropPodDrop(dropPodArmed, { col, row });
+      return;
+    }
+
     if (attackWeapon) {
       const attacker = tokens.find((t) => t.id === attackWeapon.tokenId);
       if (isSplashWeapon) {
@@ -1034,8 +1051,77 @@ function BattlePage() {
     if (tokenAt(`${col},${row}`)) return;
     const token = tokens.find((t) => t.id === tokenId);
     if (!token || !canControl(token)) return;
+    // Drop pods never place directly — they always go through the aim +
+    // deviation roll flow instead (#157, #158).
+    if (isDropPodToken(token)) return;
     animateMove(token, col, row);
     setSelectedTokenId(tokenId);
+  }
+
+  function hasUnusedActionDie() {
+    return actionPool.some((d) => !d.used && d.value === 'Action');
+  }
+
+  // Arms a reserve drop pod to be aimed at the next hex click (#158) — only
+  // once the deployment phase is over (#157) and there's a spare Action die
+  // to spend on it, matching the human "you need an unused die" gate every
+  // other action already follows.
+  function armDropPod(tokenId) {
+    if (deploymentPhase || !hasUnusedActionDie()) return;
+    setMovingTokenId(null);
+    setAttackWeapon(null);
+    setAttackTarget(null);
+    setDropPodArmed(tokenId);
+    setMobileTab('board');
+  }
+
+  // Rolls the drop pod's deviation (1d4 distance, 1d6 direction — #158),
+  // applies 10 rear damage to anything it bounces off of on the way down,
+  // and lands it on the final empty hex.
+  function resolveDropPodDrop(tokenId, aim) {
+    const token = tokens.find((t) => t.id === tokenId);
+    const actionDie = actionPool.find((d) => !d.used && d.value === 'Action');
+    if (!token || !actionDie) {
+      setDropPodArmed(null);
+      return;
+    }
+
+    const d4Roll = rollDie(DIE_TYPES.find((d) => d.id === 'd4'));
+    const d6Roll = rollDie(DIE_TYPES.find((d) => d.id === 'd6'));
+    const { hex, hits } = resolveDropPod({
+      aim,
+      d4Roll,
+      d6Roll,
+      dimensions,
+      findTokenAt: (h) =>
+        tokens.find(
+          (t) =>
+            t.position &&
+            !t.destroyed &&
+            t.position.col === h.col &&
+            t.position.row === h.row,
+        ),
+    });
+
+    hits.forEach(({ token: hitToken }) => {
+      const unit = units.find((u) => Number(u.id) === Number(hitToken.unitId));
+      const sideArmor = parseArmor(unit?.armor)?.rear ?? 0;
+      const damage = calculateDamage(10, sideArmor, 1);
+      applyDamageToToken(hitToken, 'rear', damage, null);
+    });
+
+    appendLog(
+      `${ownerLabel(token.owner)}'s ${unitName(token)} drop pod aimed at (${aim.col}, ${aim.row}), rolled ${d4Roll}/${d6Roll} and landed at (${hex.col}, ${hex.row})` +
+        (hits.length > 0
+          ? `, hitting ${hits.length} model${hits.length === 1 ? '' : 's'} for 10 damage to the rear on the way down`
+          : ''),
+    );
+
+    placeTokenAt(token.id, hex.col, hex.row);
+    triggerDeployEffect(token.id, hex.col, hex.row);
+    useActionPoolDie(actionDie.id);
+    setDropPodArmed(null);
+    setSelectedTokenId(token.id);
   }
 
   // Reserve list's own Deploy button (#142) — on mobile, reserve tokens are
@@ -1281,6 +1367,83 @@ function BattlePage() {
     applyDamageToToken(target, action.side, damage, action.item);
   }
 
+  // Mirrors destroySelected(), but off `action.tokenId` (a stateRef-fresh
+  // argument) instead of the `selectedToken` render-closure state, since
+  // runBotTurn's own closure never sees a human selection (#154).
+  function performBotDestroy(action) {
+    const freshTokens = stateRef.current.tokens;
+    const token = freshTokens.find((t) => t.id === action.tokenId);
+    if (!token) return;
+    appendLog(
+      `${ownerLabel(token.owner)}'s ${unitName(token)} was destroyed` +
+        (action.dieColor ? ` (kept a ${action.dieColor} die)` : ''),
+    );
+    if (action.dieColor) {
+      setBankedDice((current) => ({
+        ...current,
+        [token.owner]: {
+          ...current[token.owner],
+          [action.dieColor]: (current[token.owner]?.[action.dieColor] ?? 0) + 1,
+        },
+      }));
+    }
+    setTokens((current) =>
+      current.map((t) =>
+        t.id === action.tokenId
+          ? {
+              ...t,
+              destroyed: true,
+              position: null,
+              bankedDieColor: action.dieColor ?? null,
+            }
+          : t,
+      ),
+    );
+  }
+
+  // Mirrors resolveDropPodDrop(), but off `action.tokenId`/`action.aim`
+  // (stateRef-fresh arguments) instead of the render closure, for the same
+  // stale-closure reason performBotAttack/performBotDestroy do (#157, #158).
+  function performBotDropPod(action) {
+    const freshTokens = stateRef.current.tokens;
+    const token = freshTokens.find((t) => t.id === action.tokenId);
+    if (!token) return;
+
+    const d4Roll = rollDie(DIE_TYPES.find((d) => d.id === 'd4'));
+    const d6Roll = rollDie(DIE_TYPES.find((d) => d.id === 'd6'));
+    const { hex, hits } = resolveDropPod({
+      aim: action.aim,
+      d4Roll,
+      d6Roll,
+      dimensions,
+      findTokenAt: (h) =>
+        stateRef.current.tokens.find(
+          (t) =>
+            t.position &&
+            !t.destroyed &&
+            t.position.col === h.col &&
+            t.position.row === h.row,
+        ),
+    });
+
+    hits.forEach(({ token: hitToken }) => {
+      const unit = units.find((u) => Number(u.id) === Number(hitToken.unitId));
+      const sideArmor = parseArmor(unit?.armor)?.rear ?? 0;
+      const damage = calculateDamage(10, sideArmor, 1);
+      applyDamageToToken(hitToken, 'rear', damage, null);
+    });
+
+    appendLog(
+      `${ownerLabel(token.owner)}'s ${unitName(token)} drop pod aimed at (${action.aim.col}, ${action.aim.row}), rolled ${d4Roll}/${d6Roll} and landed at (${hex.col}, ${hex.row})` +
+        (hits.length > 0
+          ? `, hitting ${hits.length} model${hits.length === 1 ? '' : 's'} for 10 damage to the rear on the way down`
+          : ''),
+    );
+
+    placeTokenAt(token.id, hex.col, hex.row);
+    triggerDeployEffect(token.id, hex.col, hex.row);
+  }
+
   const botTurnKeyRef = useRef(null);
   async function runBotTurn() {
     const ownerDice = playerDice[botOwner] ?? { blue: 0, red: 0, green: 0 };
@@ -1312,11 +1475,19 @@ function BattlePage() {
         botOwner,
         actionPool: freshPool,
         difficulty: botDifficulty,
+        dimensions,
       });
       if (!action) break;
 
-      if (action.type === 'attack') {
+      if (action.type === 'destroy') {
+        performBotDestroy(action);
+        await sleep(400);
+      } else if (action.type === 'attack') {
         performBotAttack(action);
+        useActionPoolDie(action.dieId);
+        await sleep(700);
+      } else if (action.type === 'dropPod') {
+        performBotDropPod(action);
         useActionPoolDie(action.dieId);
         await sleep(700);
       } else if (action.type === 'move') {
@@ -1359,8 +1530,13 @@ function BattlePage() {
       await sleep(400);
     }
 
+    // Drop pods deploy mid-game via an Action die, not at setup (#157).
     const reserveBotTokens = stateRef.current.tokens.filter(
-      (t) => t.owner === botOwner && !t.position && !t.destroyed,
+      (t) =>
+        t.owner === botOwner &&
+        !t.position &&
+        !t.destroyed &&
+        !isDropPodToken(t),
     );
     if (reserveBotTokens.length === 0) return;
 
@@ -1489,7 +1665,10 @@ function BattlePage() {
               token={selectedToken}
               unit={selectedUnit}
               equipment={equipment}
-              moving={movingTokenId === selectedToken.id}
+              moving={
+                movingTokenId === selectedToken.id ||
+                dropPodArmed === selectedToken.id
+              }
               canControl={canControl(selectedToken)}
               onAdjustHp={adjustHp}
               onRotate={rotate}
@@ -1517,6 +1696,9 @@ function BattlePage() {
               onDestroy={destroySelected}
               onReturnToReserve={returnSelectedToReserve}
               onDeselect={() => setSelectedTokenId(null)}
+              deploymentPhase={deploymentPhase}
+              hasActionDie={hasUnusedActionDie()}
+              onArmDropPod={() => armDropPod(selectedToken.id)}
             />
           )}
           <ReserveRosterPanel
@@ -1529,6 +1711,9 @@ function BattlePage() {
             onSelect={setSelectedTokenId}
             onDeploy={deployFromReserve}
             importPanel={isMobile ? rosterImportPanel : null}
+            deploymentPhase={deploymentPhase}
+            hasActionDie={hasUnusedActionDie()}
+            onDropPod={armDropPod}
           />
           <DestroyedList
             tokens={destroyedTokens}

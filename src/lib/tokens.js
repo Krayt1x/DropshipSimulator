@@ -100,6 +100,12 @@ export function sizeNumber(size) {
   return SIZE_NUMBERS[size] ?? null;
 }
 
+// Drop pods (e.g. "Delivery Capsule") are deployed mid-game via the drop pod
+// mechanic instead of a plain placement click (#157, #158).
+export function isDropPodUnit(unit) {
+  return unit?.size === 'Drop Pod';
+}
+
 export function healthBarColor(fraction) {
   if (fraction <= 0.25) return '#dc2626';
   if (fraction <= 0.5) return '#f59e0b';

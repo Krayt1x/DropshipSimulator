@@ -4,6 +4,7 @@ import {
   parseHeatRating,
   slotForType,
   withTokenLabel,
+  isDropPodUnit,
 } from '../lib/tokens.js';
 import { DICE_COLORS } from '../lib/dice.js';
 import HpBoxes from './HpBoxes.jsx';
@@ -29,6 +30,9 @@ function TokenCard({
   onDestroy,
   onReturnToReserve,
   onDeselect,
+  deploymentPhase,
+  hasActionDie,
+  onArmDropPod,
 }) {
   const [confirmingDestroy, setConfirmingDestroy] = useState(false);
   const [pickedDieColor, setPickedDieColor] = useState(null);
@@ -45,6 +49,16 @@ function TokenCard({
   const weapons = grouped.Weapon ?? [];
   const movementItems = grouped.Movement ?? [];
   const augments = grouped.Augment ?? [];
+  // Mirrors weapons' broken/overheated gate on Attack (#127) — a model can't
+  // move on legs that are broken or too hot to use (#153).
+  const movementBlocked = movementItems.some((item) => {
+    const { max } = parseHeatRating(item.heat_rating);
+    const state = token.weaponState[item.instanceIndex] ?? {
+      heat: 0,
+      broken: false,
+    };
+    return state.broken || (Boolean(max) && state.heat > max);
+  });
   const availableDiceColors = DICE_COLORS.filter(
     (color) => Number(unit[`dice_${color}`]) > 0,
   );
@@ -77,7 +91,7 @@ function TokenCard({
     };
     const rangeActive = showRange && activeRangeIndex === item.instanceIndex;
     const attackActive = showRange && activeAttackIndex === item.instanceIndex;
-    const overheated = showRange && Boolean(max) && state.heat > max;
+    const overheated = Boolean(max) && state.heat > max;
     const maxHp = Number(item.hp) || 0;
     const hp = state.hp ?? maxHp;
     return (
@@ -339,26 +353,69 @@ function TokenCard({
         </div>
       )}
 
-      {!token.destroyed && (
+      {!token.destroyed && !token.position && isDropPodUnit(unit) ? (
         <div className="token-card-section">
           {!canControl && (
             <p className="unit-meta">
-              This unit belongs to another player — you can't move or deploy it.
+              This unit belongs to another player — you can't deploy it.
             </p>
           )}
-          <button
-            type="button"
-            className={moving ? '' : 'ghost'}
-            disabled={!canControl}
-            onClick={onArmMove}
-          >
-            {moving
-              ? 'Click a hex to place'
-              : token.position
-                ? 'Move token'
-                : 'Place on board'}
-          </button>
+          {canControl && deploymentPhase && (
+            <p className="unit-meta">
+              Drop pods are deployed during the game, not now — bring it in
+              later with an unused Action die.
+            </p>
+          )}
+          {canControl && !deploymentPhase && (
+            <button
+              type="button"
+              className={moving ? '' : 'ghost'}
+              disabled={!hasActionDie}
+              title={
+                hasActionDie
+                  ? 'Aim it at a hex, then roll its deviation'
+                  : 'Needs an unused Action die'
+              }
+              onClick={onArmDropPod}
+            >
+              {moving ? 'Click a hex to aim' : 'Drop Pod'}
+            </button>
+          )}
         </div>
+      ) : (
+        !token.destroyed && (
+          <div className="token-card-section">
+            {!canControl && (
+              <p className="unit-meta">
+                This unit belongs to another player — you can't move or
+                deploy it.
+              </p>
+            )}
+            {movementBlocked && (
+              <p className="unit-meta">
+                Movement is broken or overheated — let it cool down before
+                moving again.
+              </p>
+            )}
+            <button
+              type="button"
+              className={moving ? '' : 'ghost'}
+              disabled={!canControl || movementBlocked}
+              title={
+                movementBlocked
+                  ? 'Overheated — let it cool down before moving again'
+                  : undefined
+              }
+              onClick={onArmMove}
+            >
+              {moving
+                ? 'Click a hex to place'
+                : token.position
+                  ? 'Move token'
+                  : 'Place on board'}
+            </button>
+          </div>
+        )
       )}
 
       {token.destroyed ? (

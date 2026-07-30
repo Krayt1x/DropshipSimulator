@@ -16,6 +16,7 @@ const units = [
     size: 'Small',
     hp: 5,
     armor: '2/2/2/1',
+    dice_blue: 1,
   },
   {
     id: 2,
@@ -31,6 +32,14 @@ const units = [
     manufacturer: 'Corp A',
     size: 'Small',
     hp: 10,
+    armor: '0/0/0/0',
+  },
+  {
+    id: 4,
+    name: 'Delivery Capsule',
+    manufacturer: 'Corp A',
+    size: 'Drop Pod',
+    hp: 5,
     armor: '0/0/0/0',
   },
 ];
@@ -352,6 +361,154 @@ describe('chooseBotAction', () => {
       difficulty: 'tactical',
     });
     expect(result.targetId).toBe('weak');
+  });
+
+  it('processes its own wrecked (0 HP) model before attacking or moving (#154)', () => {
+    const wreck = makeToken({
+      id: 'bot1',
+      unitId: 1, // A10, dice_blue: 1
+      owner: 'p2',
+      position: { col: 5, row: 5 },
+      currentHp: 0,
+    });
+    const enemy = makeToken({
+      id: 'enemy1',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 5, row: 6 },
+    });
+    const result = chooseBotAction({
+      tokens: [wreck, enemy],
+      units,
+      equipment,
+      botOwner: 'p2',
+      actionPool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+      difficulty: 'simple',
+    });
+    expect(result).toEqual({ type: 'destroy', tokenId: 'bot1', dieColor: 'blue' });
+  });
+
+  it('never moves a token outside the board bounds (#155)', () => {
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 0, row: 0 },
+      equippedIds: [11], // Chicken Legs, movement 3
+    });
+    const enemy = makeToken({
+      id: 'enemy1',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 0, row: 20 },
+    });
+    // A 3x3 board: unclamped, 3 steps south from (0,0) would land on row 3,
+    // one past the last valid row (2).
+    const result = chooseBotAction({
+      tokens: [bot, enemy],
+      units,
+      equipment,
+      botOwner: 'p2',
+      actionPool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+      difficulty: 'simple',
+      dimensions: { cols: 3, rows: 3 },
+    });
+    expect(result.destination.col).toBeGreaterThanOrEqual(0);
+    expect(result.destination.row).toBeGreaterThanOrEqual(0);
+    expect(result.destination.col).toBeLessThan(3);
+    expect(result.destination.row).toBeLessThan(3);
+  });
+
+  it('does not move a token whose movement gear is overheated (#153)', () => {
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 0, row: 0 },
+      equippedIds: [11],
+      weaponState: { 0: { heat: 99, broken: false } },
+    });
+    const enemy = makeToken({
+      id: 'enemy1',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 0, row: 10 },
+    });
+    // Chicken Legs (id 11) has no heat_rating in the fixture, so give it one
+    // here via a per-test equipment override.
+    const hotEquipment = equipment.map((item) =>
+      item.id === 11 ? { ...item, heat_rating: '2/6' } : item,
+    );
+    const result = chooseBotAction({
+      tokens: [bot, enemy],
+      units,
+      equipment: hotEquipment,
+      botOwner: 'p2',
+      actionPool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+      difficulty: 'simple',
+    });
+    expect(result).toBeNull();
+  });
+
+  it('brings in a reserve drop pod with a spare Action die (#157, #158)', () => {
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 5, row: 5 },
+      equippedIds: [10],
+      weaponState: { 0: { heat: 10, broken: false } }, // overheated, can't attack
+    });
+    const pod = makeToken({
+      id: 'pod1',
+      unitId: 4, // Delivery Capsule / Drop Pod
+      owner: 'p2',
+      position: null,
+    });
+    const enemy = makeToken({
+      id: 'enemy1',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 5, row: 6 },
+    });
+    const result = chooseBotAction({
+      tokens: [bot, pod, enemy],
+      units,
+      equipment,
+      botOwner: 'p2',
+      actionPool: [{ id: 'd1', label: 'Green', value: 'Action', used: false }],
+      difficulty: 'simple',
+    });
+    expect(result).toMatchObject({
+      type: 'dropPod',
+      tokenId: 'pod1',
+      dieId: 'd1',
+      aim: { col: 5, row: 6 },
+    });
+  });
+
+  it('does not drop a pod without a spare Action die', () => {
+    const pod = makeToken({
+      id: 'pod1',
+      unitId: 4,
+      owner: 'p2',
+      position: null,
+    });
+    const enemy = makeToken({
+      id: 'enemy1',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 5, row: 6 },
+    });
+    const result = chooseBotAction({
+      tokens: [pod, enemy],
+      units,
+      equipment,
+      botOwner: 'p2',
+      actionPool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+      difficulty: 'simple',
+    });
+    expect(result).toBeNull();
   });
 
   it("a splash weapon skips a shot that would catch more of the bot's own tokens than enemies (tactical)", () => {

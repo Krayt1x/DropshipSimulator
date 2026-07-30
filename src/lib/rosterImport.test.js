@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { parseRosterExport } from './rosterImport.js';
+import { DEFAULT_ROSTERS } from '../components/RosterImport.jsx';
+import realUnits from '../data/units.json';
+import realEquipment from '../data/equipment.json';
+import realManufacturers from '../data/manufacturers.json';
 
 const manufacturers = ['Corp A'];
 const units = [
@@ -104,4 +108,17 @@ describe('parseRosterExport', () => {
     expect(result.entries).toEqual([]);
     expect(result.warnings[0]).toMatch(/DropshipBuilder share export/);
   });
+
+  it.each(DEFAULT_ROSTERS)(
+    'parses the "$name" default roster against real data with no warnings (#170)',
+    ({ text }) => {
+      const result = parseRosterExport(text, {
+        units: realUnits,
+        manufacturers: realManufacturers,
+        equipment: realEquipment,
+      });
+      expect(result.warnings).toEqual([]);
+      expect(result.entries.length).toBeGreaterThan(0);
+    },
+  );
 });

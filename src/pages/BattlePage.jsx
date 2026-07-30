@@ -423,7 +423,7 @@ function BattlePage() {
       );
       appendLog('Undid an Exchange');
     } else if (lastAction.type === 'move') {
-      const { tokenId, position, previousWeaponState } = lastAction;
+      const { tokenId, position, previousWeaponState, dieId } = lastAction;
       const occupant = tokenAt(`${position.col},${position.row}`);
       if (!occupant || occupant.id === tokenId) {
         setTokens((current) =>
@@ -432,6 +432,13 @@ function BattlePage() {
               ? { ...t, position, weaponState: previousWeaponState }
               : t,
           ),
+        );
+      }
+      // Refund the Move (or Action) die this move spent, if any (#168) —
+      // a free initial placement never had one to refund.
+      if (dieId) {
+        setActionPool((current) =>
+          current.map((d) => (d.id === dieId ? { ...d, used: false } : d)),
         );
       }
       const token = tokens.find((t) => t.id === tokenId);
@@ -996,13 +1003,16 @@ function BattlePage() {
     return weaponState;
   }
 
-  function moveTokenTo(token, col, row) {
+  function moveTokenTo(token, col, row, dieId) {
     if (token.position) {
       setLastAction({
         type: 'move',
         tokenId: token.id,
         position: token.position,
         previousWeaponState: token.weaponState,
+        // Recorded so "Undo last move" can also refund the Move die a human
+        // move spent (#162), rather than just restoring position (#168).
+        dieId,
       });
       appendLog(
         `${ownerLabel(token.owner)} moved ${unitName(token)} to (${col}, ${row})`,
@@ -1026,17 +1036,17 @@ function BattlePage() {
   // (#93) instead of jumping straight there; the real position/log/undo
   // update only happens once the animation reaches the destination.
   const MOVE_STEP_MS = 160;
-  function animateMove(token, col, row) {
+  function animateMove(token, col, row, dieId) {
     moveTimeoutsRef.current.forEach(clearTimeout);
     moveTimeoutsRef.current = [];
     if (!token.position) {
-      moveTokenTo(token, col, row);
+      moveTokenTo(token, col, row, dieId);
       return;
     }
     const path = hexLine(token.position, { col, row });
     if (path.length <= 2) {
       setAnimatingToken(null);
-      moveTokenTo(token, col, row);
+      moveTokenTo(token, col, row, dieId);
       return;
     }
     path.slice(1, -1).forEach((hex, i) => {
@@ -1053,7 +1063,7 @@ function BattlePage() {
       setTimeout(
         () => {
           setAnimatingToken(null);
-          moveTokenTo(token, col, row);
+          moveTokenTo(token, col, row, dieId);
         },
         MOVE_STEP_MS * (path.length - 1),
       ),
@@ -1127,8 +1137,13 @@ function BattlePage() {
         if (movingToken.position) {
           const die = pickActionDie('Move');
           if (die) {
-            animateMove(movingToken, col, row);
+            // Order matters: both calls set lastAction, and a short move
+            // finishes synchronously inside animateMove while a longer one
+            // completes later on a timeout — calling useActionPoolDie first
+            // guarantees moveTokenTo's own 'move' record (carrying dieId)
+            // is always the one left standing either way (#168).
             useActionPoolDie(die.id);
+            animateMove(movingToken, col, row, die.id);
           }
         } else {
           animateMove(movingToken, col, row);
@@ -1155,8 +1170,10 @@ function BattlePage() {
     if (token.position) {
       const die = pickActionDie('Move');
       if (!die) return;
-      animateMove(token, col, row);
+      // See handleHexClick's identical comment on why useActionPoolDie runs
+      // first (#168).
       useActionPoolDie(die.id);
+      animateMove(token, col, row, die.id);
     } else {
       animateMove(token, col, row);
     }

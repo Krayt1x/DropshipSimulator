@@ -206,6 +206,53 @@ describe('BattlePage', () => {
     ).toBe(true);
   });
 
+  it('refunds the spent Move die when undoing a move, for both a short (instant) and long (animated) move (#168)', () => {
+    vi.useFakeTimers();
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve();
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+    // A10 has 2 red dice; vary the mock slightly per call (still within
+    // red's "Move" face bucket) so the two dice don't collide on the same
+    // makeKey-generated id the way a constant mock would.
+    let rollCall = 0;
+    const poolRollSpy = vi
+      .spyOn(Math, 'random')
+      .mockImplementation(() => 0.5 + (rollCall++ % 5) * 0.01);
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    poolRollSpy.mockRestore();
+    expect(screen.getByRole('button', { name: /2 Move/ })).toBeDefined();
+
+    // Adjacent hex -> the move completes synchronously (no animation),
+    // exercising the same-tick race between useActionPoolDie and
+    // moveTokenTo's own lastAction write.
+    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
+    fireEvent.click(screen.getByTestId('hex-0,1'));
+    finishMoveAnimation();
+
+    expect(
+      screen.getByRole('button', { name: 'Undo last move' }).disabled,
+    ).toBe(false);
+    expect(screen.getByRole('button', { name: /1 Move/ })).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo last move' }));
+    expect(screen.getByRole('button', { name: /2 Move/ })).toBeDefined();
+
+    // Now a distant hex -> the move completes later, on a timeout.
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
+    fireEvent.click(screen.getByTestId('hex-3,3'));
+    finishMoveAnimation();
+
+    expect(screen.getByRole('button', { name: /1 Move/ })).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Undo last move' }));
+    expect(screen.getByRole('button', { name: /2 Move/ })).toBeDefined();
+  });
+
   it('advances the turn tracker as each player ends their turn', () => {
     render(<BattlePage />);
 

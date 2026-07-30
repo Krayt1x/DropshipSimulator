@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { parseRosterExport } from '../lib/rosterImport.js';
 import { OWNERS } from '../lib/tokens.js';
 
-const DEFAULT_ROSTERS = [
+// Exported so the vs-computer bot (BattlePage.jsx) can auto-equip itself
+// with the same quick-start list a human can load here (#single-player-vs-computer).
+export const DEFAULT_ROSTERS = [
   {
     name: 'Default A Corp List',
     text: [

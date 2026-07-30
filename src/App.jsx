@@ -108,6 +108,26 @@ function PlayerIdentityPicker() {
     'dropshipsimulator:myPlayer',
     null,
   );
+  // In vs-computer mode the human is locked to their chosen seat (set once
+  // on PlayPage) — letting them swap here would hand control of their own
+  // side to the bot and vice versa, since the bot always plays whichever
+  // seat `myPlayer` isn't (BattlePage.jsx's `botOwner`).
+  const [gameMode] = useLocalStorageState('dropshipsimulator:gameMode', 'sandbox');
+  if (gameMode === 'vs-computer') {
+    const me = OWNERS.find((o) => o.id === myPlayer);
+    return (
+      <div className="player-identity-picker">
+        <span className="player-identity-label">You are:</span>
+        <span
+          className="player-identity-btn selected"
+          style={{ borderColor: me?.color, background: me?.color }}
+        >
+          <span className="tile-swatch" style={{ background: me?.color }} />
+          {me?.label ?? 'Player 1'}
+        </span>
+      </div>
+    );
+  }
   return (
     <div className="player-identity-picker">
       <span className="player-identity-label">You are:</span>

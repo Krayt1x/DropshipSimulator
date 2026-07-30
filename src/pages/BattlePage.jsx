@@ -6,7 +6,13 @@ import {
   makeKey,
 } from '../lib/storage.js';
 import { backgroundContainerStyle } from '../lib/mapBackground.js';
-import { formatRollLogMessage, parseHitDice } from '../lib/dice.js';
+import {
+  formatRollLogMessage,
+  parseHitDice,
+  DIE_TYPES,
+  DICE_COLORS,
+  rollDie,
+} from '../lib/dice.js';
 import {
   hexLine,
   hexDistance,
@@ -33,12 +39,18 @@ import {
   calculateDamage,
 } from '../lib/combat.js';
 import { DEFAULT_TURN, DEFAULT_BANKED_DICE } from '../lib/gameState.js';
+import { parseRosterExport } from '../lib/rosterImport.js';
+import {
+  chooseBotAction,
+  pickDeploymentHexes,
+  sleep,
+} from '../lib/bot.js';
 import BattleBoard from '../components/BattleBoard.jsx';
 import TokenCard from '../components/TokenCard.jsx';
 import UnitCardHeader from '../components/UnitCardHeader.jsx';
 import AttackModal from '../components/AttackModal.jsx';
 import SplashAttackModal from '../components/SplashAttackModal.jsx';
-import RosterImport from '../components/RosterImport.jsx';
+import RosterImport, { DEFAULT_ROSTERS } from '../components/RosterImport.jsx';
 import ReserveRosterPanel from '../components/ReserveRosterPanel.jsx';
 import DestroyedList from '../components/DestroyedList.jsx';
 import TurnTracker from '../components/TurnTracker.jsx';
@@ -98,6 +110,19 @@ function BattlePage() {
     true,
   );
   const [myPlayer] = useLocalStorageState('dropshipsimulator:myPlayer', null);
+  // Chosen on PlayPage before entering a fresh game — 'sandbox' (today's
+  // existing behavior, control both sides) or 'vs-computer' (a bot plays
+  // whichever seat `myPlayer` isn't). Local-only, never synced to a peer —
+  // there's no multiplayer meaning for "am I playing a bot".
+  const [gameMode] = useLocalStorageState('dropshipsimulator:gameMode', 'sandbox');
+  const [botDifficulty] = useLocalStorageState(
+    'dropshipsimulator:botDifficulty',
+    'simple',
+  );
+  const botOwner =
+    gameMode === 'vs-computer'
+      ? (OWNERS.find((o) => o.id !== myPlayer)?.id ?? null)
+      : null;
   const [selectedTokenId, setSelectedTokenId] = useState(null);
   const [movingTokenId, setMovingTokenId] = useState(null);
   const [rangeWeapon, setRangeWeapon] = useState(null);
@@ -226,6 +251,18 @@ function BattlePage() {
     'dropshipsimulator:battle:actionPool',
     [],
   );
+
+  // The bot's turn driver (runBotTurn, below) runs as one long-lived async
+  // function per turn, chained together with real delays for pacing — by
+  // the time it reaches its 2nd/3rd action, the plain `tokens`/`actionPool`
+  // variables it closed over at the top of this render are stale (React
+  // doesn't retroactively update a function's already-captured locals). This
+  // ref is kept in sync every render so the bot can always read the *actual*
+  // current state mid-turn instead.
+  const stateRef = useRef({ tokens, actionPool, deploymentPhase });
+  useEffect(() => {
+    stateRef.current = { tokens, actionPool, deploymentPhase };
+  });
 
   function appendLog(message) {
     setLogEntries((current) =>
@@ -1157,6 +1194,212 @@ function BattlePage() {
       `${ownerLabel(owner)} imported ${imported.length} unit${imported.length === 1 ? '' : 's'} to reserve`,
     );
   }
+
+  // --- Computer opponent (single-player vs-computer mode) -----------------
+  //
+  // Deliberately does NOT reuse startAttack/rollAttack/applyAttackDamage or
+  // handleHexClick's attack-target branch: those all read attackWeapon/
+  // attackTarget/attackResult from this render's closure, and setting those
+  // mid-bot-turn wouldn't be visible to the *same* closure's rollAttack a
+  // moment later (React doesn't retroactively patch an already-created
+  // function's captured variables) — nor would it be desirable even if it
+  // worked, since that state also drives the human-facing AttackModal, and a
+  // bot's own attacks shouldn't pop a confirmation modal on the human's
+  // screen. Instead every bot action resolves immediately and directly.
+  // animateMove and applyDamageToToken ARE safe to call as-is — both take
+  // the token to act on as a plain argument rather than reading it from
+  // component state, so they work correctly regardless of which render's
+  // closure calls them.
+  function bumpWeaponHeat(tokenId, instanceIndex, generate) {
+    setTokens((current) =>
+      current.map((t) =>
+        t.id === tokenId
+          ? {
+              ...t,
+              weaponState: {
+                ...t.weaponState,
+                [instanceIndex]: {
+                  ...t.weaponState[instanceIndex],
+                  heat: (t.weaponState[instanceIndex]?.heat ?? 0) + generate,
+                },
+              },
+            }
+          : t,
+      ),
+    );
+  }
+
+  function performBotAttack(action) {
+    const freshTokens = stateRef.current.tokens;
+    const attacker = freshTokens.find((t) => t.id === action.attackerId);
+    if (!attacker) return;
+    const { generate } = parseHeatRating(action.item.heat_rating);
+    bumpWeaponHeat(attacker.id, action.instanceIndex, generate);
+
+    const rolled = rollAttackDice(action.item.hit_dice);
+    if (!rolled) return;
+
+    if (action.isSplash) {
+      const template = [
+        action.origin,
+        ...[0, 1, 2, 3, 4, 5].map((dir) =>
+          neighborHex(action.origin.col, action.origin.row, dir),
+        ),
+      ];
+      const hitTokens = freshTokens.filter(
+        (t) =>
+          t.position &&
+          !t.destroyed &&
+          template.some(
+            (h) => h.col === t.position.col && h.row === t.position.row,
+          ),
+      );
+      hitTokens.forEach((token) => {
+        const unit = units.find((u) => Number(u.id) === Number(token.unitId));
+        const side = nearestSide(token.position, token.facing, action.origin);
+        const sideArmor = parseArmor(unit?.armor)?.[side] ?? 0;
+        const hits = countHits(rolled.rolls, sizeNumber(unit?.size) ?? 0);
+        const damage = calculateDamage(rolled.sides, sideArmor, hits);
+        applyDamageToToken(token, side, damage, action.item);
+      });
+      appendLog(
+        `${unitName(attacker)}'s ${action.item.name} hit the blast template at (${action.origin.col}, ${action.origin.row}), rolling ${rolled.rolls.join(', ')} against ${hitTokens.length} target${hitTokens.length === 1 ? '' : 's'}`,
+      );
+      return;
+    }
+
+    const target = freshTokens.find((t) => t.id === action.targetId);
+    if (!target) return;
+    const targetUnit = units.find((u) => Number(u.id) === Number(target.unitId));
+    const targetNumber = sizeNumber(targetUnit?.size) ?? 0;
+    const sideArmor = parseArmor(targetUnit?.armor)?.[action.side] ?? 0;
+    const hits = countHits(rolled.rolls, targetNumber);
+    const damage = calculateDamage(rolled.sides, sideArmor, hits);
+    appendLog(
+      `${unitName(attacker)}'s ${action.item.name} rolled ${rolled.rolls.join(', ')} vs ${unitName(target)}'s ${action.side} (TN ${targetNumber}) → ${hits} hit${hits === 1 ? '' : 's'}`,
+    );
+    applyDamageToToken(target, action.side, damage, action.item);
+  }
+
+  const botTurnKeyRef = useRef(null);
+  async function runBotTurn() {
+    const ownerDice = playerDice[botOwner] ?? { blue: 0, red: 0, green: 0 };
+    const rolled = [];
+    DICE_COLORS.forEach((color) => {
+      const dieType = DIE_TYPES.find((d) => d.id === color);
+      for (let i = 0; i < (ownerDice[color] ?? 0); i++) {
+        rolled.push({
+          id: makeKey('die'),
+          label: dieType.label,
+          value: rollDie(dieType),
+        });
+      }
+    });
+    if (rolled.length > 0) {
+      rollToActionPool(rolled);
+      handleDiceRoll(rolled);
+      await sleep(500);
+    }
+
+    // Capped as a safety net — a real turn only ever has a handful of dice —
+    // so a logic bug can't wedge this into looping forever.
+    for (let i = 0; i < 50; i++) {
+      const { tokens: freshTokens, actionPool: freshPool } = stateRef.current;
+      const action = chooseBotAction({
+        tokens: freshTokens,
+        units,
+        equipment,
+        botOwner,
+        actionPool: freshPool,
+        difficulty: botDifficulty,
+      });
+      if (!action) break;
+
+      if (action.type === 'attack') {
+        performBotAttack(action);
+        useActionPoolDie(action.dieId);
+        await sleep(700);
+      } else if (action.type === 'move') {
+        const token = freshTokens.find((t) => t.id === action.tokenId);
+        if (!token) break;
+        const steps = hexDistance(token.position, action.destination);
+        animateMove(token, action.destination.col, action.destination.row);
+        useActionPoolDie(action.dieId);
+        await sleep(steps * MOVE_STEP_MS + 400);
+      }
+    }
+
+    endTurn();
+  }
+
+  useEffect(() => {
+    if (gameMode !== 'vs-computer' || !botOwner || deploymentPhase) return;
+    if (turn.active !== botOwner) return;
+    const key = `${turn.active}:${turn.number}`;
+    if (botTurnKeyRef.current === key) return;
+    botTurnKeyRef.current = key;
+    runBotTurn();
+  }, [turn, gameMode, deploymentPhase, botOwner]);
+
+  const botDeployStartedRef = useRef(false);
+  async function runBotDeployment() {
+    if (botDeployStartedRef.current || !deploymentZonesValid) return;
+    botDeployStartedRef.current = true;
+
+    const hasBotTokens = stateRef.current.tokens.some(
+      (t) => t.owner === botOwner,
+    );
+    if (!hasBotTokens) {
+      const parsed = parseRosterExport(DEFAULT_ROSTERS[0].text, {
+        units,
+        manufacturers,
+        equipment,
+      });
+      importRoster({ entries: parsed.entries, owner: botOwner });
+      await sleep(400);
+    }
+
+    const reserveBotTokens = stateRef.current.tokens.filter(
+      (t) => t.owner === botOwner && !t.position && !t.destroyed,
+    );
+    if (reserveBotTokens.length === 0) return;
+
+    const zoneRows =
+      botOwner === 'p1'
+        ? Array.from({ length: topBoundaryRow + 1 }, (_, i) => i)
+        : Array.from(
+            { length: dimensions.rows - 1 - bottomBoundaryRow },
+            (_, i) => bottomBoundaryRow + 1 + i,
+          );
+    const occupied = new Set(
+      stateRef.current.tokens
+        .filter((t) => t.position)
+        .map((t) => `${t.position.col},${t.position.row}`),
+    );
+    const hexes = pickDeploymentHexes({
+      count: reserveBotTokens.length,
+      rows: zoneRows,
+      cols: dimensions.cols,
+      occupied,
+    });
+
+    for (let i = 0; i < reserveBotTokens.length; i++) {
+      const hex = hexes[i];
+      if (!hex) break;
+      const freshToken = stateRef.current.tokens.find(
+        (t) => t.id === reserveBotTokens[i].id,
+      );
+      if (!freshToken || freshToken.position) continue;
+      animateMove(freshToken, hex.col, hex.row);
+      await sleep(300);
+    }
+  }
+
+  useEffect(() => {
+    if (gameMode !== 'vs-computer' || !botOwner || !deploymentPhase) return;
+    runBotDeployment();
+  }, [gameMode, botOwner, deploymentPhase]);
+  // --------------------------------------------------------------------
 
   // Built once and reused in two spots (#146): shown inline above the
   // Reserve/Roster card on desktop, or as an "Import" tab inside it on

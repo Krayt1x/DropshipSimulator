@@ -11,6 +11,10 @@ const RESET_VALUES = {
   'dropshipsimulator:battle:log': [],
   'dropshipsimulator:battle:bankedDice': DEFAULT_BANKED_DICE,
   'dropshipsimulator:battle:actionPool': [],
+  // Back to sandbox so a fresh #battle visit that bypasses PlayPage's mode
+  // picker (a direct link, a stale tab) never silently resumes vs-computer
+  // mode and auto-deploys a bot opponent nobody asked for this time.
+  'dropshipsimulator:gameMode': 'sandbox',
 };
 
 // Clears the active game's shared (synced) state. Any mounted

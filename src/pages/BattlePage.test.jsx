@@ -1458,4 +1458,68 @@ describe('BattlePage', () => {
     expect(screen.queryByText('Choose a weapon')).toBeNull();
     expect(screen.getByRole('button', { name: 'Cancel attack' })).toBeDefined();
   });
+
+  it('deploys itself and takes a full turn automatically in vs-computer mode', async () => {
+    window.localStorage.setItem(
+      'dropshipsimulator:gameMode',
+      JSON.stringify('vs-computer'),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:botDifficulty',
+      JSON.stringify('simple'),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:myPlayer',
+      JSON.stringify('p1'),
+    );
+
+    render(<BattlePage />);
+
+    // The bot equips and deploys its own roster without any input.
+    await vi.waitFor(
+      () => {
+        const currentTokens = JSON.parse(
+          window.localStorage.getItem('dropshipsimulator:battle:tokens') ??
+            '[]',
+        );
+        const botTokens = currentTokens.filter((t) => t.owner === 'p2');
+        expect(botTokens.length).toBeGreaterThan(0);
+        expect(botTokens.every((t) => t.position)).toBe(true);
+      },
+      { timeout: 15000, interval: 100 },
+    );
+
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+
+    // The bot rolls its Action Pool, takes whatever actions it can (which
+    // depend on real dice rolls, so not asserted specifically here), and
+    // hands the turn back — verified via the same log line a human's own
+    // End Turn produces.
+    await vi.waitFor(
+      () => {
+        expect(screen.getByText(/Player 2 ended their turn/)).toBeDefined();
+      },
+      { timeout: 15000, interval: 100 },
+    );
+
+    const turn = JSON.parse(
+      window.localStorage.getItem('dropshipsimulator:battle:turn') ?? '{}',
+    );
+    expect(turn.active).toBe('p1');
+  });
+
+  it('does not run any bot logic in sandbox mode', async () => {
+    render(<BattlePage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+    // Give any (incorrectly firing) bot effect a moment to have acted.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    const currentTokens = JSON.parse(
+      window.localStorage.getItem('dropshipsimulator:battle:tokens') ?? '[]',
+    );
+    expect(currentTokens.filter((t) => t.owner === 'p2')).toHaveLength(0);
+    expect(screen.queryByText(/Player 2 ended their turn/)).toBeNull();
+  });
 });

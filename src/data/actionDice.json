@@ -2,11 +2,11 @@
   {
     "id": 1,
     "color": "blue",
-    "side1": "Action",
-    "side2": "Action",
-    "side3": "Action",
-    "side4": "Move",
-    "side5": "Move",
+    "side1": "Move",
+    "side2": "Move",
+    "side3": "Move",
+    "side4": "Action",
+    "side5": "Action",
     "side6": "Attack"
   },
   {
@@ -15,18 +15,48 @@
     "side1": "Attack",
     "side2": "Attack",
     "side3": "Attack",
-    "side4": "Action",
-    "side5": "Action",
-    "side6": "Move"
+    "side4": "Move",
+    "side5": "Move",
+    "side6": "Action"
   },
   {
     "id": 3,
     "color": "green",
-    "side1": "Move",
-    "side2": "Move",
-    "side3": "Move",
+    "side1": "Action",
+    "side2": "Action",
+    "side3": "Action",
+    "side4": "Move",
+    "side5": "Move",
+    "side6": "Move"
+  },
+  {
+    "id": 4,
+    "color": "yellow",
+    "side1": "Action",
+    "side2": "Action",
+    "side3": "Action",
     "side4": "Attack",
     "side5": "Attack",
-    "side6": "Action"
+    "side6": "Move"
+  },
+  {
+    "id": 5,
+    "color": "purple",
+    "side1": "Attack",
+    "side2": "Attack",
+    "side3": "Attack",
+    "side4": "Move",
+    "side5": "Move",
+    "side6": "Move"
+  },
+  {
+    "id": 6,
+    "color": "orange",
+    "side1": "Action",
+    "side2": "Action",
+    "side3": "Action",
+    "side4": "Attack",
+    "side5": "Attack",
+    "side6": "Attack"
   }
 ]

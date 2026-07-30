@@ -39,7 +39,12 @@ import {
   countHits,
   calculateDamage,
 } from '../lib/combat.js';
-import { DEFAULT_TURN, DEFAULT_BANKED_DICE } from '../lib/gameState.js';
+import {
+  DEFAULT_TURN,
+  DEFAULT_BANKED_DICE,
+  resetActiveGame,
+  restartBattle,
+} from '../lib/gameState.js';
 import { parseRosterExport } from '../lib/rosterImport.js';
 import {
   chooseBotAction,
@@ -407,6 +412,48 @@ function BattlePage() {
   }
 
   const selectedToken = tokens.find((t) => t.id === selectedTokenId) ?? null;
+  // A model at 0 chassis HP is a wreck — it can't move or attack until
+  // someone clicks "Model Destroyed" (#160), same gate as TokenCard's own
+  // desktop buttons.
+  const selectedTokenWrecked = Boolean(selectedToken) && selectedToken.currentHp <= 0;
+
+  // Game-end detection (#159): a player is out once they have no live,
+  // deployed models left on the board — reserve units still in the wings
+  // don't save them, matching the issue's literal "no more models on the
+  // board". A wrecked (0 HP) model doesn't count even before someone gets
+  // around to clicking "Model Destroyed" — waiting on that would let a
+  // human opponent stall their own loss indefinitely. Drop pods don't count
+  // either — they're delivery vehicles, not something defending the board.
+  // Gated on the deployment phase being over so a fresh game (both sides
+  // still at 0 before anyone's placed anything) never falsely ends itself.
+  const modelsOnBoard = (owner) =>
+    tokens.filter(
+      (t) =>
+        t.owner === owner &&
+        t.position &&
+        !t.destroyed &&
+        (t.currentHp ?? 0) > 0 &&
+        !isDropPodToken(t),
+    ).length;
+  const p1ModelsRemaining = modelsOnBoard('p1');
+  const p2ModelsRemaining = modelsOnBoard('p2');
+  const winner = deploymentPhase
+    ? null
+    : p1ModelsRemaining === 0 && p2ModelsRemaining > 0
+      ? 'p2'
+      : p2ModelsRemaining === 0 && p1ModelsRemaining > 0
+        ? 'p1'
+        : null;
+  const loser = winner === 'p1' ? 'p2' : winner === 'p2' ? 'p1' : null;
+
+  function playAgain() {
+    restartBattle();
+  }
+
+  function returnHome() {
+    resetActiveGame();
+    window.location.hash = '#home';
+  }
   const movingToken = movingTokenId
     ? (tokens.find((t) => t.id === movingTokenId) ?? null)
     : null;
@@ -1593,6 +1640,44 @@ function BattlePage() {
   return (
     <div className="container-wide battle-page">
       <TurnNotificationToast notice={turnNotice} myPlayer={myPlayer} />
+      {winner && (
+        <div className="winner-overlay">
+          <div className="card winner-modal">
+            <div className="winner-trophy">🏆</div>
+            <h1 className="winner-heading">{ownerLabel(winner)} Wins!</h1>
+            <p className="unit-meta winner-reason">
+              {ownerLabel(loser)} has no models left on the board.
+            </p>
+            <div className="card winner-summary">
+              <p className="unit-name">Match summary</p>
+              <div className="token-stat-row">
+                <span>Turns played</span>
+                <span className="winner-summary-value">{turn.number}</span>
+              </div>
+              <div className="token-stat-row">
+                <span>{ownerLabel('p1')} models remaining</span>
+                <span className="winner-summary-value">
+                  {p1ModelsRemaining}
+                </span>
+              </div>
+              <div className="token-stat-row">
+                <span>{ownerLabel('p2')} models remaining</span>
+                <span className="winner-summary-value">
+                  {p2ModelsRemaining}
+                </span>
+              </div>
+            </div>
+            <div className="winner-actions">
+              <button type="button" onClick={playAgain}>
+                Play Again
+              </button>
+              <button type="button" className="ghost" onClick={returnHome}>
+                Return Home
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {!isMobile &&
         turnSlot &&
         createPortal(
@@ -1880,6 +1965,7 @@ function BattlePage() {
               )}
               {selectedToken &&
                 !selectedToken.destroyed &&
+                !selectedTokenWrecked &&
                 canControl(selectedToken) && (
                   <button
                     type="button"
@@ -1900,6 +1986,7 @@ function BattlePage() {
               {selectedToken &&
                 selectedToken.position &&
                 !selectedToken.destroyed &&
+                !selectedTokenWrecked &&
                 canControl(selectedToken) &&
                 selectedTokenWeapons.length > 0 && (
                   <button
@@ -1933,8 +2020,10 @@ function BattlePage() {
                     <button
                       type="button"
                       key={item.instanceIndex}
+                      disabled={
+                        state.broken || overheated || selectedTokenWrecked
+                      }
                       className="mobile-attack-picker-item"
-                      disabled={state.broken || overheated}
                       onClick={() => {
                         startAttack(item.instanceIndex, item);
                         setAttackPickerOpen(false);

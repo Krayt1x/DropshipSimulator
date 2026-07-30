@@ -59,6 +59,9 @@ function TokenCard({
     };
     return state.broken || (Boolean(max) && state.heat > max);
   });
+  // A model at 0 chassis HP is a wreck — it can't move or attack until
+  // someone clicks "Model Destroyed" (#160).
+  const wrecked = token.currentHp <= 0;
   const availableDiceColors = DICE_COLORS.filter(
     (color) => Number(unit[`dice_${color}`]) > 0,
   );
@@ -155,11 +158,13 @@ function TokenCard({
                     type="button"
                     className={`attack-btn ${attackActive ? 'active' : ''}`}
                     title={
-                      overheated
-                        ? 'Overheated — let it cool down before firing again'
-                        : "Show this weapon's arc and pick a target to attack"
+                      wrecked
+                        ? 'Destroyed — this model can no longer attack'
+                        : overheated
+                          ? 'Overheated — let it cool down before firing again'
+                          : "Show this weapon's arc and pick a target to attack"
                     }
-                    disabled={state.broken || overheated}
+                    disabled={state.broken || overheated || wrecked}
                     onClick={() => onStartAttack(item.instanceIndex, item)}
                   >
                     {attackActive ? 'Attacking…' : 'Attack'}
@@ -391,7 +396,12 @@ function TokenCard({
                 deploy it.
               </p>
             )}
-            {movementBlocked && (
+            {wrecked && (
+              <p className="unit-meta">
+                Destroyed — this model can no longer move.
+              </p>
+            )}
+            {!wrecked && movementBlocked && (
               <p className="unit-meta">
                 Movement is broken or overheated — let it cool down before
                 moving again.
@@ -400,11 +410,13 @@ function TokenCard({
             <button
               type="button"
               className={moving ? '' : 'ghost'}
-              disabled={!canControl || movementBlocked}
+              disabled={!canControl || movementBlocked || wrecked}
               title={
-                movementBlocked
-                  ? 'Overheated — let it cool down before moving again'
-                  : undefined
+                wrecked
+                  ? 'Destroyed — this model can no longer move'
+                  : movementBlocked
+                    ? 'Overheated — let it cool down before moving again'
+                    : undefined
               }
               onClick={onArmMove}
             >

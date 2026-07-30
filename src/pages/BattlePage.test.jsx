@@ -940,6 +940,38 @@ describe('BattlePage', () => {
     expect(screen.getByRole('button', { name: 'Attack' }).disabled).toBe(true);
   });
 
+  it('disables Attack and Move once a model reaches 0 chassis HP (#160)', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    const a10 = units.find((u) => u.name === 'A10');
+    importA10ToReserve(['  Right: Long Range Bolt']);
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    expect(screen.getByRole('button', { name: 'Attack' }).disabled).toBe(false);
+    expect(screen.getByRole('button', { name: 'Move token' }).disabled).toBe(
+      false,
+    );
+
+    // Order in the card: chassis HP −, weapon heat −, weapon HP −.
+    const chassisHpMinusButton = () =>
+      screen.getAllByRole('button', { name: '−' })[0];
+    for (let i = 0; i < Number(a10.hp); i++) {
+      fireEvent.click(chassisHpMinusButton());
+    }
+
+    expect(screen.getByRole('button', { name: 'Attack' }).disabled).toBe(true);
+    expect(screen.getByRole('button', { name: 'Move token' }).disabled).toBe(
+      true,
+    );
+    expect(
+      screen.getByText('Destroyed — this model can no longer move.'),
+    ).toBeDefined();
+  });
+
   it('only allows picking sides visible to the attacker (#126)', () => {
     render(<BattlePage />);
     startDeploymentPhase();
@@ -1434,6 +1466,130 @@ describe('BattlePage', () => {
     // in the Reserve list once imported.
     expect(screen.getByRole('button', { name: 'A10 (1)' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'A10 (2)' })).toBeDefined();
+  });
+
+  it('shows a winner modal once a player has no live models left on the board (#159)', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    // Player 1's A10.
+    importA10ToReserve();
+
+    // Player 2's A20.
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: ['Test List (Corp A)', 'Weight: 20t / 100t', '', 'A20 - 20t'].join(
+          '\n',
+        ),
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Player 2' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
+    );
+
+    endDeploymentPhase();
+
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'A20' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-6,5'));
+
+    expect(screen.queryByText(/Wins!/)).toBeNull();
+
+    // A20 is still the selected token from placing it — no need to
+    // re-select it via the Reserve tab (it's empty now that both are
+    // deployed). Wreck it: chassis HP − is the first "−" button.
+    const a20 = units.find((u) => u.name === 'A20');
+    const chassisHpMinusButton = () =>
+      screen.getAllByRole('button', { name: '−' })[0];
+    for (let i = 0; i < Number(a20.hp); i++) {
+      fireEvent.click(chassisHpMinusButton());
+    }
+
+    expect(screen.getByText('Player 1 Wins!')).toBeDefined();
+    expect(
+      screen.getByText('Player 2 has no models left on the board.'),
+    ).toBeDefined();
+    expect(screen.getByText('Player 2 models remaining')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Play Again' }));
+
+    // restartBattle() clears the board but leaves gameMode alone, so the
+    // winner modal disappears and deployment starts fresh.
+    expect(screen.queryByText(/Wins!/)).toBeNull();
+    expect(
+      JSON.parse(
+        window.localStorage.getItem('dropshipsimulator:battle:tokens') ??
+          '[]',
+      ),
+    ).toEqual([]);
+    expect(
+      JSON.parse(
+        window.localStorage.getItem(
+          'dropshipsimulator:battle:deploymentPhase',
+        ) ?? 'false',
+      ),
+    ).toBe(true);
+  });
+
+  it("does not declare a winner while models are only in reserve, or during deployment", () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve();
+    endDeploymentPhase();
+
+    // Nobody has deployed anything yet — 0 models each side shouldn't be
+    // read as either player winning.
+    expect(screen.queryByText(/Wins!/)).toBeNull();
+  });
+
+  it("does not let a drop pod count as defending the board (#159)", () => {
+    const deliveryCapsule = units.find((u) => u.name === 'Delivery Capsule');
+    const a10 = units.find((u) => u.name === 'A10');
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:deploymentPhase',
+      JSON.stringify(false),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:tokens',
+      JSON.stringify([
+        {
+          id: 'p1-token',
+          unitId: a10.id,
+          owner: 'p1',
+          position: { col: 5, row: 5 },
+          facing: 0,
+          currentHp: a10.hp,
+          equippedIds: [],
+          weaponState: {},
+          destroyed: false,
+        },
+        {
+          id: 'p2-pod',
+          unitId: deliveryCapsule.id,
+          owner: 'p2',
+          position: { col: 6, row: 5 },
+          facing: 0,
+          currentHp: deliveryCapsule.hp,
+          equippedIds: [],
+          weaponState: {},
+          destroyed: false,
+        },
+      ]),
+    );
+
+    render(<BattlePage />);
+
+    expect(screen.getByText('Player 1 Wins!')).toBeDefined();
+    expect(
+      screen.getByText('Player 2 has no models left on the board.'),
+    ).toBeDefined();
   });
 
   it('arms an attack from the Board tab via the Weapons FAB, without needing the Units tab (#138)', () => {

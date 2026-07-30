@@ -1752,3 +1752,56 @@ button.danger:hover {
     cursor: not-allowed;
   }
 }
+
+/* Game-end winner modal (#159) */
+.winner-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.winner-modal {
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+  padding: 32px;
+}
+
+.winner-trophy {
+  font-size: 48px;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.winner-heading {
+  margin: 0 0 4px;
+  font-size: 24px;
+}
+
+.winner-reason {
+  margin-bottom: 20px;
+}
+
+.winner-summary {
+  text-align: left;
+  margin-bottom: 24px;
+  background: var(--bg-track);
+}
+
+.winner-summary .token-stat-row {
+  justify-content: space-between;
+}
+
+.winner-summary-value {
+  font-weight: 600;
+}
+
+.winner-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}

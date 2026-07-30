@@ -24,6 +24,7 @@ import {
   parseHeatRating,
   sizeNumber,
   ownerColor,
+  withTokenLabel,
 } from '../lib/tokens.js';
 import {
   parseArmor,
@@ -233,9 +234,9 @@ function BattlePage() {
   }
 
   function unitName(token) {
-    return (
-      units.find((u) => Number(u.id) === Number(token.unitId))?.name ?? 'Unit'
-    );
+    const name =
+      units.find((u) => Number(u.id) === Number(token.unitId))?.name ?? 'Unit';
+    return withTokenLabel(name, token);
   }
 
   function ownerLabel(ownerId) {
@@ -1140,8 +1141,16 @@ function BattlePage() {
   }
 
   function importRoster({ entries, owner }) {
-    const imported = entries.map(({ unit, equippedIds, equippedSides }) =>
-      createToken({ unit, equippedIds, equippedSides, owner, position: null }),
+    const imported = entries.map(
+      ({ unit, equippedIds, equippedSides, label }) =>
+        createToken({
+          unit,
+          equippedIds,
+          equippedSides,
+          owner,
+          position: null,
+          label,
+        }),
     );
     setTokens((current) => [...current, ...imported]);
     appendLog(
@@ -1372,7 +1381,9 @@ function BattlePage() {
                     className="token-hover-card"
                     style={{ left: hoverInfo.x + 16, top: hoverInfo.y + 16 }}
                   >
-                    <p className="unit-name">{hoverUnit.name}</p>
+                    <p className="unit-name">
+                      {withTokenLabel(hoverUnit.name, hoverToken)}
+                    </p>
                     <UnitCardHeader
                       unit={hoverUnit}
                       token={hoverToken}

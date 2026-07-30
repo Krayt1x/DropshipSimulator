@@ -1399,6 +1399,40 @@ describe('BattlePage', () => {
     expect(screen.getByLabelText('Roster export')).toBeDefined();
   });
 
+  it('imports duplicate copies of a unit with their "(N)" suffix kept as a label (#151)', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: [
+          'Test List (Corp A)',
+          'Weight: 12t / 100t',
+          '',
+          'A10 (1) - 6t',
+          '',
+          'A10 (2) - 6t',
+        ].join('\n'),
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+
+    // Matches against the unit list despite the "(N)" suffix, and the
+    // preview shows it kept so the player can confirm which is which.
+    expect(screen.queryByText(/Unknown unit/)).toBeNull();
+    expect(screen.getByText('A10 (1)')).toBeDefined();
+    expect(screen.getByText('A10 (2)')).toBeDefined();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 2 units to reserve' }),
+    );
+
+    // Kept on the actual token too, so multiple copies stay distinguishable
+    // in the Reserve list once imported.
+    expect(screen.getByRole('button', { name: 'A10 (1)' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'A10 (2)' })).toBeDefined();
+  });
+
   it('arms an attack from the Board tab via the Weapons FAB, without needing the Units tab (#138)', () => {
     render(<BattlePage />);
     startDeploymentPhase();

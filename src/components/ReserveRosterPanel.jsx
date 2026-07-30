@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { OWNERS, ownerColor } from '../lib/tokens.js';
+import { OWNERS, ownerColor, withTokenLabel } from '../lib/tokens.js';
 
 function statusLabel(token) {
   if (token.destroyed) return 'Destroyed';
@@ -55,7 +55,7 @@ function ReserveGroup({
                   className="tile-swatch"
                   style={{ background: ownerColor(token.owner) }}
                 />
-                {unit?.name ?? 'Unknown unit'}
+                {withTokenLabel(unit?.name ?? 'Unknown unit', token)}
               </button>
               {/* Selects, arms the move, and jumps straight to the Board tab
                   (#142) — previously deploying on mobile meant selecting here
@@ -228,7 +228,7 @@ function ReserveRosterPanel({
                           : undefined
                       }
                     >
-                      {unit?.name ?? 'Unknown unit'}
+                      {withTokenLabel(unit?.name ?? 'Unknown unit', token)}
                     </span>
                     <span className="unit-meta" style={{ marginLeft: 'auto' }}>
                       {statusLabel(token)}

@@ -128,6 +128,7 @@ function RosterImport({ manufacturers, units, equipment, onImport, myPlayer }) {
                 {result.entries.map((entry, i) => (
                   <li key={`${entry.unit.id}-${i}`}>
                     {entry.unit.name}
+                    {entry.label ? ` ${entry.label}` : ''}
                     {entry.equippedIds.length > 0
                       ? ` (${entry.equippedIds.length} item${entry.equippedIds.length === 1 ? '' : 's'})`
                       : ''}

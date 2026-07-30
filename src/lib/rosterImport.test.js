@@ -39,6 +39,28 @@ describe('parseRosterExport', () => {
     expect(result.entries[1].equippedSides).toEqual([undefined]);
   });
 
+  it('matches units against the unit list even with a "(N)" duplicate-copy suffix, keeping it as a label (#151)', () => {
+    const text = [
+      'Test List (Corp A)',
+      'Weight: 12t / 100t',
+      '',
+      'A10 (1) - 6t',
+      '  Left: Long Range Bolt',
+      '',
+      'A10 (2) - 6t',
+    ].join('\n');
+
+    const result = parseRosterExport(text, { units, manufacturers, equipment });
+
+    expect(result.warnings).toEqual([]);
+    expect(result.entries).toHaveLength(2);
+    expect(result.entries[0].unit.name).toBe('A10');
+    expect(result.entries[0].label).toBe('(1)');
+    expect(result.entries[0].equippedIds).toEqual([5]);
+    expect(result.entries[1].unit.name).toBe('A10');
+    expect(result.entries[1].label).toBe('(2)');
+  });
+
   it("captures Left/Right slot labels as each weapon's mounted side", () => {
     const text = [
       'Test List (Corp A)',

@@ -3,6 +3,7 @@ import {
   groupEquipmentByType,
   parseHeatRating,
   slotForType,
+  withTokenLabel,
 } from '../lib/tokens.js';
 import { DICE_COLORS } from '../lib/dice.js';
 import HpBoxes from './HpBoxes.jsx';
@@ -239,7 +240,7 @@ function TokenCard({
     <div className="card token-card">
       <div className="token-card-header">
         <p className="unit-name">
-          {unit.name}
+          {withTokenLabel(unit.name, token)}
           {token.destroyed && (
             <span className="badge-destroyed">Destroyed</span>
           )}

@@ -37,6 +37,7 @@ export function createToken({
   equippedSides,
   owner,
   position,
+  label,
 }) {
   const weaponState = {};
   equippedIds.forEach((id, index) => {
@@ -57,7 +58,18 @@ export function createToken({
     equippedIds,
     weaponState,
     destroyed: false,
+    // The "(1)"/"(2)" DropshipBuilder appends to tell multiple copies of the
+    // same unit apart (#151) — stripped before matching against the unit
+    // list, but kept here so the player can still tell their own copies
+    // apart everywhere a token's name is shown.
+    label: label ?? null,
   };
+}
+
+// Reapplies a token's own distinguishing "(1)"/"(2)" label (#151) on top of
+// its unit's base name, wherever that name is displayed.
+export function withTokenLabel(name, token) {
+  return token?.label ? `${name} ${token.label}` : name;
 }
 
 // "6" means 0-6 hexes away; "3-9" means a min-range weapon that can't hit

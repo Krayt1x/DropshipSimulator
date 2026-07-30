@@ -1,5 +1,8 @@
 const HEADER_RE = /^(.+?)\s+\(([^)]+)\)\s*$/;
-const UNIT_LINE_RE = /^(.+?) - \d+t$/;
+// DropshipBuilder appends " (1)", " (2)", etc. to tell multiple copies of
+// the same unit apart (#151) — captured separately so it doesn't break
+// matching against the unit list, but can still be kept as a per-token label.
+const UNIT_LINE_RE = /^(.+?)(\s*\(\d+\))? - \d+t$/;
 const ITEM_LINE_RE = /^([^:]+):\s*(.+)$/;
 
 export function parseRosterExport(text, { units, manufacturers, equipment }) {
@@ -80,12 +83,13 @@ export function parseRosterExport(text, { units, manufacturers, equipment }) {
       continue;
     }
     const name = unitMatch[1].trim();
+    const label = unitMatch[2]?.trim();
     const unit = manufacturerUnits.find((u) => u.name === name);
     if (!unit) {
       warnings.push(`Unknown unit "${name}" — skipped.`);
       continue;
     }
-    current = { unit, equippedIds: [], equippedSides: [] };
+    current = { unit, equippedIds: [], equippedSides: [], label };
   }
   flush();
 

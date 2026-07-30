@@ -1,4 +1,4 @@
-import { OWNERS, ownerColor } from '../lib/tokens.js';
+import { OWNERS, ownerColor, withTokenLabel } from '../lib/tokens.js';
 
 function DestroyedGroup({
   owner,
@@ -34,7 +34,7 @@ function DestroyedGroup({
                   className="tile-swatch"
                   style={{ background: ownerColor(token.owner) }}
                 />
-                {unit?.name ?? 'Unknown unit'}
+                {withTokenLabel(unit?.name ?? 'Unknown unit', token)}
               </button>
               <button
                 type="button"

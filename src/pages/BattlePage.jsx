@@ -365,13 +365,16 @@ function BattlePage() {
 
   const hasMoveDie = Boolean(pickActionDie('Move'));
   const hasAttackDie = Boolean(pickActionDie('Attack'));
-  // Counts shown on the mobile Move/Attack FABs (#162) — a Move/Attack die,
-  // or a flexible Action die, can spend on either, mirroring pickActionDie.
+  // Counts shown on the mobile Move/Attack FABs (#162) — each die only
+  // belongs to one bucket, matching DiceRoller's own Action Pool summary
+  // (actionCounts). A flexible Action die can still cover either action
+  // (see pickActionDie), but counting it in both totals at once summed to
+  // more dice than the pool actually has (#167).
   const moveDieCount = actionPool.filter(
-    (d) => !d.used && (d.value === 'Move' || d.value === 'Action'),
+    (d) => !d.used && d.value === 'Move',
   ).length;
   const attackDieCount = actionPool.filter(
-    (d) => !d.used && (d.value === 'Attack' || d.value === 'Action'),
+    (d) => !d.used && d.value === 'Attack',
   ).length;
 
   // Spends one unused action die to re-roll a different unused action die's

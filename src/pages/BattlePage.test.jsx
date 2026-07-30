@@ -1478,6 +1478,35 @@ describe('BattlePage', () => {
     expect(screen.getByRole('button', { name: /^Move \(/ })).toBeDefined();
   });
 
+  it('shows each die only once across the Move/Weapons FAB counts, not double-counted via Action (#167)', () => {
+    // 1 Move + 3 Action + 4 Attack = 8 dice total; Move and Weapons must not
+    // each separately add the Action dice on top of their own type.
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:actionPool',
+      JSON.stringify([
+        { id: 'd-move', label: 'Blue', value: 'Move' },
+        { id: 'd-action-1', label: 'Blue', value: 'Action' },
+        { id: 'd-action-2', label: 'Blue', value: 'Action' },
+        { id: 'd-action-3', label: 'Blue', value: 'Action' },
+        { id: 'd-attack-1', label: 'Red', value: 'Attack' },
+        { id: 'd-attack-2', label: 'Red', value: 'Attack' },
+        { id: 'd-attack-3', label: 'Red', value: 'Attack' },
+        { id: 'd-attack-4', label: 'Red', value: 'Attack' },
+      ]),
+    );
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve(['  Right: Long Range Bolt']);
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+
+    expect(screen.getByRole('button', { name: 'Move (1)' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Weapons (4)' })).toBeDefined();
+  });
+
   it('deploys a reserve token via its own Deploy to board button, jumping straight to the Board tab (#142)', () => {
     render(<BattlePage />);
     startDeploymentPhase();

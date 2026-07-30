@@ -1645,7 +1645,10 @@ button.danger:hover {
     flex: 1;
     background: transparent;
     border: none;
-    color: var(--text-muted);
+    /* --text-muted's light-theme value only clears ~2.4:1 contrast against
+       --bg-card, unreadable for these always-visible nav labels (#148);
+       --text-secondary clears ~5.3:1 in both themes. */
+    color: var(--text-secondary);
     font-size: 12px;
     font-weight: 700;
     padding: 8px 0;

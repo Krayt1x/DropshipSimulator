@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { OWNERS, ownerColor } from '../lib/tokens.js';
 
 function statusLabel(token) {
@@ -90,14 +90,35 @@ function ReserveRosterPanel({
   canControl,
   onSelect,
   onDeploy,
+  importPanel,
 }) {
-  const [tab, setTab] = useState('reserve');
+  // Defaults to the Import tab when it's offered (#146, mobile only — see
+  // BattlePage) and nothing's been imported yet, so it's still the first
+  // thing shown without an extra tap, matching where it used to always sit.
+  const [tab, setTab] = useState(() => (importPanel ? 'import' : 'reserve'));
   const [collapsed, setCollapsed] = useState(false);
   const [activeOwner, setActiveOwner] = useState(
     () => myPlayer ?? OWNERS[0].id,
   );
 
-  if (reserveTokens.length === 0 && allTokens.length === 0) return null;
+  // Jumps to Reserve as soon as an import actually lands a unit, since
+  // that's where you'd go next to place it — otherwise a successful import
+  // would leave mobile users stranded looking at the now-empty paste box.
+  useEffect(() => {
+    if (
+      tab === 'import' &&
+      (reserveTokens.length > 0 || allTokens.length > 0)
+    ) {
+      setTab('reserve');
+    }
+  }, [reserveTokens.length, allTokens.length]);
+
+  // Normally hidden until there's at least one token to show, but the Import
+  // tab needs to stay reachable even before any units exist — otherwise
+  // there'd be no way to import the very first one on mobile.
+  if (!importPanel && reserveTokens.length === 0 && allTokens.length === 0) {
+    return null;
+  }
 
   const ownerTokens = allTokens.filter((t) => t.owner === activeOwner);
 
@@ -105,6 +126,15 @@ function ReserveRosterPanel({
     <div className="card">
       <div className="reserve-header">
         <div className="workspace-tabs">
+          {importPanel && (
+            <button
+              type="button"
+              className={`workspace-tab ${tab === 'import' ? 'active' : ''}`}
+              onClick={() => setTab('import')}
+            >
+              Import
+            </button>
+          )}
           <button
             type="button"
             className={`workspace-tab ${tab === 'reserve' ? 'active' : ''}`}
@@ -128,6 +158,8 @@ function ReserveRosterPanel({
           {collapsed ? 'Expand' : 'Collapse'}
         </button>
       </div>
+
+      {!collapsed && tab === 'import' && importPanel}
 
       {!collapsed && tab === 'reserve' && (
         <>

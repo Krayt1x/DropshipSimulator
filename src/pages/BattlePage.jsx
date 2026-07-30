@@ -1149,6 +1149,19 @@ function BattlePage() {
     );
   }
 
+  // Built once and reused in two spots (#146): shown inline above the
+  // Reserve/Roster card on desktop, or as an "Import" tab inside it on
+  // mobile, instead of duplicating the JSX for each.
+  const rosterImportPanel = deploymentPhase ? (
+    <RosterImport
+      manufacturers={manufacturers}
+      units={units}
+      equipment={equipment}
+      myPlayer={myPlayer}
+      onImport={importRoster}
+    />
+  ) : null;
+
   return (
     <div className="container-wide battle-page">
       <TurnNotificationToast notice={turnNotice} myPlayer={myPlayer} />
@@ -1214,15 +1227,10 @@ function BattlePage() {
               Deploy Phase
             </button>
           )}
-          {deploymentPhase && (
-            <RosterImport
-              manufacturers={manufacturers}
-              units={units}
-              equipment={equipment}
-              myPlayer={myPlayer}
-              onImport={importRoster}
-            />
-          )}
+          {/* On mobile this instead becomes an "Import" tab inside the
+              Reserve/Roster card below (#146), rather than its own block
+              taking up space above it. */}
+          {!isMobile && rosterImportPanel}
           {selectedToken && !deploymentPhase && (
             <TokenCard
               key={selectedToken.id}
@@ -1268,6 +1276,7 @@ function BattlePage() {
             canControl={canControl}
             onSelect={setSelectedTokenId}
             onDeploy={deployFromReserve}
+            importPanel={isMobile ? rosterImportPanel : null}
           />
           <DestroyedList
             tokens={destroyedTokens}

@@ -46,6 +46,7 @@ const DiceRoller = forwardRef(function DiceRoller(
   const [exchangeOpen, setExchangeOpen] = useState(false);
   const [spendId, setSpendId] = useState('');
   const [targetId, setTargetId] = useState('');
+  const [intoValue, setIntoValue] = useState('');
 
   function adjust(id, delta) {
     setPool((current) => ({
@@ -126,8 +127,21 @@ const DiceRoller = forwardRef(function DiceRoller(
   }
 
   // Only unused colored (action) dice can take part in an Exchange (#134) —
-  // spending one re-rolls a different one's outcome.
+  // spending one lets the player pick a different one's new outcome.
   const unusedActionDice = actionPool.filter((d) => !d.used);
+
+  // The distinct outcomes a die's color can actually land on (#147) — what
+  // it's exchanged into is a player choice, not another random roll.
+  function distinctFaces(label) {
+    const dieType = DIE_TYPES.find((dt) => dt.label === label);
+    return dieType?.faces ? [...new Set(dieType.faces)] : [];
+  }
+
+  function pickTarget(id) {
+    setTargetId(id);
+    const targetDie = actionPool.find((d) => d.id === id);
+    setIntoValue(distinctFaces(targetDie?.label)[0] ?? '');
+  }
 
   function toggleExchange() {
     if (exchangeOpen) {
@@ -135,19 +149,17 @@ const DiceRoller = forwardRef(function DiceRoller(
       return;
     }
     setSpendId(unusedActionDice[0]?.id ?? '');
-    setTargetId(unusedActionDice[1]?.id ?? '');
+    pickTarget(unusedActionDice[1]?.id ?? '');
     setExchangeOpen(true);
   }
 
   function confirmExchange() {
-    const targetDie = actionPool.find((d) => d.id === targetId);
-    if (!targetDie) return;
-    const dieType = DIE_TYPES.find((dt) => dt.label === targetDie.label);
-    const newValue = dieType ? rollDie(dieType) : targetDie.value;
-    onExchangeActionDice(spendId, targetId, newValue);
+    if (!targetId || !intoValue) return;
+    onExchangeActionDice(spendId, targetId, intoValue);
     setExchangeOpen(false);
     setSpendId('');
     setTargetId('');
+    setIntoValue('');
   }
 
   const poolTotal = Object.values(pool).reduce((sum, n) => sum + n, 0);
@@ -309,8 +321,10 @@ const DiceRoller = forwardRef(function DiceRoller(
               </button>
             ))}
           </div>
-          {selectedAction && (
-            <div className="token-owner-row" style={{ marginTop: 8 }}>
+          {/* Use Dice and Exchange share one row (#150) instead of Exchange
+              sitting alone on its own line below. */}
+          <div className="token-owner-row" style={{ marginTop: 8 }}>
+            {selectedAction && (
               <button
                 type="button"
                 disabled={!canRoll}
@@ -318,9 +332,7 @@ const DiceRoller = forwardRef(function DiceRoller(
               >
                 Use Dice
               </button>
-            </div>
-          )}
-          <div className="token-owner-row" style={{ marginTop: 8 }}>
+            )}
             <button
               type="button"
               className="ghost"
@@ -349,7 +361,7 @@ const DiceRoller = forwardRef(function DiceRoller(
                 Change
                 <select
                   value={targetId}
-                  onChange={(e) => setTargetId(e.target.value)}
+                  onChange={(e) => pickTarget(e.target.value)}
                 >
                   {unusedActionDice.map((d) => (
                     <option key={d.id} value={d.id}>
@@ -358,9 +370,26 @@ const DiceRoller = forwardRef(function DiceRoller(
                   ))}
                 </select>
               </label>
+              <label className="field">
+                Into
+                <select
+                  value={intoValue}
+                  onChange={(e) => setIntoValue(e.target.value)}
+                >
+                  {distinctFaces(
+                    actionPool.find((d) => d.id === targetId)?.label,
+                  ).map((value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <button
                 type="button"
-                disabled={!spendId || !targetId || spendId === targetId}
+                disabled={
+                  !spendId || !targetId || spendId === targetId || !intoValue
+                }
                 onClick={confirmExchange}
               >
                 Exchange

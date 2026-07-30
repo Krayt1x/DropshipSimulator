@@ -706,6 +706,26 @@ describe('BattlePage', () => {
     ).toBeDefined();
   });
 
+  it('puts Use Dice and Exchange in the same row (#150)', () => {
+    render(<BattlePage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Blue to pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Blue to pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll (2)' }));
+
+    const summary = document.querySelector('.dice-action-pool .dice-summary');
+    const activeChip = within(summary)
+      .getAllByRole('button')
+      .find((btn) => !btn.disabled);
+    fireEvent.click(activeChip);
+
+    const useDiceBtn = screen.getByRole('button', { name: 'Use Dice' });
+    const exchangeBtn = screen.getByRole('button', { name: 'Exchange' });
+    expect(useDiceBtn.closest('.token-owner-row')).toBe(
+      exchangeBtn.closest('.token-owner-row'),
+    );
+  });
+
   it("spends one action die to change a different one's rolled outcome (#134)", () => {
     // Real randomness here (not mocked) — the two Blue dice need distinct
     // ids, and mocking Math.random to a fixed value would collide the
@@ -721,10 +741,13 @@ describe('BattlePage', () => {
     expect(exchangeToggle.disabled).toBe(false);
     fireEvent.click(exchangeToggle);
 
+    // Spend, Change, and Into (#147) — the third lets the player pick what
+    // the changed die's new outcome actually is, rather than rerolling it.
     const selects = screen.getAllByRole('combobox');
-    expect(selects).toHaveLength(2);
+    expect(selects).toHaveLength(3);
     expect(within(selects[0]).getAllByRole('option')).toHaveLength(2);
     expect(within(selects[1]).getAllByRole('option')).toHaveLength(2);
+    expect(within(selects[2]).getAllByRole('option')).toHaveLength(3);
 
     const confirmBtn = screen.getAllByRole('button', { name: 'Exchange' })[1];
     expect(confirmBtn.disabled).toBe(false);
@@ -1343,6 +1366,37 @@ describe('BattlePage', () => {
         { name: 'End Deploy' },
       ),
     ).toBeDefined();
+  });
+
+  it('offers Import as a tab alongside Reserve/Roster on mobile, switching to Reserve once a unit lands (#146)', () => {
+    vi.stubGlobal('matchMedia', () => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+
+    render(<BattlePage />);
+
+    // Import is offered (and active by default) even with nothing in
+    // Reserve/Roster yet — otherwise there'd be no way to import the very
+    // first unit on mobile.
+    expect(screen.getByRole('button', { name: 'Import' }).className).toContain(
+      'active',
+    );
+    expect(screen.getByLabelText('Roster export')).toBeDefined();
+
+    importA10ToReserve();
+
+    // A successful import jumps to Reserve automatically instead of leaving
+    // the player stranded on the now-empty paste box.
+    expect(screen.queryByLabelText('Roster export')).toBeNull();
+    expect(screen.getByRole('button', { name: 'A10' })).toBeDefined();
+  });
+
+  it('does not offer an Import tab on desktop — the roster panel stays above Reserve/Roster (#146)', () => {
+    render(<BattlePage />);
+    expect(screen.queryByRole('button', { name: 'Import' })).toBeNull();
+    expect(screen.getByLabelText('Roster export')).toBeDefined();
   });
 
   it('arms an attack from the Board tab via the Weapons FAB, without needing the Units tab (#138)', () => {

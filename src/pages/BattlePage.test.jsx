@@ -1799,6 +1799,89 @@ describe('BattlePage', () => {
     ).toBe(true);
   });
 
+  it('shows the bot difficulty on the victory page in vs-computer mode, but not in sandbox (#169)', () => {
+    // In vs-computer mode the bot owns and manages Player 2's roster itself
+    // (it auto-imports on mount), so this only drives Player 1's own side —
+    // Player 2 never gets a model onto the board within this synchronous
+    // test, which is enough to reach the same "no models left" win state
+    // the display feature only needs to be checked against.
+    window.localStorage.setItem(
+      'dropshipsimulator:gameMode',
+      JSON.stringify('vs-computer'),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:botDifficulty',
+      JSON.stringify('tactical'),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:myPlayer',
+      JSON.stringify('p1'),
+    );
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    // Drone (Corp B) rather than A10 — the bot's own default roster (Corp
+    // A) already contains two A10s, which would collide by name.
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: ['Test List (Corp B)', 'Weight: 10t / 100t', '', 'Drone - 10t'].join(
+          '\n',
+        ),
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
+    );
+    endDeploymentPhase();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Drone' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    expect(screen.getByText('Player 1 Wins!')).toBeDefined();
+    expect(screen.getByText('vs Computer · Tactical')).toBeDefined();
+  });
+
+  it('does not show a difficulty line on the victory page in sandbox mode', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve();
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: ['Test List (Corp A)', 'Weight: 20t / 100t', '', 'A20 - 20t'].join(
+          '\n',
+        ),
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Player 2' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
+    );
+
+    endDeploymentPhase();
+
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'A20' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-6,5'));
+
+    const a20 = units.find((u) => u.name === 'A20');
+    const chassisHpMinusButton = () =>
+      screen.getAllByRole('button', { name: '−' })[0];
+    for (let i = 0; i < Number(a20.hp); i++) {
+      fireEvent.click(chassisHpMinusButton());
+    }
+
+    expect(screen.getByText('Player 1 Wins!')).toBeDefined();
+    expect(screen.queryByText(/vs Computer/)).toBeNull();
+  });
+
   it("does not declare a winner while models are only in reserve, or during deployment", () => {
     render(<BattlePage />);
     startDeploymentPhase();

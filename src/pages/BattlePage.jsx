@@ -1757,6 +1757,12 @@ function BattlePage() {
             <p className="unit-meta winner-reason">
               {ownerLabel(loser)} has no models left on the board.
             </p>
+            {gameMode === 'vs-computer' && (
+              <p className="unit-meta winner-difficulty">
+                vs Computer ·{' '}
+                {botDifficulty === 'tactical' ? 'Tactical' : 'Simple'}
+              </p>
+            )}
             <div className="card winner-summary">
               <p className="unit-name">Match summary</p>
               <div className="token-stat-row">

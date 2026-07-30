@@ -1289,7 +1289,7 @@ describe('BattlePage', () => {
     expect(screen.queryByText('Battle board')).toBeNull();
   });
 
-  it('moves the deployment-phase toggle into the mobile action toolbar next to Move/Weapons (#143)', () => {
+  it('moves End Deploy into the mobile action toolbar next to Move/Weapons (#143)', () => {
     vi.stubGlobal('matchMedia', () => ({
       matches: true,
       addEventListener: () => {},
@@ -1303,25 +1303,45 @@ describe('BattlePage', () => {
     const toolbar = document.querySelector('.mobile-action-toolbar');
     expect(toolbar).not.toBeNull();
 
-    // Deployment phase starts active, so the toggle reads "End Deploy"; only
-    // one instance of it exists anywhere on screen — it's moved here, not
-    // duplicated alongside the (now desktop-only) top-of-page button.
+    // Deployment phase starts active, so only "End Deploy" shows, inside the
+    // Board tab's toolbar; only one instance of it exists anywhere on screen
+    // — it's moved here, not duplicated alongside the desktop-only button.
     expect(
       within(toolbar).getByRole('button', { name: 'End Deploy' }),
     ).toBeDefined();
-    expect(
-      screen.getAllByRole('button', { name: /^(End Deploy|Deploy Phase)$/ }),
-    ).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'Deploy Phase' })).toBeNull();
     expect(
       within(toolbar).getByRole('button', { name: 'Deploy' }),
     ).toBeDefined();
+  });
 
-    fireEvent.click(
-      within(toolbar).getByRole('button', { name: 'End Deploy' }),
-    );
+  it('starts deployment from a button on the Units tab instead of the Board toolbar (#145)', () => {
+    vi.stubGlobal('matchMedia', () => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+
+    render(<BattlePage />);
+    importA10ToReserve();
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'End Deploy' }));
+
+    // Ending deployment removes the toolbar's toggle entirely; starting it
+    // again is only offered from the Units tab now, not the Board tab.
+    expect(screen.queryByRole('button', { name: 'End Deploy' })).toBeNull();
+
+    const startBtn = screen.getByRole('button', { name: 'Deploy Phase' });
+    expect(startBtn.closest('.mobile-action-toolbar')).toBeNull();
+
+    fireEvent.click(startBtn);
 
     expect(
-      within(toolbar).getByRole('button', { name: 'Deploy Phase' }),
+      within(document.querySelector('.mobile-action-toolbar')).getByRole(
+        'button',
+        { name: 'End Deploy' },
+      ),
     ).toBeDefined();
   });
 

@@ -970,6 +970,27 @@ button.danger:hover {
   white-space: nowrap;
 }
 
+/* Starts deployment from the Units tab on mobile (#145) — ending it stays
+   on the Board tab's action toolbar instead, since that's a separate button
+   only mounted (via `isMobile`) rather than shown/hidden with CSS. */
+.mobile-deploy-phase-btn-units {
+  display: block;
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  background: #7c3aed;
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.mobile-deploy-phase-btn-units:disabled {
+  background: var(--bg-track);
+  color: var(--text-muted);
+}
+
 .deploy-hint-banner {
   display: flex;
   align-items: center;

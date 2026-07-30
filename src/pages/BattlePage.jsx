@@ -1199,6 +1199,21 @@ function BattlePage() {
         <div
           className={`mobile-tab-panel ${mobileTab === 'units' ? 'mobile-tab-panel-active' : ''}`}
         >
+          {/* Starting deployment happens from here on mobile (#145) — it's
+              where Reserve units are managed, so it's the natural place to
+              re-open deployment for reinforcements. Ending it stays on the
+              Board tab (see the action toolbar below), since that's where
+              you're looking once everything's placed. */}
+          {isMobile && !deploymentPhase && (
+            <button
+              type="button"
+              className="mobile-deploy-phase-btn-units"
+              disabled={!deploymentZonesValid}
+              onClick={() => setDeploymentPhase(true)}
+            >
+              Deploy Phase
+            </button>
+          )}
           {deploymentPhase && (
             <RosterImport
               manufacturers={manufacturers}
@@ -1404,14 +1419,15 @@ function BattlePage() {
                 the top of the page, disconnected from the board actions it's
                 closely related to. */}
             <div className="mobile-action-toolbar">
-              {isMobile && (
+              {/* Only the "end" direction lives here — starting deployment
+                  happens from the Units tab instead (#145). */}
+              {isMobile && deploymentPhase && (
                 <button
                   type="button"
                   className="mobile-deploy-phase-btn"
-                  disabled={!deploymentZonesValid}
-                  onClick={() => setDeploymentPhase((current) => !current)}
+                  onClick={() => setDeploymentPhase(false)}
                 >
-                  {deploymentPhase ? 'End Deploy' : 'Deploy Phase'}
+                  End Deploy
                 </button>
               )}
               {selectedToken &&

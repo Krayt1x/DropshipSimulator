@@ -88,7 +88,7 @@ function TokenCard({
     setPickedDieColor(null);
   }
 
-  function renderGearRow(item, { showRange }) {
+  function renderGearRow(item, { showRange, showMoveButton }) {
     const { max } = parseHeatRating(item.heat_rating);
     const state = token.weaponState[item.instanceIndex] ?? {
       heat: 0,
@@ -155,27 +155,6 @@ function TokenCard({
                 ) : (
                   '—'
                 )}
-                {item.hit_dice && (
-                  <button
-                    type="button"
-                    className={`attack-btn ${attackActive ? 'active' : ''}`}
-                    title={
-                      wrecked
-                        ? 'Destroyed — this model can no longer attack'
-                        : overheated
-                          ? 'Overheated — let it cool down before firing again'
-                          : !hasAttackDie
-                            ? 'No Attack dice left in the action pool'
-                            : "Show this weapon's arc and pick a target to attack"
-                    }
-                    disabled={
-                      state.broken || overheated || wrecked || !hasAttackDie
-                    }
-                    onClick={() => onStartAttack(item.instanceIndex, item)}
-                  >
-                    {attackActive ? 'Attacking…' : 'Attack'}
-                  </button>
-                )}
               </>
             )}
           </span>
@@ -217,6 +196,59 @@ function TokenCard({
             />
             Broken
           </label>
+          {showRange && item.hit_dice && (
+            <button
+              type="button"
+              className={`attack-btn ${attackActive ? 'active' : ''}`}
+              style={{ marginLeft: 'auto' }}
+              title={
+                wrecked
+                  ? 'Destroyed — this model can no longer attack'
+                  : overheated
+                    ? 'Overheated — let it cool down before firing again'
+                    : !hasAttackDie
+                      ? 'No Attack dice left in the action pool'
+                      : "Show this weapon's arc and pick a target to attack"
+              }
+              disabled={
+                state.broken || overheated || wrecked || !hasAttackDie
+              }
+              onClick={() => onStartAttack(item.instanceIndex, item)}
+            >
+              {attackActive ? 'Attacking…' : 'Attack'}
+            </button>
+          )}
+          {!token.destroyed && showMoveButton && (
+            <button
+              type="button"
+              className={`move-action-btn ${moving ? 'active' : ''}`}
+              style={{ marginLeft: 'auto' }}
+              disabled={
+                !canControl ||
+                movementBlocked ||
+                wrecked ||
+                (token.position && !hasMoveDie)
+              }
+              title={
+                !canControl
+                  ? "This unit belongs to another player — you can't move or deploy it."
+                  : wrecked
+                    ? 'Destroyed — this model can no longer move'
+                    : movementBlocked
+                      ? 'Overheated — let it cool down before moving again'
+                      : token.position && !hasMoveDie
+                        ? 'No Move dice left in the action pool'
+                        : undefined
+              }
+              onClick={onArmMove}
+            >
+              {moving
+                ? 'Click a hex to place'
+                : token.position
+                  ? 'Move'
+                  : 'Place on board'}
+            </button>
+          )}
         </div>
         {maxHp > 0 && (
           <>
@@ -356,8 +388,11 @@ function TokenCard({
           {movementItems.length > 0 && (
             <>
               <p className="equipment-subheader">Movement</p>
-              {movementItems.map((item) =>
-                renderGearRow(item, { showRange: false }),
+              {movementItems.map((item, index) =>
+                renderGearRow(item, {
+                  showRange: false,
+                  showMoveButton: index === 0,
+                }),
               )}
             </>
           )}
@@ -394,7 +429,11 @@ function TokenCard({
           )}
         </div>
       ) : (
-        !token.destroyed && (
+        // A unit with movement gear gets its Move button inline in that
+        // gear's row instead (#166); this fallback only covers a unit with
+        // no movement equipment at all (still needs somewhere to deploy).
+        !token.destroyed &&
+        movementItems.length === 0 && (
           <div className="token-card-section">
             {!canControl && (
               <p className="unit-meta">
@@ -407,36 +446,25 @@ function TokenCard({
                 Destroyed — this model can no longer move.
               </p>
             )}
-            {!wrecked && movementBlocked && (
-              <p className="unit-meta">
-                Movement is broken or overheated — let it cool down before
-                moving again.
-              </p>
-            )}
             <button
               type="button"
               className={moving ? '' : 'ghost'}
               disabled={
-                !canControl ||
-                movementBlocked ||
-                wrecked ||
-                (token.position && !hasMoveDie)
+                !canControl || wrecked || (token.position && !hasMoveDie)
               }
               title={
                 wrecked
                   ? 'Destroyed — this model can no longer move'
-                  : movementBlocked
-                    ? 'Overheated — let it cool down before moving again'
-                    : token.position && !hasMoveDie
-                      ? 'No Move dice left in the action pool'
-                      : undefined
+                  : token.position && !hasMoveDie
+                    ? 'No Move dice left in the action pool'
+                    : undefined
               }
               onClick={onArmMove}
             >
               {moving
                 ? 'Click a hex to place'
                 : token.position
-                  ? 'Move token'
+                  ? 'Move'
                   : 'Place on board'}
             </button>
           </div>

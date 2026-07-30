@@ -786,16 +786,23 @@ button.danger:hover {
 }
 
 /* Attack workflow (#103): arms a weapon's arc for target-picking on the
-   board, then walks through side/roll/damage in a modal. */
+   board, then walks through side/roll/damage in a modal. Sits in its
+   weapon's heat-controls row as a real button, not a tiny inline pill
+   (#166). */
 .attack-btn {
   background: #dc2626;
   border: none;
-  border-radius: 10px;
-  padding: 1px 8px;
-  font-size: 11px;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 13px;
   font-weight: 700;
   color: #fff;
   cursor: pointer;
+  flex-shrink: 0;
+}
+
+.attack-btn:hover {
+  background: #b91c1c;
 }
 
 .attack-btn.active {
@@ -803,6 +810,34 @@ button.danger:hover {
 }
 
 .attack-btn:disabled {
+  background: var(--border);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* Move/Place-on-board (#166): sits in its movement gear's heat-controls
+   row, mirroring .attack-btn's treatment for weapons. */
+.move-action-btn {
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.move-action-btn:hover {
+  background: var(--accent-hover);
+}
+
+.move-action-btn.active {
+  background: var(--accent-hover);
+}
+
+.move-action-btn:disabled {
   background: var(--border);
   color: var(--text-muted);
   cursor: not-allowed;

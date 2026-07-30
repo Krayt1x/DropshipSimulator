@@ -131,7 +131,7 @@ describe('BattlePage', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Move token' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
     fireEvent.click(screen.getByTestId('hex-3,3'));
     finishMoveAnimation();
 
@@ -189,7 +189,7 @@ describe('BattlePage', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Move token' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
     fireEvent.click(screen.getByTestId('hex-3,3'));
     finishMoveAnimation();
 
@@ -329,7 +329,7 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
     // This token belongs to Player 2 (the locked owner), so it's controllable.
-    expect(screen.getByRole('button', { name: 'Move token' }).disabled).toBe(
+    expect(screen.getByRole('button', { name: 'Move' }).disabled).toBe(
       false,
     );
   });
@@ -352,7 +352,7 @@ describe('BattlePage', () => {
     render(<BattlePage />);
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
-    expect(screen.getByRole('button', { name: 'Move token' }).disabled).toBe(
+    expect(screen.getByRole('button', { name: 'Move' }).disabled).toBe(
       true,
     );
     expect(
@@ -480,7 +480,7 @@ describe('BattlePage', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Move token' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
     fireEvent.click(screen.getByTestId('hex-3,3'));
     finishMoveAnimation();
     expect(screen.getByText(/moved A10 to \(3, 3\)/)).toBeDefined();
@@ -617,7 +617,7 @@ describe('BattlePage', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Move token' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
     fireEvent.click(screen.getByTestId('hex-8,8'));
     finishMoveAnimation();
 
@@ -1121,7 +1121,7 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
 
     expect(screen.getByRole('button', { name: 'Attack' }).disabled).toBe(false);
-    expect(screen.getByRole('button', { name: 'Move token' }).disabled).toBe(
+    expect(screen.getByRole('button', { name: 'Move' }).disabled).toBe(
       false,
     );
 
@@ -1133,7 +1133,7 @@ describe('BattlePage', () => {
     }
 
     expect(screen.getByRole('button', { name: 'Attack' }).disabled).toBe(true);
-    expect(screen.getByRole('button', { name: 'Move token' }).disabled).toBe(
+    expect(screen.getByRole('button', { name: 'Move' }).disabled).toBe(
       true,
     );
     expect(

@@ -1559,6 +1559,40 @@ function BattlePage() {
     runBotTurn();
   }, [turn, gameMode, deploymentPhase, botOwner]);
 
+  // Auto-rolls the active player's Action Pool the moment their turn starts
+  // (#164), instead of waiting on a manual "Roll Action Pool" click. Lives
+  // here (not inside DiceRoller) since it needs to call appendLog/rollToActionPool
+  // directly — a child component's effect calling those same callbacks
+  // during the same render cascade as endTurn()'s own state updates was
+  // silently losing the log entry. Guarded the same way DiceRoller's old
+  // "canRoll" prop was (skip if this browser isn't the active player) so
+  // exactly one side ever rolls in multiplayer, and the bot's own turn is
+  // left to runBotTurn(), which already rolls its own dice.
+  const humanRollKeyRef = useRef(null);
+  useEffect(() => {
+    if (deploymentPhase) return;
+    if (myPlayer && myPlayer !== turn.active) return;
+    const key = `${turn.active}:${turn.number}`;
+    if (humanRollKeyRef.current === key) return;
+    humanRollKeyRef.current = key;
+    const ownerDice = playerDice[turn.active] ?? { blue: 0, red: 0, green: 0 };
+    const rolled = [];
+    DICE_COLORS.forEach((color) => {
+      const dieType = DIE_TYPES.find((d) => d.id === color);
+      for (let i = 0; i < (ownerDice[color] ?? 0); i++) {
+        rolled.push({
+          id: makeKey('die'),
+          label: dieType.label,
+          value: rollDie(dieType),
+        });
+      }
+    });
+    if (rolled.length > 0) {
+      rollToActionPool(rolled);
+      handleDiceRoll(rolled);
+    }
+  }, [turn, deploymentPhase, myPlayer]);
+
   const botDeployStartedRef = useRef(false);
   async function runBotDeployment() {
     if (botDeployStartedRef.current || !deploymentZonesValid) return;

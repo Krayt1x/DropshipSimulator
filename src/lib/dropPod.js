@@ -19,15 +19,17 @@ function inBounds(hex, dimensions) {
   );
 }
 
-// Walks the pod from `aim` in the rolled direction for `d4Roll` hexes
-// (clamped to the board edge), then, if it lands on an occupied hex, that
-// model is hit and the pod deviates one further hex in the same direction —
-// repeated until it lands somewhere empty or falls off the board. `findTokenAt`
-// takes a {col,row} and returns the occupying token (or null/undefined).
+// Walks the pod from `aim` in the rolled direction for (d4Roll - 1) hexes
+// (#163 — 0-3 hexes rather than 1-4, clamped to the board edge), then, if it
+// lands on an occupied hex, that model is hit and the pod deviates one
+// further hex in the same direction — repeated until it lands somewhere
+// empty or falls off the board. `findTokenAt` takes a {col,row} and returns
+// the occupying token (or null/undefined).
 export function resolveDropPod({ aim, d4Roll, d6Roll, dimensions, findTokenAt }) {
   const direction = directionFromD6(d6Roll);
+  const distance = Number(d4Roll) - 1;
   let hex = aim;
-  for (let i = 0; i < Number(d4Roll); i++) {
+  for (let i = 0; i < distance; i++) {
     const next = neighborHex(hex.col, hex.row, direction);
     if (!inBounds(next, dimensions)) break;
     hex = next;

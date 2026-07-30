@@ -13,7 +13,7 @@ describe('directionFromD6', () => {
 });
 
 describe('resolveDropPod', () => {
-  it('lands distance d4Roll away in the d6Roll direction when the path is empty', () => {
+  it('lands (d4Roll - 1) hexes away in the d6Roll direction when the path is empty (#163)', () => {
     const result = resolveDropPod({
       aim: { col: 5, row: 5 },
       d4Roll: 2,
@@ -21,8 +21,19 @@ describe('resolveDropPod', () => {
       dimensions: { cols: 20, rows: 20 },
       findTokenAt: () => null,
     });
-    expect(result.hex).toEqual({ col: 5, row: 3 });
+    expect(result.hex).toEqual({ col: 5, row: 4 });
     expect(result.hits).toEqual([]);
+  });
+
+  it('lands exactly on the aim tile when d4Roll is 1 (distance 0) (#163)', () => {
+    const result = resolveDropPod({
+      aim: { col: 5, row: 5 },
+      d4Roll: 1,
+      d6Roll: 1,
+      dimensions: { cols: 20, rows: 20 },
+      findTokenAt: () => null,
+    });
+    expect(result.hex).toEqual({ col: 5, row: 5 });
   });
 
   it('clamps at the board edge instead of going out of bounds', () => {
@@ -38,8 +49,8 @@ describe('resolveDropPod', () => {
   });
 
   it('hits an occupying model and deviates one further hex in the same direction', () => {
-    const occupantHex = { col: 5, row: 3 };
-    const beyondHex = { col: 5, row: 2 };
+    const occupantHex = { col: 5, row: 4 };
+    const beyondHex = { col: 5, row: 3 };
     const occupant = { id: 'enemy-1', position: occupantHex };
     const result = resolveDropPod({
       aim: { col: 5, row: 5 },
@@ -58,8 +69,8 @@ describe('resolveDropPod', () => {
 
   it('chains through multiple stacked occupants until it finds an empty hex', () => {
     const occupiedHexes = [
+      { col: 5, row: 4 },
       { col: 5, row: 3 },
-      { col: 5, row: 2 },
     ];
     const findTokenAt = (hex) =>
       occupiedHexes.some((h) => h.col === hex.col && h.row === hex.row)
@@ -73,6 +84,6 @@ describe('resolveDropPod', () => {
       findTokenAt,
     });
     expect(result.hits).toHaveLength(2);
-    expect(result.hex).toEqual({ col: 5, row: 1 });
+    expect(result.hex).toEqual({ col: 5, row: 2 });
   });
 });

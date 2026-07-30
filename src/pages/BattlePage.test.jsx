@@ -505,12 +505,57 @@ describe('BattlePage', () => {
 
     // Ending Player 1's turn hands it to Player 2, who has no deployed units
     // (and so no action dice of their own); ending again comes back around
-    // to Player 1's next turn, where the gate should have reset.
+    // to Player 1's next turn, where the gate resets and the pool
+    // auto-rolls again on its own (#164) — already used, no manual click
+    // needed this time.
     fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
     fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
     expect(
       screen.getByRole('button', { name: 'Roll Action Pool' }).disabled,
+    ).toBe(true);
+    // Two log entries now: the manual roll above, and the auto-roll (#164)
+    // for this new turn.
+    expect(screen.getAllByText(/Rolled 2 red/i)).toHaveLength(2);
+  });
+
+  it("automatically rolls the Action Pool at the start of a player's turn, without a manual click (#164)", () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve();
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    // Deploying after deployment phase already ended doesn't itself trigger
+    // a roll — only an actual turn-start transition does.
+    expect(
+      screen.getByRole('button', { name: 'Roll Action Pool' }).disabled,
     ).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+
+    expect(
+      screen.getByRole('button', { name: 'Roll Action Pool' }).disabled,
+    ).toBe(true);
+    expect(screen.getByText(/Rolled 2 red/i)).toBeDefined();
+  });
+
+  it('does not auto-roll the Action Pool during deployment phase, even once dice are available (#164)', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve();
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy to board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    // Deployed with dice available, but still mid-deployment-phase — the
+    // action pool must stay untouched until the real game starts.
+    expect(
+      window.localStorage.getItem('dropshipsimulator:battle:actionPool'),
+    ).toBe(JSON.stringify([]));
   });
 
   it("never tints the model's own tile as part of its weapon's arc", () => {

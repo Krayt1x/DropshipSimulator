@@ -23,18 +23,10 @@ const DiceRoller = forwardRef(function DiceRoller(
     onExchangeActionDice,
     activeOwnerDice,
     canRoll = true,
-    turn,
   },
   ref,
 ) {
   const [pool, setPool] = useState({});
-  // Gates Roll Action Pool to once per active-player turn segment (#140) —
-  // derived from `turn` rather than a separate reset effect, since it
-  // naturally changes every time endTurn() advances the active player.
-  const [rolledActionPoolTurnKey, setRolledActionPoolTurnKey] = useState(null);
-  const turnKey = turn ? `${turn.active}:${turn.number}` : null;
-  const usedActionPoolThisTurn =
-    turnKey !== null && rolledActionPoolTurnKey === turnKey;
   // Mirrored to the other player over the multiplayer data channel (#119) —
   // without this, only the log's text summary of a roll reached the peer,
   // not the actual dice roller display.
@@ -106,7 +98,6 @@ const DiceRoller = forwardRef(function DiceRoller(
     // would stack on top of this turn's already-rolled counts instead of
     // rolling just that turn's pool (#156).
     setPool({});
-    setRolledActionPoolTurnKey(turnKey);
   }
 
   const playerDiceTotal = DICE_COLORS.reduce(
@@ -249,7 +240,7 @@ const DiceRoller = forwardRef(function DiceRoller(
         <button
           type="button"
           className="ghost"
-          disabled={playerDiceTotal === 0 || !canRoll || usedActionPoolThisTurn}
+          disabled={playerDiceTotal === 0 || !canRoll || actionPool.length > 0}
           onClick={rollActionPool}
         >
           Roll Action Pool

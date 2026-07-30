@@ -21,9 +21,15 @@ function AttackModal({
   onApply,
   onCancel,
 }) {
+  // A hit that lands 0 damage (fully absorbed) reads the same as a miss to
+  // the player, so only shake when damage actually landed (#161).
+  const hitLanded = Boolean(result) && result.damage > 0;
   return (
     <div className="attack-modal-backdrop" onClick={onCancel}>
-      <div className="attack-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className={`attack-modal ${hitLanded ? 'attack-modal-shake' : ''}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <p className="attack-modal-title">
           {attackerName}'s {weaponName} → {targetName}
         </p>

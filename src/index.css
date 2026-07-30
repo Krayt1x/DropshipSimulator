@@ -828,6 +828,44 @@ button.danger:hover {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
 }
 
+/* Plays once when a roll lands damage; a miss leaves the modal still (#161). */
+@keyframes attack-modal-shake {
+  0% {
+    transform: translateX(0);
+  }
+  15% {
+    transform: translateX(-7px);
+  }
+  30% {
+    transform: translateX(6px);
+  }
+  45% {
+    transform: translateX(-4px);
+  }
+  60% {
+    transform: translateX(3px);
+  }
+  75% {
+    transform: translateX(-2px);
+  }
+  90% {
+    transform: translateX(1px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.attack-modal-shake {
+  animation: attack-modal-shake 0.4s ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attack-modal-shake {
+    animation: none;
+  }
+}
+
 .attack-modal-title {
   font-weight: 700;
   font-size: 14px;

@@ -728,6 +728,85 @@ describe('BattlePage', () => {
     }
   });
 
+  it('shakes the attack modal when a roll lands damage, but not on a miss (#161)', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve(['  Right: Long Range Bolt']);
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: [
+          'Test List (Corp A)',
+          'Weight: 20t / 100t',
+          '',
+          'A20 - 20t',
+          '  Right: Long Range Bolt',
+        ].join('\n'),
+      },
+    });
+    const importPanel = screen
+      .getByRole('button', { name: 'Preview import' })
+      .closest('.token-form');
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(
+      within(importPanel).getByRole('button', { name: 'Player 2' }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+    // A10's attack spends an Attack (or Action) die (#162). Both of A10's
+    // red dice need to land on "Attack" here, but a single constant mock
+    // would give both dice's makeKey suffix the same value in the same
+    // tick, colliding their ids — vary it slightly per call (still under
+    // 1/6 so every call lands on red's "Attack" face) instead.
+    let rollCall = 0;
+    const poolRollSpy = vi
+      .spyOn(Math, 'random')
+      .mockImplementation(() => (rollCall++ % 5) * 0.02);
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    poolRollSpy.mockRestore();
+
+    fireEvent.click(screen.getByRole('button', { name: 'A20' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-4,6'));
+
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    fireEvent.click(screen.getByTestId('hex-4,6'));
+    fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+
+    // A20 is Medium (target number 3); mocking Math.random near 1 rolls the
+    // maximum face on the 2d8 (8), always over the target number -> a miss.
+    vi.spyOn(Math, 'random').mockReturnValue(0.99);
+    fireEvent.click(screen.getByRole('button', { name: 'Roll to Hit' }));
+    let modal = screen
+      .getByText(/Which side are you hitting/)
+      .closest('.attack-modal');
+    expect(within(modal).getByText(/0 hits/)).toBeDefined();
+    expect(modal.classList.contains('attack-modal-shake')).toBe(false);
+
+    fireEvent.click(within(modal).getByRole('button', { name: 'Apply damage' }));
+
+    // Re-arm the same attack and roll again, this time landing a hit.
+    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    fireEvent.click(screen.getByTestId('hex-4,6'));
+    fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+    // Math.random mocked to 0 -> both dice roll a 1, always <= the target
+    // number -> a hit that lands damage (weapon.hit_dice guarantees >0 dice).
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Roll to Hit' }));
+    modal = screen
+      .getByText(/Which side are you hitting/)
+      .closest('.attack-modal');
+    expect(within(modal).queryByText(/0 hits/)).toBeNull();
+    expect(modal.classList.contains('attack-modal-shake')).toBe(true);
+  });
+
   it("cools a player's weapons by 1 heat when their turn ends (#121)", () => {
     render(<BattlePage />);
     startDeploymentPhase();
@@ -1191,6 +1270,9 @@ describe('BattlePage', () => {
     // way mocking it from the very start of the test would.
     const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
     fireEvent.click(within(modal).getByRole('button', { name: 'Roll to Hit' }));
+
+    // Landed damage on at least one target under the blast -> shakes (#161).
+    expect(modal.classList.contains('attack-modal-shake')).toBe(true);
 
     const frontDamage = calculateDamage(dieSides, armor.front, hits);
     const leftDamage = calculateDamage(dieSides, armor.left, hits);

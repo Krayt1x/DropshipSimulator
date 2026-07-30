@@ -21,10 +21,16 @@ function SplashAttackModal({
 }) {
   const manualTarget = targets.find((t) => t.isManualSide);
   const canRoll = !manualTarget || Boolean(side);
+  // Shake only if the blast actually landed damage on at least one target
+  // under it, not on a roll that hits nobody (#161).
+  const hitLanded = Boolean(result) && result.perTarget.some((t) => t.damage > 0);
 
   return (
     <div className="attack-modal-backdrop" onClick={onCancel}>
-      <div className="attack-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className={`attack-modal ${hitLanded ? 'attack-modal-shake' : ''}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <p className="attack-modal-title">
           {attackerName}'s {weaponName} → blast at ({origin.col}, {origin.row})
         </p>

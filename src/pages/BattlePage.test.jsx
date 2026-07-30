@@ -125,6 +125,11 @@ describe('BattlePage', () => {
     endDeploymentPhase();
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
+    // A real move spends a Move die (#162) — the turn-start auto-roll (#164)
+    // ran before this token was deployed and came up empty, so roll manually.
+    // Math.random mocked so red's face-index-3 ("Move") comes up reliably.
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Move token' }));
     fireEvent.click(screen.getByTestId('hex-3,3'));
@@ -143,6 +148,9 @@ describe('BattlePage', () => {
     endDeploymentPhase();
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
+    // A real move spends a Move die (#162); mock so red's "Move" face wins.
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
 
     const tokenMarker = container.querySelector('[data-testid^="token-"]');
     const targetHex = screen.getByTestId('hex-4,4');
@@ -176,6 +184,10 @@ describe('BattlePage', () => {
     expect(
       screen.getByRole('button', { name: 'Undo last move' }).disabled,
     ).toBe(true);
+
+    // A real move spends a Move die (#162); mock so red's "Move" face wins.
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Move token' }));
     fireEvent.click(screen.getByTestId('hex-3,3'));
@@ -283,6 +295,14 @@ describe('BattlePage', () => {
     window.localStorage.setItem(
       'dropshipsimulator:myPlayer',
       JSON.stringify('p2'),
+    );
+    // This test is about ownership (canControl), not dice — seed a Move die
+    // directly since it's Player 1's turn and this browser is Player 2's, so
+    // neither a manual nor an automatic roll (#164) would populate one here
+    // (#162).
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:actionPool',
+      JSON.stringify([{ id: 'test-move-die', label: 'Red', value: 'Move' }]),
     );
     render(<BattlePage />);
     startDeploymentPhase();
@@ -456,6 +476,10 @@ describe('BattlePage', () => {
 
     expect(screen.getByText(/deployed A10 at \(0, 0\)/)).toBeDefined();
 
+    // A real move spends a Move die (#162); mock so red's "Move" face wins.
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+
     fireEvent.click(screen.getByRole('button', { name: 'Move token' }));
     fireEvent.click(screen.getByTestId('hex-3,3'));
     finishMoveAnimation();
@@ -589,6 +613,10 @@ describe('BattlePage', () => {
 
     expect(screen.getByText(/Heat 0 \/ 1/)).toBeDefined();
 
+    // A real move spends a Move die (#162); mock so red's "Move" face wins.
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+
     fireEvent.click(screen.getByRole('button', { name: 'Move token' }));
     fireEvent.click(screen.getByTestId('hex-8,8'));
     finishMoveAnimation();
@@ -646,6 +674,9 @@ describe('BattlePage', () => {
     endDeploymentPhase();
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
+    // A10's attack spends an Attack (or Action) die (#162); Math.random is
+    // already mocked to 0 above, so this manual roll produces "Attack" too.
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
@@ -853,6 +884,9 @@ describe('BattlePage', () => {
     endDeploymentPhase();
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
+    // A10's attack spends an Attack (or Action) die (#162); Math.random is
+    // already mocked to 0 above, so this manual roll produces "Attack" too.
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
@@ -936,6 +970,9 @@ describe('BattlePage', () => {
     endDeploymentPhase();
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
+    // A10's attack spends an Attack (or Action) die (#162); Math.random is
+    // already mocked to 0 above, so this manual roll produces "Attack" too.
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
@@ -970,6 +1007,10 @@ describe('BattlePage', () => {
     endDeploymentPhase();
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
+    // Attacking spends an Attack (or Action) die (#162); mock so red's
+    // "Attack" face wins.
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
 
     expect(screen.queryByText('OVERHEATED')).toBeNull();
     expect(screen.getByRole('button', { name: 'Attack' }).disabled).toBe(false);
@@ -995,6 +1036,10 @@ describe('BattlePage', () => {
     endDeploymentPhase();
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
+    // Attacking/moving spends a matching (or Action) die (#162); mock so
+    // red's "Action" face wins, covering both.
+    vi.spyOn(Math, 'random').mockReturnValue(0.9);
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
 
     expect(screen.getByRole('button', { name: 'Attack' }).disabled).toBe(false);
     expect(screen.getByRole('button', { name: 'Move token' }).disabled).toBe(
@@ -1049,6 +1094,10 @@ describe('BattlePage', () => {
     endDeploymentPhase();
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
+    // A10's attack spends an Attack (or Action) die (#162); mock so red's
+    // "Attack" face wins.
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
@@ -1108,6 +1157,12 @@ describe('BattlePage', () => {
     endDeploymentPhase();
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
+    // A10's splash attack spends an Attack (or Action) die (#162); scoped
+    // mock+restore (same id-collision concern as the later roll below) so
+    // it doesn't affect the A20 tokens' ids created right after.
+    const dieRollSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    dieRollSpy.mockRestore();
 
     // Origin-tile model (5,9 — 4 hexes due south, within Artillery's 3-9
     // range and its right-mounted arc): its side must be picked manually.
@@ -1334,7 +1389,7 @@ describe('BattlePage', () => {
 
     endDeploymentPhase();
     fireEvent.click(screen.getByTestId('hex-0,0'));
-    expect(screen.getByRole('button', { name: 'Move' })).toBeDefined();
+    expect(screen.getByRole('button', { name: /^Move \(/ })).toBeDefined();
   });
 
   it('deploys a reserve token via its own Deploy to board button, jumping straight to the Board tab (#142)', () => {
@@ -1646,8 +1701,12 @@ describe('BattlePage', () => {
     endDeploymentPhase();
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
+    // Attacking spends an Attack (or Action) die (#162); mock so red's
+    // "Attack" face wins.
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Weapons' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Weapons \(/ }));
     const picker = screen
       .getByText('Choose a weapon')
       .closest('.mobile-attack-picker');

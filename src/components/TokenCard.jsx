@@ -33,6 +33,8 @@ function TokenCard({
   deploymentPhase,
   hasActionDie,
   onArmDropPod,
+  hasMoveDie,
+  hasAttackDie,
 }) {
   const [confirmingDestroy, setConfirmingDestroy] = useState(false);
   const [pickedDieColor, setPickedDieColor] = useState(null);
@@ -162,9 +164,13 @@ function TokenCard({
                         ? 'Destroyed — this model can no longer attack'
                         : overheated
                           ? 'Overheated — let it cool down before firing again'
-                          : "Show this weapon's arc and pick a target to attack"
+                          : !hasAttackDie
+                            ? 'No Attack dice left in the action pool'
+                            : "Show this weapon's arc and pick a target to attack"
                     }
-                    disabled={state.broken || overheated || wrecked}
+                    disabled={
+                      state.broken || overheated || wrecked || !hasAttackDie
+                    }
                     onClick={() => onStartAttack(item.instanceIndex, item)}
                   >
                     {attackActive ? 'Attacking…' : 'Attack'}
@@ -410,13 +416,20 @@ function TokenCard({
             <button
               type="button"
               className={moving ? '' : 'ghost'}
-              disabled={!canControl || movementBlocked || wrecked}
+              disabled={
+                !canControl ||
+                movementBlocked ||
+                wrecked ||
+                (token.position && !hasMoveDie)
+              }
               title={
                 wrecked
                   ? 'Destroyed — this model can no longer move'
                   : movementBlocked
                     ? 'Overheated — let it cool down before moving again'
-                    : undefined
+                    : token.position && !hasMoveDie
+                      ? 'No Move dice left in the action pool'
+                      : undefined
               }
               onClick={onArmMove}
             >

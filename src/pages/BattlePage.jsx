@@ -348,6 +348,30 @@ function BattlePage() {
     if (die) appendLog(`Used a ${die.label.toLowerCase()} die: ${die.value}`);
   }
 
+  // Picks an unused die matching `preferredValue` ('Move'/'Attack'), falling
+  // back to a flexible 'Action' die — same Move/Action/Attack economy the
+  // bot already follows (bot.js's pickDie). Moving or attacking spends one
+  // of these and is blocked without one (#162).
+  function pickActionDie(preferredValue) {
+    const unused = actionPool.filter((d) => !d.used);
+    return (
+      unused.find((d) => d.value === preferredValue) ??
+      unused.find((d) => d.value === 'Action') ??
+      null
+    );
+  }
+
+  const hasMoveDie = Boolean(pickActionDie('Move'));
+  const hasAttackDie = Boolean(pickActionDie('Attack'));
+  // Counts shown on the mobile Move/Attack FABs (#162) — a Move/Attack die,
+  // or a flexible Action die, can spend on either, mirroring pickActionDie.
+  const moveDieCount = actionPool.filter(
+    (d) => !d.used && (d.value === 'Move' || d.value === 'Action'),
+  ).length;
+  const attackDieCount = actionPool.filter(
+    (d) => !d.used && (d.value === 'Attack' || d.value === 'Action'),
+  ).length;
+
   // Spends one unused action die to re-roll a different unused action die's
   // outcome (#134) — DiceRoller picks the new value (it already has the
   // die-type/face data) and hands it up here to apply + log.
@@ -663,9 +687,13 @@ function BattlePage() {
   // comparison has no meaning for.
   function rollAttack() {
     if (!attackWeapon || !attackTarget?.side) return;
+    // Spends an Attack (or Action) die and is blocked without one (#162).
+    const die = pickActionDie('Attack');
+    if (!die) return;
     const attacker = tokens.find((t) => t.id === attackWeapon.tokenId);
     const rolled = rollAttackDice(attackWeapon.item.hit_dice);
     if (!attacker || !rolled) return;
+    useActionPoolDie(die.id);
     const currentHeat =
       attacker.weaponState[attackWeapon.instanceIndex]?.heat ?? 0;
     // Firing generates whatever the weapon's own heat_rating stipulates
@@ -822,9 +850,13 @@ function BattlePage() {
   function rollSplashAttack() {
     if (!attackWeapon || !attackOrigin) return;
     if (splashOriginToken && !attackTarget?.side) return;
+    // Spends an Attack (or Action) die and is blocked without one (#162).
+    const die = pickActionDie('Attack');
+    if (!die) return;
     const attacker = tokens.find((t) => t.id === attackWeapon.tokenId);
     const rolled = rollAttackDice(attackWeapon.item.hit_dice);
     if (!attacker || !rolled) return;
+    useActionPoolDie(die.id);
     const currentHeat =
       attacker.weaponState[attackWeapon.instanceIndex]?.heat ?? 0;
     const { generate } = parseHeatRating(attackWeapon.item.heat_rating);
@@ -1084,7 +1116,18 @@ function BattlePage() {
 
     if (movingTokenId) {
       if (movingToken && canControl(movingToken)) {
-        animateMove(movingToken, col, row);
+        // Placing a reserve token for the first time is free; an actual
+        // move spends a Move (or Action) die and is blocked without one
+        // (#162).
+        if (movingToken.position) {
+          const die = pickActionDie('Move');
+          if (die) {
+            animateMove(movingToken, col, row);
+            useActionPoolDie(die.id);
+          }
+        } else {
+          animateMove(movingToken, col, row);
+        }
       }
       setMovingTokenId(null);
       return;
@@ -1101,7 +1144,17 @@ function BattlePage() {
     // Drop pods never place directly — they always go through the aim +
     // deviation roll flow instead (#157, #158).
     if (isDropPodToken(token)) return;
-    animateMove(token, col, row);
+    // Placing a reserve token for the first time is free; repositioning an
+    // already-deployed one spends a Move (or Action) die and is blocked
+    // without one (#162).
+    if (token.position) {
+      const die = pickActionDie('Move');
+      if (!die) return;
+      animateMove(token, col, row);
+      useActionPoolDie(die.id);
+    } else {
+      animateMove(token, col, row);
+    }
     setSelectedTokenId(tokenId);
   }
 
@@ -1818,6 +1871,8 @@ function BattlePage() {
               deploymentPhase={deploymentPhase}
               hasActionDie={hasUnusedActionDie()}
               onArmDropPod={() => armDropPod(selectedToken.id)}
+              hasMoveDie={hasMoveDie}
+              hasAttackDie={hasAttackDie}
             />
           )}
           <ReserveRosterPanel
@@ -2004,6 +2059,11 @@ function BattlePage() {
                   <button
                     type="button"
                     className="mobile-move-fab"
+                    disabled={
+                      movingTokenId !== selectedToken.id &&
+                      selectedToken.position &&
+                      !hasMoveDie
+                    }
                     onClick={() =>
                       setMovingTokenId((current) =>
                         current === selectedToken.id ? null : selectedToken.id,
@@ -2013,7 +2073,7 @@ function BattlePage() {
                     {movingTokenId === selectedToken.id
                       ? 'Cancel'
                       : selectedToken.position
-                        ? 'Move'
+                        ? `Move (${moveDieCount})`
                         : 'Deploy'}
                   </button>
                 )}
@@ -2026,6 +2086,10 @@ function BattlePage() {
                   <button
                     type="button"
                     className="mobile-attack-fab"
+                    disabled={
+                      attackWeapon?.tokenId !== selectedToken.id &&
+                      !hasAttackDie
+                    }
                     onClick={() => {
                       if (attackWeapon?.tokenId === selectedToken.id) {
                         cancelAttack();
@@ -2037,7 +2101,7 @@ function BattlePage() {
                   >
                     {attackWeapon?.tokenId === selectedToken.id
                       ? 'Cancel attack'
-                      : 'Weapons'}
+                      : `Weapons (${attackDieCount})`}
                   </button>
                 )}
             </div>
@@ -2055,7 +2119,10 @@ function BattlePage() {
                       type="button"
                       key={item.instanceIndex}
                       disabled={
-                        state.broken || overheated || selectedTokenWrecked
+                        state.broken ||
+                        overheated ||
+                        selectedTokenWrecked ||
+                        !hasAttackDie
                       }
                       className="mobile-attack-picker-item"
                       onClick={() => {

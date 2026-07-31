@@ -1,5 +1,11 @@
 import { describe, it, expect, afterEach, beforeEach } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import {
+  render,
+  screen,
+  cleanup,
+  fireEvent,
+  within,
+} from '@testing-library/react';
 import PlayPage from './PlayPage.jsx';
 
 beforeEach(() => window.localStorage.clear());
@@ -190,6 +196,33 @@ describe('PlayPage', () => {
     expect(
       JSON.parse(window.localStorage.getItem('dropshipsimulator:mapEditor:tiles')),
     ).toEqual({ '0,0': 'buildings' });
+  });
+
+  it('drops emoji icons from the difficulty and map tiles, and drops the map import option (#189, #190, #191)', () => {
+    render(<PlayPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
+    expect(screen.getByRole('button', { name: 'Simple' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Tactical' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Expert' })).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tactical' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Random' }));
+
+    const mapStage = screen
+      .getByText('Which map do you want to play?')
+      .closest('.cascade-stage');
+    expect(
+      within(mapStage).getByRole('button', { name: 'Current map' }),
+    ).toBeDefined();
+    expect(
+      within(mapStage).getByRole('button', { name: 'Blank' }),
+    ).toBeDefined();
+    expect(
+      within(mapStage).queryByRole('button', { name: /Import/ }),
+    ).toBeNull();
+    expect(screen.queryByLabelText('Map export')).toBeNull();
   });
 
   it('Cancel dismisses the mode picker without starting a game', () => {

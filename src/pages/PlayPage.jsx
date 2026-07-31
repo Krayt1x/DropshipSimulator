@@ -3,21 +3,22 @@ import { useLocalStorageState } from '../lib/storage.js';
 import { resetActiveGame } from '../lib/gameState.js';
 import { parseRosterExport } from '../lib/rosterImport.js';
 import { DEFAULT_ROSTERS } from '../components/RosterImport.jsx';
-import { DEFAULT_MAPS, parseMapExport } from '../lib/maps.js';
+import { DEFAULT_MAPS } from '../lib/maps.js';
 import manufacturers from '../data/manufacturers.json';
 import units from '../data/units.json';
 import equipment from '../data/equipment.json';
 
 const DIFFICULTIES = [
-  { id: 'simple', icon: '🙂', label: 'Simple' },
-  { id: 'tactical', icon: '🎯', label: 'Tactical' },
-  { id: 'expert', icon: '🧠', label: 'Expert' },
+  { id: 'simple', label: 'Simple' },
+  { id: 'tactical', label: 'Tactical' },
+  { id: 'expert', label: 'Expert' },
 ];
 
+// Importing a map here was removed (#191) — map creation/maintenance is a
+// Map Editor concern now, not something to redo on every new game.
 const MAP_CHOICES = [
-  { id: 'current', icon: '🗺️', label: 'Current map' },
-  { id: 'blank', icon: '⬜', label: 'Blank' },
-  { id: 'import', icon: '📥', label: 'Import…' },
+  { id: 'current', label: 'Current map' },
+  { id: 'blank', label: 'Blank' },
 ];
 
 function PlayPage() {
@@ -69,9 +70,7 @@ function PlayPage() {
   const [showRosterImport, setShowRosterImport] = useState(false);
   const [importText, setImportText] = useState('');
   const [importPreview, setImportPreview] = useState(null);
-  const [mapChoice, setMapChoice] = useState('current'); // 'current' | 'blank' | 'import'
-  const [mapImportText, setMapImportText] = useState('');
-  const [mapImportPreview, setMapImportPreview] = useState(null);
+  const [mapChoice, setMapChoice] = useState('current'); // 'current' | 'blank'
 
   function resetPicker() {
     setExpanded(false);
@@ -82,8 +81,6 @@ function PlayPage() {
     setImportText('');
     setImportPreview(null);
     setMapChoice('current');
-    setMapImportText('');
-    setMapImportPreview(null);
   }
 
   function handleEndGame() {
@@ -130,20 +127,12 @@ function PlayPage() {
     );
   }
 
-  function previewMapImport() {
-    setMapImportPreview(parseMapExport(mapImportText));
-  }
-
   function confirmStartGame() {
     if (mapChoice === 'blank') {
       const blank = DEFAULT_MAPS.find((m) => m.name === 'Blank');
       setMapDimensions(blank.dimensions);
       setMapTileTypes(blank.tileTypes);
       setMapTiles(blank.tiles);
-    } else if (mapChoice === 'import' && mapImportPreview) {
-      setMapDimensions(mapImportPreview.dimensions);
-      setMapTileTypes(mapImportPreview.tileTypes);
-      setMapTiles(mapImportPreview.tiles);
     }
     // 'current' leaves whatever's already saved in the Map Editor alone.
     window.location.hash = '#battle';
@@ -254,7 +243,6 @@ function PlayPage() {
                     className={`home-tile ${difficulty === d.id ? 'selected' : ''}`}
                     onClick={() => pickDifficulty(d.id)}
                   >
-                    <span className="home-tile-icon">{d.icon}</span>
                     <span className="home-tile-title">{d.label}</span>
                   </button>
                 ))}
@@ -364,53 +352,10 @@ function PlayPage() {
                     className={`home-tile ${mapChoice === m.id ? 'selected' : ''}`}
                     onClick={() => setMapChoice(m.id)}
                   >
-                    <span className="home-tile-icon">{m.icon}</span>
                     <span className="home-tile-title">{m.label}</span>
                   </button>
                 ))}
               </div>
-
-              {mapChoice === 'import' && (
-                <div className="field" style={{ marginTop: 12 }}>
-                  <label htmlFor="map-import-text">Map export</label>
-                  <textarea
-                    id="map-import-text"
-                    rows={6}
-                    placeholder="Paste an exported map here"
-                    value={mapImportText}
-                    onChange={(e) => {
-                      setMapImportText(e.target.value);
-                      setMapImportPreview(null);
-                    }}
-                  />
-                  <div className="token-owner-row" style={{ marginTop: 8 }}>
-                    <button
-                      type="button"
-                      className="ghost"
-                      disabled={!mapImportText.trim()}
-                      onClick={previewMapImport}
-                    >
-                      Preview import
-                    </button>
-                  </div>
-                  {mapImportPreview && (
-                    <p className="unit-meta" style={{ marginTop: 8 }}>
-                      {mapImportPreview.dimensions.cols} ×{' '}
-                      {mapImportPreview.dimensions.rows},{' '}
-                      {Object.keys(mapImportPreview.tiles).length} tile
-                      {Object.keys(mapImportPreview.tiles).length === 1
-                        ? ''
-                        : 's'}{' '}
-                      painted.
-                    </p>
-                  )}
-                  {mapImportText.trim() && !mapImportPreview && (
-                    <p className="unit-meta" style={{ marginTop: 8 }}>
-                      Preview it to check it&apos;s a valid map export.
-                    </p>
-                  )}
-                </div>
-              )}
 
               <div
                 style={{
@@ -419,11 +364,7 @@ function PlayPage() {
                   marginTop: 16,
                 }}
               >
-                <button
-                  type="button"
-                  disabled={mapChoice === 'import' && !mapImportPreview}
-                  onClick={confirmStartGame}
-                >
+                <button type="button" onClick={confirmStartGame}>
                   Start Game
                 </button>
               </div>

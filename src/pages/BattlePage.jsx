@@ -1022,6 +1022,19 @@ function BattlePage() {
     );
   }
 
+  // A model can't move onto, or pass through, a hex another model already
+  // occupies (#181) — checked along the whole straight line between the two
+  // points, not just the destination, so a longer move can't hop over
+  // something standing in the way.
+  function isPathOccupied(from, to, excludeTokenId) {
+    return hexLine(from, to)
+      .slice(1)
+      .some((hex) => {
+        const occupant = tokenAt(`${hex.col},${hex.row}`);
+        return occupant && occupant.id !== excludeTokenId;
+      });
+  }
+
   function placeTokenAt(tokenId, col, row) {
     setTokens((current) =>
       current.map((t) =>
@@ -1185,15 +1198,18 @@ function BattlePage() {
         // move spends a Move (or Action) die and is blocked without one
         // (#162).
         if (movingToken.position) {
-          // Water/buildings block a move that isn't already flying (#178).
+          // Water/buildings block a move that isn't already flying (#178);
+          // another model standing on or across the path blocks it too
+          // (#181).
           const blocked =
-            !tokenHasMovementTag(movingToken, equipment, 'flying') &&
-            isMovementPathBlocked(
-              movingToken.position,
-              { col, row },
-              tiles,
-              tileTypes,
-            );
+            (!tokenHasMovementTag(movingToken, equipment, 'flying') &&
+              isMovementPathBlocked(
+                movingToken.position,
+                { col, row },
+                tiles,
+                tileTypes,
+              )) ||
+            isPathOccupied(movingToken.position, { col, row }, movingToken.id);
           const die = !blocked && pickActionDie('Move');
           if (die) {
             // Order matters: both calls set lastAction, and a short move
@@ -1204,7 +1220,7 @@ function BattlePage() {
             useActionPoolDie(die.id);
             animateMove(movingToken, col, row, die.id);
           }
-        } else {
+        } else if (!tokenAt(key)) {
           animateMove(movingToken, col, row);
         }
       }
@@ -1227,10 +1243,13 @@ function BattlePage() {
     // already-deployed one spends a Move (or Action) die and is blocked
     // without one (#162).
     if (token.position) {
-      // Water/buildings block a move that isn't already flying (#178).
+      // Water/buildings block a move that isn't already flying (#178);
+      // another model along the path blocks it too (#181) — the destination
+      // itself is already covered by the tokenAt check above.
       if (
-        !tokenHasMovementTag(token, equipment, 'flying') &&
-        isMovementPathBlocked(token.position, { col, row }, tiles, tileTypes)
+        (!tokenHasMovementTag(token, equipment, 'flying') &&
+          isMovementPathBlocked(token.position, { col, row }, tiles, tileTypes)) ||
+        isPathOccupied(token.position, { col, row }, token.id)
       ) {
         return;
       }

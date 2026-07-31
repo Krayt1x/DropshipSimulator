@@ -223,6 +223,96 @@ describe('BattlePage', () => {
     expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
   });
 
+  it('blocks a move onto a hex already occupied by another model (#181)', () => {
+    vi.useFakeTimers();
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: [
+          'Test List (Corp A)',
+          'Weight: 26t / 100t',
+          '',
+          'A10 - 6t',
+          'A20 - 20t',
+        ].join('\n'),
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 2 units to reserve' }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'A20' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-0,4'));
+
+    // Try to move the A10 (still at 0,0) straight onto the A20 at (0,4).
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    expandDiceRoller();
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
+    fireEvent.click(screen.getByTestId('hex-0,4'));
+    finishMoveAnimation();
+
+    // A10 never left (0,0) — the A20 blocked the destination.
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+    expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
+  });
+
+  it('blocks a longer move that would pass through an occupied hex (#181)', () => {
+    vi.useFakeTimers();
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: [
+          'Test List (Corp A)',
+          'Weight: 26t / 100t',
+          '',
+          'A10 - 6t',
+          'A20 - 20t',
+        ].join('\n'),
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 2 units to reserve' }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+
+    // A20 sits directly between (0,0) and (0,8), blocking the straight path.
+    fireEvent.click(screen.getByRole('button', { name: 'A20' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-0,4'));
+
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    expandDiceRoller();
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
+    fireEvent.click(screen.getByTestId('hex-0,8'));
+    finishMoveAnimation();
+
+    // (0,8) itself was empty, but the A20 in the way still blocked the move.
+    fireEvent.click(screen.getByTestId('hex-0,8'));
+    expect(screen.queryByText('A10', { selector: 'p.unit-name' })).toBeNull();
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+    expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
+  });
+
   it('undoes the last move back to the previous hex', () => {
     vi.useFakeTimers();
     render(<BattlePage />);

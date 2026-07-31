@@ -827,4 +827,92 @@ describe('chooseBotAction', () => {
     expect(result).toMatchObject({ type: 'move', tokenId: 'bot1' });
     expect(result.destination).not.toEqual(bot.position);
   });
+
+  it('does not target an enemy model already at 0 HP (#182)', () => {
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 5, row: 5 },
+      equippedIds: [10],
+      weaponState: { 0: { heat: 0, broken: false } },
+    });
+    const wreck = makeToken({
+      id: 'wreck1',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 5, row: 6 },
+      currentHp: 0,
+    });
+    const result = chooseBotAction({
+      tokens: [bot, wreck],
+      units,
+      equipment,
+      botOwner: 'p2',
+      actionPool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+      difficulty: 'simple',
+    });
+    // No live enemy to attack, no Move die to reposition with either.
+    expect(result).toBeNull();
+  });
+
+  it('prefers a live model over a drop pod, even when the pod is a better raw EV target (#180)', () => {
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 5, row: 2 },
+      equippedIds: [10],
+      weaponState: { 0: { heat: 0, broken: false } },
+    });
+    // Delivery Capsule (unitId 4) has 0 armor everywhere — the highest raw
+    // EV target on the board, but not one worth prioritizing (#180).
+    const pod = makeToken({
+      id: 'pod1',
+      unitId: 4,
+      owner: 'p1',
+      position: { col: 5, row: 4 },
+    });
+    const liveUnit = makeToken({
+      id: 'enemy1',
+      unitId: 1,
+      owner: 'p1',
+      position: { col: 6, row: 2 },
+    });
+    const result = chooseBotAction({
+      tokens: [bot, pod, liveUnit],
+      units,
+      equipment,
+      botOwner: 'p2',
+      actionPool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+      difficulty: 'tactical',
+    });
+    expect(result.targetId).toBe('enemy1');
+  });
+
+  it('still attacks a drop pod when it is the only target left (#180)', () => {
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 5, row: 5 },
+      equippedIds: [10],
+      weaponState: { 0: { heat: 0, broken: false } },
+    });
+    const pod = makeToken({
+      id: 'pod1',
+      unitId: 4,
+      owner: 'p1',
+      position: { col: 5, row: 6 },
+    });
+    const result = chooseBotAction({
+      tokens: [bot, pod],
+      units,
+      equipment,
+      botOwner: 'p2',
+      actionPool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+      difficulty: 'simple',
+    });
+    expect(result.targetId).toBe('pod1');
+  });
 });

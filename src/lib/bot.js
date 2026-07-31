@@ -125,8 +125,15 @@ function findAttackOptions({
   const myTokens = tokens.filter(
     (t) => t.owner === botOwner && t.position && !t.destroyed,
   );
+  // A wrecked (0 HP) model isn't a real target — it's waiting on its owner
+  // to click "Model Destroyed", not something worth spending an Attack die
+  // on (#182).
   const enemyTokens = tokens.filter(
-    (t) => t.owner !== botOwner && t.position && !t.destroyed,
+    (t) =>
+      t.owner !== botOwner &&
+      t.position &&
+      !t.destroyed &&
+      (t.currentHp ?? 0) > 0,
   );
   const options = [];
 
@@ -225,6 +232,10 @@ function findAttackOptions({
             ev: expectedDamage(item, unitFor(enemy, units), chosenSide),
             targetHp: enemy.currentHp,
             overheats: wouldOverheat(attacker.weaponState[instanceIndex], item),
+            // Drop pods are a low-value chassis (#180) — worth attacking
+            // only when nothing else is on the table, not preferred over a
+            // "real" unit just because its armor makes the EV math attractive.
+            isDropPodTarget: isDropPodUnit(unitFor(enemy, units)),
           });
         });
       }
@@ -472,7 +483,12 @@ export function chooseBotAction({
             (o) => !o.overheats || (o.targetHp != null && o.ev >= o.targetHp),
           )
         : options;
-    const viable = safeOptions.length > 0 ? safeOptions : options;
+    const beforePodFilter = safeOptions.length > 0 ? safeOptions : options;
+    // Every difficulty avoids spending its Attack die on a drop pod while a
+    // "real" unit is also reachable (#180) — only falls back to the pod when
+    // it's the only target on offer.
+    const nonPodOptions = beforePodFilter.filter((o) => !o.isDropPodTarget);
+    const viable = nonPodOptions.length > 0 ? nonPodOptions : beforePodFilter;
     if (viable.length > 0) {
       const chosen =
         difficulty === 'simple'

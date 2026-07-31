@@ -75,4 +75,38 @@ describe('MapEditorPage', () => {
     expect(screen.queryByTestId('hex-3,3')).toBeNull();
     expect(screen.getByTestId('hex-0,0').style.fill).toBe('rgb(120, 113, 108)');
   });
+
+  it('exports the current map as JSON reflecting a painted tile (#176)', () => {
+    render(<MapEditorPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Water' }));
+    fireEvent.click(screen.getByTestId('hex-1,1'));
+
+    const exportText = screen.getByLabelText('Export').value;
+    const exported = JSON.parse(exportText);
+    expect(exported.tiles['1,1']).toBe('water');
+    expect(exported.dimensions).toEqual({ cols: 24, rows: 24 });
+  });
+
+  it('imports a pasted map export and repaints the board to match (#176)', () => {
+    render(<MapEditorPage />);
+
+    const imported = JSON.stringify({
+      dimensions: { cols: 3, rows: 3 },
+      tileTypes: [{ id: 'plain', name: 'Plain', color: '#78716c' }],
+      tiles: { '0,0': 'plain' },
+    });
+    fireEvent.change(screen.getByLabelText('Import'), {
+      target: { value: imported },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    expect(screen.getByText(/3 × 3/)).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use this map' }));
+
+    expect(screen.queryByTestId('hex-5,5')).toBeNull();
+    expect(
+      JSON.parse(window.localStorage.getItem('dropshipsimulator:mapEditor:dimensions')),
+    ).toEqual({ cols: 3, rows: 3 });
+  });
 });

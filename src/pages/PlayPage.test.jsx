@@ -48,13 +48,19 @@ describe('PlayPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Sandbox' }));
 
+    // Picking a mode doesn't start the game yet — the map step still needs
+    // an answer (#176).
+    expect(window.location.hash).toBe('');
+    expect(screen.getByText('Which map do you want to play?')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+
     expect(window.location.hash).toBe('#battle');
     expect(window.localStorage.getItem('dropshipsimulator:gameMode')).toBe(
       JSON.stringify('sandbox'),
     );
   });
 
-  it('asks for a difficulty, then a roster, before starting a vs-computer game (#173)', () => {
+  it('asks for a difficulty, then a roster, then a map, before starting a vs-computer game (#173, #176)', () => {
     render(<PlayPage />);
 
     fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
@@ -71,6 +77,11 @@ describe('PlayPage', () => {
     expect(window.location.hash).toBe('');
 
     fireEvent.click(screen.getByRole('button', { name: 'Random' }));
+
+    // Nor does picking a roster — the map step comes next (#176).
+    expect(window.location.hash).toBe('');
+    expect(screen.getByText('Which map do you want to play?')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(window.location.hash).toBe('#battle');
     expect(window.localStorage.getItem('dropshipsimulator:gameMode')).toBe(
@@ -100,6 +111,7 @@ describe('PlayPage', () => {
       target: { value: 'Flame Chicken Spam' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Use this list' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(window.location.hash).toBe('#battle');
     expect(window.localStorage.getItem('dropshipsimulator:botRoster')).toBe(
@@ -137,11 +149,46 @@ describe('PlayPage', () => {
     expect(screen.getByText('1 unit found.')).toBeDefined();
 
     fireEvent.click(screen.getByRole('button', { name: 'Use this list' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(window.location.hash).toBe('#battle');
     expect(window.localStorage.getItem('dropshipsimulator:botRoster')).toBe(
       JSON.stringify({ type: 'import', text: rosterText }),
     );
+  });
+
+  it('lets the human start a fresh blank map instead of whatever is in the Map Editor (#176)', () => {
+    window.localStorage.setItem(
+      'dropshipsimulator:mapEditor:tiles',
+      JSON.stringify({ '0,0': 'buildings' }),
+    );
+    render(<PlayPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sandbox' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Blank' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+
+    expect(window.location.hash).toBe('#battle');
+    expect(
+      JSON.parse(window.localStorage.getItem('dropshipsimulator:mapEditor:tiles')),
+    ).toEqual({});
+  });
+
+  it('leaves the saved map alone when "Current map" is kept (#176)', () => {
+    window.localStorage.setItem(
+      'dropshipsimulator:mapEditor:tiles',
+      JSON.stringify({ '0,0': 'buildings' }),
+    );
+    render(<PlayPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sandbox' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+
+    expect(
+      JSON.parse(window.localStorage.getItem('dropshipsimulator:mapEditor:tiles')),
+    ).toEqual({ '0,0': 'buildings' });
   });
 
   it('Cancel dismisses the mode picker without starting a game', () => {

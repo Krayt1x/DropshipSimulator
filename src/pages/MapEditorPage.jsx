@@ -5,6 +5,7 @@ import { DEFAULT_TERRAIN_TYPES } from '../lib/terrain.js';
 import HexGrid from '../components/HexGrid.jsx';
 import TilePalette from '../components/TilePalette.jsx';
 import BackgroundPicker from '../components/BackgroundPicker.jsx';
+import MapExportPanel from '../components/MapExportPanel.jsx';
 
 const DEFAULT_DIMENSIONS = { cols: 24, rows: 24 };
 const MIN_DIMENSION = 1;
@@ -99,6 +100,15 @@ function MapEditorPage() {
     if (Object.keys(tiles).length === 0) return;
     if (!window.confirm('Clear every placed tile from the board?')) return;
     setTiles({});
+  }
+
+  function importMap({ dimensions: newDimensions, tileTypes: newTileTypes, tiles: newTiles }) {
+    setDimensions(newDimensions);
+    setColsInput(newDimensions.cols);
+    setRowsInput(newDimensions.rows);
+    setTileTypes(newTileTypes);
+    setTiles(newTiles);
+    setSelectedTool(newTileTypes[0]?.id ?? 'eraser');
   }
 
   function applyDimensions(e) {
@@ -202,6 +212,12 @@ function MapEditorPage() {
             onRemoveTileType={removeTileType}
           />
           <BackgroundPicker background={background} onChange={setBackground} />
+          <MapExportPanel
+            dimensions={dimensions}
+            tileTypes={tileTypes}
+            tiles={tiles}
+            onImport={importMap}
+          />
         </div>
       </div>
     </div>

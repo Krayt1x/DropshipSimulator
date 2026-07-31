@@ -3,6 +3,7 @@ import { useLocalStorageState } from '../lib/storage.js';
 import { resetActiveGame } from '../lib/gameState.js';
 import { parseRosterExport } from '../lib/rosterImport.js';
 import { DEFAULT_ROSTERS } from '../components/RosterImport.jsx';
+import { DEFAULT_MAPS, parseMapExport } from '../lib/maps.js';
 import manufacturers from '../data/manufacturers.json';
 import units from '../data/units.json';
 import equipment from '../data/equipment.json';
@@ -28,16 +29,34 @@ function PlayPage() {
   const [, setBotRoster] = useLocalStorageState('dropshipsimulator:botRoster', {
     type: 'random',
   });
+  // Write-only here — BattlePage.jsx reads these on mount once the game
+  // actually starts (#176). Left untouched entirely when the human keeps
+  // whatever's already in the Map Editor ("Current map").
+  const [, setMapDimensions] = useLocalStorageState(
+    'dropshipsimulator:mapEditor:dimensions',
+    DEFAULT_MAPS[0].dimensions,
+  );
+  const [, setMapTileTypes] = useLocalStorageState(
+    'dropshipsimulator:mapEditor:tileTypes',
+    DEFAULT_MAPS[0].tileTypes,
+  );
+  const [, setMapTiles] = useLocalStorageState(
+    'dropshipsimulator:mapEditor:tiles',
+    {},
+  );
   // A fresh game only — resuming one already in progress (the "Resume Game"
   // banner below) skips this, since that game's mode was already decided
   // when it started.
-  const [step, setStep] = useState(null); // null | 'mode' | 'difficulty' | 'roster'
+  const [step, setStep] = useState(null); // null | 'mode' | 'difficulty' | 'roster' | 'map'
   const [rosterChoice, setRosterChoice] = useState(null); // null | 'specific' | 'import'
   const [specificRosterName, setSpecificRosterName] = useState(
     DEFAULT_ROSTERS[0]?.name ?? '',
   );
   const [importText, setImportText] = useState('');
   const [importPreview, setImportPreview] = useState(null);
+  const [mapChoice, setMapChoice] = useState('current'); // 'current' | 'blank' | 'import'
+  const [mapImportText, setMapImportText] = useState('');
+  const [mapImportPreview, setMapImportPreview] = useState(null);
 
   function handleEndGame() {
     if (
@@ -52,7 +71,7 @@ function PlayPage() {
 
   function chooseSandbox() {
     setGameMode('sandbox');
-    window.location.hash = '#battle';
+    setStep('map');
   }
 
   function chooseDifficulty(difficulty) {
@@ -67,13 +86,32 @@ function PlayPage() {
 
   function startBattleWith(botRoster) {
     setBotRoster(botRoster);
-    window.location.hash = '#battle';
+    setStep('map');
   }
 
   function previewImport() {
     setImportPreview(
       parseRosterExport(importText, { units, manufacturers, equipment }),
     );
+  }
+
+  function previewMapImport() {
+    setMapImportPreview(parseMapExport(mapImportText));
+  }
+
+  function confirmStartGame() {
+    if (mapChoice === 'blank') {
+      const blank = DEFAULT_MAPS.find((m) => m.name === 'Blank');
+      setMapDimensions(blank.dimensions);
+      setMapTileTypes(blank.tileTypes);
+      setMapTiles(blank.tiles);
+    } else if (mapChoice === 'import' && mapImportPreview) {
+      setMapDimensions(mapImportPreview.dimensions);
+      setMapTileTypes(mapImportPreview.tileTypes);
+      setMapTiles(mapImportPreview.tiles);
+    }
+    // 'current' leaves whatever's already saved in the Map Editor alone.
+    window.location.hash = '#battle';
   }
 
   return (
@@ -309,6 +347,107 @@ function PlayPage() {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {step === 'map' && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <div className="reserve-header">
+            <p className="unit-name">Which map do you want to play?</p>
+            <button
+              type="button"
+              className="ghost"
+              onClick={() => {
+                setStep(null);
+                setMapChoice('current');
+                setMapImportText('');
+                setMapImportPreview(null);
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+          <div className="token-owner-row" style={{ marginTop: 8 }}>
+            <button
+              type="button"
+              className={`ghost ${mapChoice === 'current' ? 'active' : ''}`}
+              onClick={() => setMapChoice('current')}
+            >
+              Current map
+            </button>
+            <button
+              type="button"
+              className={`ghost ${mapChoice === 'blank' ? 'active' : ''}`}
+              onClick={() => setMapChoice('blank')}
+            >
+              Blank
+            </button>
+            <button
+              type="button"
+              className={`ghost ${mapChoice === 'import' ? 'active' : ''}`}
+              onClick={() => setMapChoice('import')}
+            >
+              Import…
+            </button>
+          </div>
+
+          {mapChoice === 'import' && (
+            <div className="field" style={{ marginTop: 12 }}>
+              <label htmlFor="map-import-text">Map export</label>
+              <textarea
+                id="map-import-text"
+                rows={6}
+                placeholder="Paste an exported map here"
+                value={mapImportText}
+                onChange={(e) => {
+                  setMapImportText(e.target.value);
+                  setMapImportPreview(null);
+                }}
+              />
+              <div className="token-owner-row" style={{ marginTop: 8 }}>
+                <button
+                  type="button"
+                  className="ghost"
+                  disabled={!mapImportText.trim()}
+                  onClick={previewMapImport}
+                >
+                  Preview import
+                </button>
+              </div>
+              {mapImportPreview && (
+                <p className="unit-meta" style={{ marginTop: 8 }}>
+                  {mapImportPreview.dimensions.cols} ×{' '}
+                  {mapImportPreview.dimensions.rows},{' '}
+                  {Object.keys(mapImportPreview.tiles).length} tile
+                  {Object.keys(mapImportPreview.tiles).length === 1
+                    ? ''
+                    : 's'}{' '}
+                  painted.
+                </p>
+              )}
+              {mapImportText.trim() && !mapImportPreview && (
+                <p className="unit-meta" style={{ marginTop: 8 }}>
+                  Preview it to check it&apos;s a valid map export.
+                </p>
+              )}
+            </div>
+          )}
+
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              marginTop: 16,
+            }}
+          >
+            <button
+              type="button"
+              disabled={mapChoice === 'import' && !mapImportPreview}
+              onClick={confirmStartGame}
+            >
+              Start Game
+            </button>
+          </div>
         </div>
       )}
     </div>

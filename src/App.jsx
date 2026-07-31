@@ -205,12 +205,16 @@ function AppShell() {
                 <a
                   href="#play"
                   className={
-                    ['play', 'battle', 'connect', 'builder'].includes(page)
-                      ? 'active'
-                      : ''
+                    ['play', 'battle', 'connect'].includes(page) ? 'active' : ''
                   }
                 >
                   Play
+                </a>
+                <a
+                  href="#builder"
+                  className={page === 'builder' ? 'active' : ''}
+                >
+                  Builder
                 </a>
                 <a href="#map" className={page === 'map' ? 'active' : ''}>
                   Map editor

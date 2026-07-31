@@ -93,6 +93,25 @@ describe('App', () => {
     expect(screen.getByText('Build your list')).toBeDefined();
   });
 
+  it('gives the Builder page its own top-nav menu item (#192)', () => {
+    window.location.hash = '#play';
+    render(<App />);
+
+    const builderLink = screen.getByRole('link', { name: 'Builder' });
+    expect(builderLink).toHaveProperty(
+      'href',
+      expect.stringContaining('#builder'),
+    );
+    expect(builderLink.className).not.toContain('active');
+
+    cleanup();
+    window.location.hash = '#builder';
+    render(<App />);
+    expect(screen.getByRole('link', { name: 'Builder' }).className).toContain(
+      'active',
+    );
+  });
+
   it('portals the turn tracker into the top menu bar and drops the battle board blurb (#136)', () => {
     window.location.hash = '#battle';
     const { container } = render(<App />);

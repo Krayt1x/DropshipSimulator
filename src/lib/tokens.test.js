@@ -3,6 +3,7 @@ import {
   createToken,
   groupEquipmentByType,
   parseHeatRating,
+  itemHasTag,
 } from './tokens.js';
 
 describe('tokens', () => {
@@ -87,5 +88,30 @@ describe('tokens', () => {
   it('parses a heat rating string into generate/max', () => {
     expect(parseHeatRating('2/4')).toEqual({ generate: 2, max: 4 });
     expect(parseHeatRating('')).toEqual({ generate: 0, max: 0 });
+  });
+
+  describe('itemHasTag', () => {
+    it('matches the exact machine key', () => {
+      const item = { effect_stats: [{ stat: 'tags', amount: 'fire' }] };
+      expect(itemHasTag(item, 'fire')).toBe(true);
+      expect(itemHasTag(item, 'splash')).toBe(false);
+    });
+
+    it('ignores case and spacing so a synced human-readable label still matches', () => {
+      // DropshipBuilder's live data has been observed storing the display
+      // label ("Indirect Fire") as the tag value instead of the key
+      // ("indirect_fire") this app's own callers use — the sync is from an
+      // app this repo doesn't control, so this has to tolerate it.
+      const item = {
+        effect_stats: [{ stat: 'tags', amount: 'Indirect Fire' }],
+      };
+      expect(itemHasTag(item, 'indirect_fire')).toBe(true);
+    });
+
+    it('is false with no matching tag or no effect_stats at all', () => {
+      expect(itemHasTag({ effect_stats: [] }, 'fire')).toBe(false);
+      expect(itemHasTag({}, 'fire')).toBe(false);
+      expect(itemHasTag(null, 'fire')).toBe(false);
+    });
   });
 });

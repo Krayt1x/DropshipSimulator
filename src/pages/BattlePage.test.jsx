@@ -313,6 +313,84 @@ describe('BattlePage', () => {
     expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
   });
 
+  it('allows zooming in further than the old 200% cap (#187)', () => {
+    render(<BattlePage />);
+    const zoomIn = screen.getByRole('button', { name: 'Zoom in' });
+    for (let i = 0; i < 20 && !zoomIn.disabled; i++) {
+      fireEvent.click(zoomIn);
+    }
+    expect(screen.getByText('400%')).toBeDefined();
+    expect(zoomIn.disabled).toBe(true);
+  });
+
+  it('pans the board by dragging, and suppresses the click that would otherwise land wherever the drag ends (#187)', () => {
+    const { container } = render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve();
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+    expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
+
+    const viewport = container.querySelector('.battle-board-viewport');
+    fireEvent.pointerDown(viewport, {
+      pointerId: 1,
+      clientX: 100,
+      clientY: 100,
+    });
+    fireEvent.pointerMove(viewport, {
+      pointerId: 1,
+      clientX: 140,
+      clientY: 130,
+    });
+    const pan = container.querySelector('.battle-board-pan');
+    expect(pan.style.transform).toBe('translate(40px, 30px)');
+    fireEvent.pointerUp(viewport, {
+      pointerId: 1,
+      clientX: 140,
+      clientY: 130,
+    });
+
+    // A real browser fires a click on release too, landing on whatever hex
+    // the drag ended over — that click must be swallowed rather than
+    // deselecting the still-selected A10 the way a genuine click on an
+    // empty hex normally would.
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+    expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
+
+    // A later, ordinary click (its own separate gesture) still works.
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+    expect(screen.queryByText('A10', { selector: 'p.unit-name' })).toBeNull();
+  });
+
+  it('does not pan when a drag starts on a token, leaving its own drag-to-move gesture alone (#187)', () => {
+    const { container } = render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve();
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    const tokenMarker = container.querySelector('[data-testid^="token-"]');
+    fireEvent.pointerDown(tokenMarker, {
+      pointerId: 2,
+      clientX: 100,
+      clientY: 100,
+    });
+    fireEvent.pointerMove(container.querySelector('.battle-board-viewport'), {
+      pointerId: 2,
+      clientX: 140,
+      clientY: 130,
+    });
+
+    const pan = container.querySelector('.battle-board-pan');
+    expect(pan.style.transform).toBe('translate(0px, 0px)');
+  });
+
   it('undoes the last move back to the previous hex', () => {
     vi.useFakeTimers();
     render(<BattlePage />);

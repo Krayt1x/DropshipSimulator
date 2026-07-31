@@ -100,8 +100,14 @@ const BOARD_CHROME_HEIGHT = 300;
 // horizontal chrome around the board once it's narrower than BOARD_WIDTH.
 const CONTAINER_PADDING = 48;
 const ZOOM_MIN = 0.5;
-const ZOOM_MAX = 2;
+// Raised from 2 so a zoomed-in board has real detail to look at (#187) — the
+// board is clipped (not scrolled) past this size, panned via click-and-drag
+// instead of scrollbars.
+const ZOOM_MAX = 4;
 const ZOOM_STEP = 0.25;
+// A pointer has to move at least this many pixels before a drag counts as
+// panning the board rather than a click on whatever's underneath (#187).
+const PAN_DRAG_THRESHOLD = 5;
 
 function BattlePage() {
   const [tileTypes] = useLocalStorageState(
@@ -170,6 +176,16 @@ function BattlePage() {
     );
   }
   const [zoom, setZoom] = useState(1);
+  // Click-and-drag panning of the battle board (#187) — panOffset is a CSS
+  // translate applied to the board only (not its overlays, like the hover
+  // card, which stay screen-anchored). panStateRef tracks an in-progress
+  // drag without triggering re-renders on every pointermove.
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const panStateRef = useRef(null);
+  // A drag that crossed the pan threshold shouldn't also fire the hex click
+  // that lands under the cursor on release.
+  const suppressNextHexClickRef = useRef(false);
   const diceRollerRef = useRef(null);
   // Which of the 4 panels is showing on narrow (mobile) viewports (#101) —
   // replaces the old slide-in overlay/tray approach. Irrelevant on desktop,
@@ -1021,6 +1037,42 @@ function BattlePage() {
     );
   }
 
+  // Panning (#187): a plain click still needs to reach handleHexClick
+  // untouched, so only a drag past PAN_DRAG_THRESHOLD engages it — token
+  // markers own their own pointer-drag gesture (repositioning), so a
+  // pointerdown starting on one never starts a pan.
+  function handleBoardPointerDown(e) {
+    if (e.target.closest?.('.token-marker')) return;
+    panStateRef.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      startOffset: panOffset,
+      dragging: false,
+    };
+  }
+
+  function handleBoardPointerMove(e) {
+    const state = panStateRef.current;
+    if (!state || state.pointerId !== e.pointerId) return;
+    const dx = e.clientX - state.startX;
+    const dy = e.clientY - state.startY;
+    if (!state.dragging) {
+      if (Math.hypot(dx, dy) < PAN_DRAG_THRESHOLD) return;
+      state.dragging = true;
+      setIsPanning(true);
+    }
+    setPanOffset({ x: state.startOffset.x + dx, y: state.startOffset.y + dy });
+  }
+
+  function endBoardPan(e) {
+    const state = panStateRef.current;
+    if (!state || state.pointerId !== e.pointerId) return;
+    if (state.dragging) suppressNextHexClickRef.current = true;
+    panStateRef.current = null;
+    setIsPanning(false);
+  }
+
   const topBoundaryRow = 2;
   const bottomBoundaryRow = dimensions.rows - 4;
   const deploymentZonesValid = bottomBoundaryRow > topBoundaryRow;
@@ -1141,6 +1193,10 @@ function BattlePage() {
   }
 
   function handleHexClick(key) {
+    if (suppressNextHexClickRef.current) {
+      suppressNextHexClickRef.current = false;
+      return;
+    }
     const [col, row] = key.split(',').map(Number);
 
     if (dropPodArmed) {
@@ -2078,32 +2134,43 @@ function BattlePage() {
           <div
             className="battle-board-viewport"
             style={backgroundContainerStyle(background)}
+            onPointerDown={handleBoardPointerDown}
+            onPointerMove={handleBoardPointerMove}
+            onPointerUp={endBoardPan}
+            onPointerLeave={endBoardPan}
           >
-            <BattleBoard
-              cols={dimensions.cols}
-              rows={dimensions.rows}
-              tiles={tiles}
-              tileTypes={tileTypes}
-              tokens={tokens}
-              units={units}
-              animatingToken={animatingToken}
-              deployEffect={deployEffect}
-              selectedTokenId={selectedTokenId}
-              rangeOrigin={selectedToken?.position ?? null}
-              weaponRange={weaponRange}
-              moveRange={moveRange}
-              deploymentZones={deploymentZones}
-              hasBackground={Boolean(background)}
-              size={boardSize}
-              canControl={canControl}
-              onHexClick={handleHexClick}
-              onDropToken={handleDropToken}
-              onHoverToken={handleHoverToken}
-              peerSelectedTokenId={theirFocus?.selectedTokenId ?? null}
-              peerIsMoving={Boolean(theirFocus?.isMoving)}
-              peerWeaponRange={theirFocus?.weaponRange ?? null}
-              peerColor={otherPlayerId ? ownerColor(otherPlayerId) : null}
-            />
+            <div
+              className={`battle-board-pan ${isPanning ? 'panning' : ''}`}
+              style={{
+                transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
+              }}
+            >
+              <BattleBoard
+                cols={dimensions.cols}
+                rows={dimensions.rows}
+                tiles={tiles}
+                tileTypes={tileTypes}
+                tokens={tokens}
+                units={units}
+                animatingToken={animatingToken}
+                deployEffect={deployEffect}
+                selectedTokenId={selectedTokenId}
+                rangeOrigin={selectedToken?.position ?? null}
+                weaponRange={weaponRange}
+                moveRange={moveRange}
+                deploymentZones={deploymentZones}
+                hasBackground={Boolean(background)}
+                size={boardSize}
+                canControl={canControl}
+                onHexClick={handleHexClick}
+                onDropToken={handleDropToken}
+                onHoverToken={handleHoverToken}
+                peerSelectedTokenId={theirFocus?.selectedTokenId ?? null}
+                peerIsMoving={Boolean(theirFocus?.isMoving)}
+                peerWeaponRange={theirFocus?.weaponRange ?? null}
+                peerColor={otherPlayerId ? ownerColor(otherPlayerId) : null}
+              />
+            </div>
             {hoverInfo &&
               (() => {
                 const hoverToken = tokens.find(

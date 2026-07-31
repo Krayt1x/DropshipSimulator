@@ -553,9 +553,20 @@ button.danger:hover {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 1rem;
-  overflow: auto;
+  /* Zoomed-in content is panned via click-and-drag instead of scrolled
+     (#187) — clipped here rather than scrollable so no scrollbars appear. */
+  overflow: hidden;
   display: flex;
   justify-content: center;
+}
+
+.battle-board-pan {
+  cursor: grab;
+  touch-action: none;
+}
+
+.battle-board-pan.panning {
+  cursor: grabbing;
 }
 
 .battle-board-viewport .hex-grid {

@@ -109,9 +109,21 @@ export function isDropPodUnit(unit) {
 // Gameplay tags (#265-#268) are synced over from DropshipBuilder's
 // `effect_stats` array (added by #269) as `{ stat: 'tags', amount: <key> }`
 // entries — this is the one place that shape gets read.
+// Normalizes away case and spacing/underscore differences — DropshipBuilder
+// data is synced in from an app we don't control, and its Tags feature
+// stores a human-readable label ("Indirect Fire") rather than the
+// machine-friendly key ("indirect_fire") this file's own callers use, so an
+// exact-string match would silently miss real tagged equipment.
+function normalizeTag(value) {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/[\s_]+/g, '');
+}
+
 export function itemHasTag(item, tag) {
+  const target = normalizeTag(tag);
   return (item?.effect_stats ?? []).some(
-    (e) => e.stat === 'tags' && e.amount === tag,
+    (e) => e.stat === 'tags' && normalizeTag(e.amount) === target,
   );
 }
 

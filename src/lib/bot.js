@@ -9,7 +9,10 @@ import {
   parseHeatRating,
   sizeNumber,
   isDropPodUnit,
+  itemHasTag,
+  tokenHasMovementTag,
 } from './tokens.js';
+import { hasLineOfSight, blocksMovement } from './terrain.js';
 import { parseArmor } from './combat.js';
 import { parseHitDice, DICE_COLORS } from './dice.js';
 
@@ -33,12 +36,16 @@ function wouldOverheat(weaponState, item) {
   return currentHeat + generate > max;
 }
 
-// Same "target tile and all adjacent tiles" detection BattlePage.jsx uses
-// for its own attackWeapon (#123) — duplicated here rather than shared since
-// that one lives on a derived render-time value, not an exported helper.
+// Same "Splash" detection BattlePage.jsx uses for its own attackWeapon
+// (#123, #267) — duplicated here rather than shared since that one lives on
+// a derived render-time value, not an exported helper. Checks the tag first
+// (#267), falling back to the older free-text `effects` convention for any
+// equipment that hasn't been re-tagged yet.
 export function isSplashWeapon(item) {
   return Boolean(
-    item && /target tile and all adjacent tiles/i.test(item.effects ?? ''),
+    item &&
+      (itemHasTag(item, 'splash') ||
+        /target tile and all adjacent tiles/i.test(item.effects ?? '')),
   );
 }
 
@@ -68,13 +75,19 @@ export function expectedDamage(weapon, targetUnit, side) {
   return Math.max(0, sides - sideArmor) * expectedHits;
 }
 
-function inRangeAndArc(attacker, item, side, targetPosition) {
+function inRangeAndArc(attacker, item, side, targetPosition, tiles, terrainTypes) {
   const range = parseWeaponRange(item.range);
   if (!range || !attacker.position) return false;
   const d = hexDistance(attacker.position, targetPosition);
   if (d < range.min || d > range.max) return false;
-  if (!side) return true;
-  return isInWeaponArc(attacker.position, targetPosition, attacker.facing, side);
+  if (side && !isInWeaponArc(attacker.position, targetPosition, attacker.facing, side)) {
+    return false;
+  }
+  // Blocking terrain stops a shot unless the weapon fires indirectly (#178,
+  // #268). No map data means nothing can be blocking, so this only ever
+  // narrows things down when tiles/terrainTypes are actually supplied.
+  if (!tiles || !terrainTypes || itemHasTag(item, 'indirect_fire')) return true;
+  return hasLineOfSight(attacker.position, targetPosition, tiles, terrainTypes);
 }
 
 function splashTemplateFor(origin) {
@@ -100,7 +113,15 @@ function pickDie(actionPool, preferredValue) {
   );
 }
 
-function findAttackOptions({ tokens, units, equipment, botOwner, difficulty }) {
+function findAttackOptions({
+  tokens,
+  units,
+  equipment,
+  botOwner,
+  difficulty,
+  tiles,
+  terrainTypes,
+}) {
   const myTokens = tokens.filter(
     (t) => t.owner === botOwner && t.position && !t.destroyed,
   );
@@ -114,7 +135,18 @@ function findAttackOptions({ tokens, units, equipment, botOwner, difficulty }) {
       const side = attacker.weaponState[instanceIndex]?.side;
       if (isSplashWeapon(item)) {
         enemyTokens.forEach((enemy) => {
-          if (!inRangeAndArc(attacker, item, side, enemy.position)) return;
+          if (
+            !inRangeAndArc(
+              attacker,
+              item,
+              side,
+              enemy.position,
+              tiles,
+              terrainTypes,
+            )
+          ) {
+            return;
+          }
           const template = splashTemplateFor(enemy.position);
           const hitTokens = tokens.filter(
             (t) =>
@@ -165,7 +197,18 @@ function findAttackOptions({ tokens, units, equipment, botOwner, difficulty }) {
         });
       } else {
         enemyTokens.forEach((enemy) => {
-          if (!inRangeAndArc(attacker, item, side, enemy.position)) return;
+          if (
+            !inRangeAndArc(
+              attacker,
+              item,
+              side,
+              enemy.position,
+              tiles,
+              terrainTypes,
+            )
+          ) {
+            return;
+          }
           const chosenSide = visibleSides(
             enemy.position,
             enemy.facing,
@@ -309,6 +352,8 @@ function findMoveAction({
   actionPool,
   difficulty,
   dimensions,
+  tiles,
+  terrainTypes,
 }) {
   const moveDie = pickDie(actionPool, 'Move');
   if (!moveDie) return null;
@@ -326,17 +371,21 @@ function findMoveAction({
       .filter((t) => t.position && !t.destroyed)
       .map((t) => `${t.position.col},${t.position.row}`),
   );
-  const isBlocked = (hex) =>
-    occupied.has(`${hex.col},${hex.row}`) ||
-    (Boolean(dimensions) &&
-      (hex.col < 0 ||
-        hex.row < 0 ||
-        hex.col >= dimensions.cols ||
-        hex.row >= dimensions.rows));
 
   for (const token of myTokens) {
     const maxMove = movementForToken(token, equipment);
     if (maxMove <= 0) continue;
+    // Water/buildings block a step that isn't already flying (#178) —
+    // checked per-token since flying depends on the mover's own gear.
+    const flies = tiles && terrainTypes && tokenHasMovementTag(token, equipment, 'flying');
+    const isBlocked = (hex) =>
+      occupied.has(`${hex.col},${hex.row}`) ||
+      (Boolean(dimensions) &&
+        (hex.col < 0 ||
+          hex.row < 0 ||
+          hex.col >= dimensions.cols ||
+          hex.row >= dimensions.rows)) ||
+      (tiles && terrainTypes && !flies && blocksMovement(tiles, terrainTypes, hex));
     const moveTarget = chooseMoveTarget(token.position, enemyTokens, difficulty);
     if (!moveTarget) continue;
 
@@ -380,6 +429,8 @@ export function chooseBotAction({
   actionPool,
   difficulty,
   dimensions,
+  tiles,
+  terrainTypes,
 }) {
   // Clean up a wrecked model before doing anything else with it (#154) —
   // doesn't need an enemy on the board or spend an action-pool die, matching
@@ -409,6 +460,8 @@ export function chooseBotAction({
       equipment,
       botOwner,
       difficulty,
+      tiles,
+      terrainTypes,
     });
     // Expert avoids breaking a weapon on a shot that isn't worth the risk —
     // it only considers an overheating option when nothing safer is on the
@@ -465,6 +518,8 @@ export function chooseBotAction({
     actionPool,
     difficulty,
     dimensions,
+    tiles,
+    terrainTypes,
   });
 }
 

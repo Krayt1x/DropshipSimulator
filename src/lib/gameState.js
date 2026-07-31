@@ -3,6 +3,7 @@ import { emptyDiceTotals } from './tokens.js';
 
 export const DEFAULT_TURN = { number: 1, active: 'p1' };
 export const DEFAULT_BANKED_DICE = emptyDiceTotals();
+export const DEFAULT_VICTORY_POINTS = { p1: 0, p2: 0 };
 
 const BATTLE_RESET_VALUES = {
   'dropshipsimulator:battle:tokens': [],
@@ -11,6 +12,7 @@ const BATTLE_RESET_VALUES = {
   'dropshipsimulator:battle:log': [],
   'dropshipsimulator:battle:bankedDice': DEFAULT_BANKED_DICE,
   'dropshipsimulator:battle:actionPool': [],
+  'dropshipsimulator:battle:victoryPoints': DEFAULT_VICTORY_POINTS,
 };
 
 function applyResetValues(values) {

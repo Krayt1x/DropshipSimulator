@@ -8,6 +8,9 @@ import {
   pickDeploymentHexes,
 } from './bot.js';
 import { hexDistance } from './hex.js';
+import { DEFAULT_TERRAIN_TYPES } from './terrain.js';
+
+const terrainTypes = DEFAULT_TERRAIN_TYPES;
 
 const units = [
   {
@@ -86,6 +89,22 @@ const equipment = [
     hit_dice: '1d8',
     range: '6',
     heat_rating: '1/6',
+  },
+  {
+    id: 14,
+    name: 'Wings',
+    type: 'Movement',
+    movement: 3,
+    effect_stats: [{ stat: 'tags', amount: 'flying' }],
+  },
+  {
+    id: 15,
+    name: 'Mortar',
+    type: 'Weapon',
+    hit_dice: '1d8',
+    range: '6',
+    heat_rating: '1/6',
+    effect_stats: [{ stat: 'tags', amount: 'indirect_fire' }],
   },
 ];
 
@@ -690,5 +709,122 @@ describe('chooseBotAction', () => {
     ).toBeLessThan(
       hexDistance(expertResult.destination, nearestHealthy.position),
     );
+  });
+
+  it('blocking terrain between attacker and target stops a shot (#178, #268)', () => {
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 0, row: 0 },
+      equippedIds: [10],
+      weaponState: { 0: { heat: 0, broken: false } },
+    });
+    const enemy = makeToken({
+      id: 'enemy1',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 0, row: 4 },
+    });
+    const tiles = { '0,2': 'buildings' };
+    const base = {
+      tokens: [bot, enemy],
+      units,
+      equipment,
+      botOwner: 'p2',
+      actionPool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+      difficulty: 'simple',
+      tiles,
+      terrainTypes,
+    };
+
+    expect(chooseBotAction(base)).toBeNull();
+  });
+
+  it('an indirect-fire weapon ignores blocking terrain (#268)', () => {
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 0, row: 0 },
+      equippedIds: [15], // Mortar, tagged indirect_fire
+      weaponState: { 0: { heat: 0, broken: false } },
+    });
+    const enemy = makeToken({
+      id: 'enemy1',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 0, row: 4 },
+    });
+    const tiles = { '0,2': 'buildings' };
+    const result = chooseBotAction({
+      tokens: [bot, enemy],
+      units,
+      equipment,
+      botOwner: 'p2',
+      actionPool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+      difficulty: 'simple',
+      tiles,
+      terrainTypes,
+    });
+    expect(result).toMatchObject({ type: 'attack', targetId: 'enemy1' });
+  });
+
+  it('water blocks a non-flying model from moving through it (#178, #265)', () => {
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 0, row: 0 },
+      equippedIds: [11], // Chicken Legs, no flying tag
+    });
+    const enemy = makeToken({
+      id: 'enemy1',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 0, row: 2 },
+    });
+    // (0,1) is the only neighbor of (0,0) that makes progress toward (0,2).
+    const tiles = { '0,1': 'water' };
+    const result = chooseBotAction({
+      tokens: [bot, enemy],
+      units,
+      equipment,
+      botOwner: 'p2',
+      actionPool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+      difficulty: 'simple',
+      tiles,
+      terrainTypes,
+    });
+    expect(result).toBeNull();
+  });
+
+  it('a flying model can move over water (#265)', () => {
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 0, row: 0 },
+      equippedIds: [14], // Wings, tagged flying
+    });
+    const enemy = makeToken({
+      id: 'enemy1',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 0, row: 2 },
+    });
+    const tiles = { '0,1': 'water' };
+    const result = chooseBotAction({
+      tokens: [bot, enemy],
+      units,
+      equipment,
+      botOwner: 'p2',
+      actionPool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+      difficulty: 'simple',
+      tiles,
+      terrainTypes,
+    });
+    expect(result).toMatchObject({ type: 'move', tokenId: 'bot1' });
+    expect(result.destination).not.toEqual(bot.position);
   });
 });

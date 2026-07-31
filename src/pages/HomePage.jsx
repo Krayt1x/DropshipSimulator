@@ -9,7 +9,7 @@ const TILES = [
     href: '#map',
     icon: '🗺️',
     title: 'Map editor',
-    description: 'Build a hex battlefield with your own tile types.',
+    description: 'Build a hex battlefield with your own terrain types.',
   },
 ];
 

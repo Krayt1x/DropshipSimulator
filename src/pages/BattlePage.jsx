@@ -32,7 +32,15 @@ import {
   ownerColor,
   withTokenLabel,
   isDropPodUnit,
+  itemHasTag,
+  tokenHasMovementTag,
 } from '../lib/tokens.js';
+import {
+  DEFAULT_TERRAIN_TYPES,
+  hasLineOfSight,
+  isMovementPathBlocked,
+} from '../lib/terrain.js';
+import { computeObjectiveVp } from '../lib/victory.js';
 import {
   parseArmor,
   rollAttackDice,
@@ -42,6 +50,7 @@ import {
 import {
   DEFAULT_TURN,
   DEFAULT_BANKED_DICE,
+  DEFAULT_VICTORY_POINTS,
   resetActiveGame,
   restartBattle,
 } from '../lib/gameState.js';
@@ -66,12 +75,6 @@ import manufacturers from '../data/manufacturers.json';
 import units from '../data/units.json';
 import equipment from '../data/equipment.json';
 
-const DEFAULT_TILE_TYPES = [
-  { id: 'plain', name: 'Plain', color: '#78716c' },
-  { id: 'buildings', name: 'Buildings', color: '#9ca3af' },
-  { id: 'forest', name: 'Forest', color: '#14532d' },
-  { id: 'objective', name: 'Objective', color: '#f97316' },
-];
 const DEFAULT_DIMENSIONS = { cols: 24, rows: 24 };
 // Winner-modal label for the vs-computer difficulty (#169, extended for the
 // Expert tier) — a lookup instead of a chained ternary now that there are
@@ -101,7 +104,7 @@ const ZOOM_STEP = 0.25;
 function BattlePage() {
   const [tileTypes] = useLocalStorageState(
     'dropshipsimulator:mapEditor:tileTypes',
-    DEFAULT_TILE_TYPES,
+    DEFAULT_TERRAIN_TYPES,
   );
   const [dimensions] = useLocalStorageState(
     'dropshipsimulator:mapEditor:dimensions',
@@ -263,6 +266,12 @@ function BattlePage() {
     'dropshipsimulator:battle:turn',
     DEFAULT_TURN,
   );
+  // Victory points (#179), currently earned only by contesting objective
+  // terrain (#178) at the end of a turn.
+  const [victoryPoints, setVictoryPoints] = useLocalStorageState(
+    'dropshipsimulator:battle:victoryPoints',
+    DEFAULT_VICTORY_POINTS,
+  );
   const [logEntries, setLogEntries] = useLocalStorageState(
     'dropshipsimulator:battle:log',
     [],
@@ -319,6 +328,22 @@ function BattlePage() {
         : { number: turn.number + 1, active: 'p1' };
     setTurn(next);
     appendLog(`${ownerLabel(endingPlayer)} ended their turn`);
+    // 1 VP per own model adjacent to an uncontested objective (#178, #179).
+    const gainedVp = computeObjectiveVp({
+      tokens,
+      tiles,
+      terrainTypes: tileTypes,
+      owner: endingPlayer,
+    });
+    if (gainedVp > 0) {
+      setVictoryPoints((current) => ({
+        ...current,
+        [endingPlayer]: (current[endingPlayer] ?? 0) + gainedVp,
+      }));
+      appendLog(
+        `${ownerLabel(endingPlayer)} scored ${gainedVp} victory point${gainedVp === 1 ? '' : 's'} from objectives`,
+      );
+    }
     // A ding + toast tells whoever's screen it now is that it's their turn
     // (#131); `id` (not just `active`) so the toast re-triggers even though
     // there are only two possible values to alternate between.
@@ -652,11 +677,15 @@ function BattlePage() {
 
   // Artillery-style weapons roll once against every model under a 7-tile
   // splash template (the targeted tile plus its 6 neighbors) instead of a
-  // single chosen target (#123) — detected off the same `effects` text
-  // DropshipBuilder ships rather than hardcoding the weapon name.
+  // single chosen target (#123) — detected off the "Splash" tag (#267), or
+  // the older free-text `effects` convention kept for any equipment that
+  // hasn't been re-tagged yet.
   const isSplashWeapon = Boolean(
     attackWeapon &&
-    /target tile and all adjacent tiles/i.test(attackWeapon.item.effects ?? ''),
+      (itemHasTag(attackWeapon.item, 'splash') ||
+        /target tile and all adjacent tiles/i.test(
+          attackWeapon.item.effects ?? '',
+        )),
   );
   const attackOrigin = attackTarget?.origin ?? null;
   const splashTemplate = attackOrigin
@@ -785,10 +814,12 @@ function BattlePage() {
 
     // Some weapons (e.g. Flame Thrower) apply their damage as heat instead
     // of HP loss (#125) — heat isn't a depleting resource, so there's no
-    // rollover to a second item the way HP damage has.
-    const damageAsHeat = /damage is applied as heat/i.test(
-      weaponItem?.effects ?? '',
-    );
+    // rollover to a second item the way HP damage has. Detected off the
+    // "Fire" tag (#266), or the older free-text `effects` convention kept
+    // for any equipment that hasn't been re-tagged yet.
+    const damageAsHeat =
+      itemHasTag(weaponItem, 'fire') ||
+      /damage is applied as heat/i.test(weaponItem?.effects ?? '');
     if (damageAsHeat && sideIndices.length > 0) {
       const { index, id } = sideIndices[0];
       const eqItem = equipment.find((e) => Number(e.id) === Number(id));
@@ -1107,7 +1138,11 @@ function BattlePage() {
               attacker.facing,
               weaponRange.side,
             );
-          })();
+          })() &&
+          // Blocking terrain stops a shot unless the weapon fires indirectly
+          // (#178, #268).
+          (itemHasTag(attackWeapon.item, 'indirect_fire') ||
+            hasLineOfSight(attacker.position, { col, row }, tiles, tileTypes));
         if (validOrigin) {
           setAttackTarget({ origin: { col, row }, side: null });
         } else {
@@ -1133,7 +1168,9 @@ function BattlePage() {
             attacker.facing,
             weaponRange.side,
           );
-        })();
+        })() &&
+        (itemHasTag(attackWeapon.item, 'indirect_fire') ||
+          hasLineOfSight(attacker.position, target.position, tiles, tileTypes));
       if (valid) {
         setAttackTarget({ tokenId: target.id, side: null });
       } else {
@@ -1148,7 +1185,16 @@ function BattlePage() {
         // move spends a Move (or Action) die and is blocked without one
         // (#162).
         if (movingToken.position) {
-          const die = pickActionDie('Move');
+          // Water/buildings block a move that isn't already flying (#178).
+          const blocked =
+            !tokenHasMovementTag(movingToken, equipment, 'flying') &&
+            isMovementPathBlocked(
+              movingToken.position,
+              { col, row },
+              tiles,
+              tileTypes,
+            );
+          const die = !blocked && pickActionDie('Move');
           if (die) {
             // Order matters: both calls set lastAction, and a short move
             // finishes synchronously inside animateMove while a longer one
@@ -1181,6 +1227,13 @@ function BattlePage() {
     // already-deployed one spends a Move (or Action) die and is blocked
     // without one (#162).
     if (token.position) {
+      // Water/buildings block a move that isn't already flying (#178).
+      if (
+        !tokenHasMovementTag(token, equipment, 'flying') &&
+        isMovementPathBlocked(token.position, { col, row }, tiles, tileTypes)
+      ) {
+        return;
+      }
       const die = pickActionDie('Move');
       if (!die) return;
       // See handleHexClick's identical comment on why useActionPoolDie runs
@@ -1613,6 +1666,8 @@ function BattlePage() {
         actionPool: freshPool,
         difficulty: botDifficulty,
         dimensions,
+        tiles,
+        terrainTypes: tileTypes,
       });
       if (!action) break;
 
@@ -1828,6 +1883,7 @@ function BattlePage() {
             turn={turn}
             onEndTurn={endTurn}
             playerDice={playerDice}
+            victoryPoints={victoryPoints}
           />,
           turnSlot,
         )}
@@ -1837,6 +1893,7 @@ function BattlePage() {
             turn={turn}
             onEndTurn={endTurn}
             playerDice={playerDice}
+            victoryPoints={victoryPoints}
           />
         </div>
       )}

@@ -24,6 +24,7 @@ const SYNCED_KEYS = [
   'dropshipsimulator:battle:log',
   'dropshipsimulator:battle:bankedDice',
   'dropshipsimulator:battle:actionPool',
+  'dropshipsimulator:battle:victoryPoints',
   // Transient (non-persisted) UI events (#117, #118, #119) — mirrored live
   // via useSyncedTransientState rather than useLocalStorageState.
   'dropshipsimulator:battle:deployEffect',

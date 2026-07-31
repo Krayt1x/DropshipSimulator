@@ -192,6 +192,37 @@ describe('BattlePage', () => {
     expect(screen.queryByText('A10', { selector: 'p.unit-name' })).toBeNull();
   });
 
+  it('blocks a move that would land a non-flying model on water (#178, #265)', () => {
+    vi.useFakeTimers();
+    // (0,4) sits straight down the column from (0,0), so a token there is
+    // moving directly onto the water tile with no detour available.
+    window.localStorage.setItem(
+      'dropshipsimulator:mapEditor:tiles',
+      JSON.stringify({ '0,4': 'water' }),
+    );
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve(['  Movement: Chicken Legs']);
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    expandDiceRoller();
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
+    fireEvent.click(screen.getByTestId('hex-0,4'));
+    finishMoveAnimation();
+
+    // Still on (0,0), not (0,4) — the water blocked the move.
+    fireEvent.click(screen.getByTestId('hex-0,4'));
+    expect(screen.queryByText('A10', { selector: 'p.unit-name' })).toBeNull();
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+    expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
+  });
+
   it('undoes the last move back to the previous hex', () => {
     vi.useFakeTimers();
     render(<BattlePage />);
@@ -290,6 +321,41 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
     expect(screen.getByText('Turn 2')).toBeDefined();
     expect(screen.getByText('▲ Player 1')).toBeDefined();
+  });
+
+  it('awards a victory point for a model adjacent to an uncontested objective on End Turn (#178, #179)', () => {
+    const a10 = units.find((u) => u.name === 'A10');
+    const token = {
+      id: 'token-1',
+      unitId: a10.id,
+      manufacturer: a10.manufacturer,
+      owner: 'p1',
+      position: { col: 0, row: 0 },
+      facing: 0,
+      currentHp: a10.hp,
+      equippedIds: [],
+      weaponState: {},
+      destroyed: false,
+      label: null,
+    };
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:tokens',
+      JSON.stringify([token]),
+    );
+    // (1,0) is adjacent to (0,0) — the default terrain types already include
+    // an "objective" tile type (#178).
+    window.localStorage.setItem(
+      'dropshipsimulator:mapEditor:tiles',
+      JSON.stringify({ '1,0': 'objective' }),
+    );
+
+    render(<BattlePage />);
+    expect(screen.getAllByText('🏆 0')).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+
+    expect(screen.getByText('🏆 1')).toBeDefined();
+    expect(screen.getByText(/scored 1 victory point/)).toBeDefined();
   });
 
   it('shows a toast naming whose turn it now is, then auto-dismisses it (#131)', () => {

@@ -6,7 +6,7 @@ beforeEach(() => window.localStorage.clear());
 afterEach(cleanup);
 
 describe('MapEditorPage', () => {
-  it('paints a hex with the selected tile type', () => {
+  it('paints a hex with the selected terrain type', () => {
     render(<MapEditorPage />);
 
     const hex = screen.getByTestId('hex-0,0');
@@ -28,17 +28,36 @@ describe('MapEditorPage', () => {
     expect(hex.style.fill).toBe('');
   });
 
-  it('adds a new tile type and selects it as the active tool', () => {
+  it('adds a new terrain type and selects it as the active tool', () => {
     render(<MapEditorPage />);
 
-    fireEvent.change(screen.getByLabelText('New tile type'), {
+    fireEvent.change(screen.getByLabelText('New terrain type'), {
       target: { value: 'Rubble' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Add tile type' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add terrain type' }));
 
     expect(screen.getByRole('button', { name: 'Rubble' }).className).toContain(
       'selected',
     );
+  });
+
+  it('lets a new terrain type block line of sight and/or movement (#178)', () => {
+    render(<MapEditorPage />);
+
+    fireEvent.change(screen.getByLabelText('New terrain type'), {
+      target: { value: 'Rubble' },
+    });
+    fireEvent.click(screen.getByLabelText('Blocks line of sight'));
+    fireEvent.click(screen.getByLabelText('Blocks movement'));
+    fireEvent.click(screen.getByRole('button', { name: 'Add terrain type' }));
+
+    const stored = JSON.parse(
+      window.localStorage.getItem('dropshipsimulator:mapEditor:tileTypes'),
+    );
+    const rubble = stored.find((t) => t.name === 'Rubble');
+    expect(rubble.blocksLineOfSight).toBe(true);
+    expect(rubble.blocksMovement).toBe(true);
+    expect(rubble.isObjective).toBe(false);
   });
 
   it('resizes the board and drops out-of-range tiles', () => {

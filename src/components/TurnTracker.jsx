@@ -17,7 +17,15 @@ function DiceSummary({ dice }) {
   );
 }
 
-function TurnTracker({ turn, onEndTurn, playerDice }) {
+function VpChip({ vp }) {
+  return (
+    <span className="turn-vp-chip" title="Victory points">
+      🏆 {vp ?? 0}
+    </span>
+  );
+}
+
+function TurnTracker({ turn, onEndTurn, playerDice, victoryPoints }) {
   const [top, bottom] = OWNERS;
 
   function segmentStyle(owner) {
@@ -36,6 +44,7 @@ function TurnTracker({ turn, onEndTurn, playerDice }) {
           {turn.active === top.id ? '▲ ' : ''}
           {top.label}
           <DiceSummary dice={playerDice?.[top.id]} />
+          <VpChip vp={victoryPoints?.[top.id]} />
         </span>
         <span className="turn-mid">
           Turn {turn.number}
@@ -49,6 +58,7 @@ function TurnTracker({ turn, onEndTurn, playerDice }) {
         >
           {bottom.label}
           <DiceSummary dice={playerDice?.[bottom.id]} />
+          <VpChip vp={victoryPoints?.[bottom.id]} />
           {turn.active === bottom.id ? ' ▼' : ''}
         </span>
       </div>

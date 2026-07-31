@@ -1,16 +1,11 @@
 import { useState } from 'react';
 import { useLocalStorageState, makeKey } from '../lib/storage.js';
 import { backgroundContainerStyle } from '../lib/mapBackground.js';
+import { DEFAULT_TERRAIN_TYPES } from '../lib/terrain.js';
 import HexGrid from '../components/HexGrid.jsx';
 import TilePalette from '../components/TilePalette.jsx';
 import BackgroundPicker from '../components/BackgroundPicker.jsx';
 
-const DEFAULT_TILE_TYPES = [
-  { id: 'plain', name: 'Plain', color: '#78716c' },
-  { id: 'buildings', name: 'Buildings', color: '#9ca3af' },
-  { id: 'forest', name: 'Forest', color: '#14532d' },
-  { id: 'objective', name: 'Objective', color: '#f97316' },
-];
 const DEFAULT_DIMENSIONS = { cols: 24, rows: 24 };
 const MIN_DIMENSION = 1;
 const MAX_DIMENSION = 40;
@@ -33,7 +28,7 @@ function clampDimension(value) {
 function MapEditorPage() {
   const [tileTypes, setTileTypes] = useLocalStorageState(
     'dropshipsimulator:mapEditor:tileTypes',
-    DEFAULT_TILE_TYPES,
+    DEFAULT_TERRAIN_TYPES,
   );
   const [dimensions, setDimensions] = useLocalStorageState(
     'dropshipsimulator:mapEditor:dimensions',
@@ -79,9 +74,12 @@ function MapEditorPage() {
     setTiles((current) => ({ ...current, [key]: selectedTool }));
   }
 
-  function addTileType({ name, color }) {
+  function addTileType({ name, color, blocksLineOfSight, blocksMovement, isObjective }) {
     const id = makeKey('tile');
-    setTileTypes((current) => [...current, { id, name, color }]);
+    setTileTypes((current) => [
+      ...current,
+      { id, name, color, blocksLineOfSight, blocksMovement, isObjective },
+    ]);
     setSelectedTool(id);
   }
 
@@ -124,8 +122,8 @@ function MapEditorPage() {
     <div className="container-wide">
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Map editor</h1>
       <p className="unit-meta" style={{ marginBottom: 20 }}>
-        Build a hex battlefield by defining your own tile types and painting
-        them onto the grid.
+        Build a hex battlefield by defining your own terrain types and
+        painting them onto the grid.
       </p>
 
       <form className="map-dimensions-form" onSubmit={applyDimensions}>

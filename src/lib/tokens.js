@@ -106,6 +106,25 @@ export function isDropPodUnit(unit) {
   return unit?.size === 'Drop Pod';
 }
 
+// Gameplay tags (#265-#268) are synced over from DropshipBuilder's
+// `effect_stats` array (added by #269) as `{ stat: 'tags', amount: <key> }`
+// entries — this is the one place that shape gets read.
+export function itemHasTag(item, tag) {
+  return (item?.effect_stats ?? []).some(
+    (e) => e.stat === 'tags' && e.amount === tag,
+  );
+}
+
+// A token "has" a movement tag (e.g. Flying, #265) if its equipped Movement
+// item carries it — only one Movement item is ever equipped per token today,
+// but this checks by type rather than assuming a fixed slot index.
+export function tokenHasMovementTag(token, equipment, tag) {
+  return token.equippedIds.some((id) => {
+    const item = equipment.find((e) => Number(e.id) === Number(id));
+    return item?.type === 'Movement' && itemHasTag(item, tag);
+  });
+}
+
 export function healthBarColor(fraction) {
   if (fraction <= 0.25) return '#dc2626';
   if (fraction <= 0.5) return '#f59e0b';

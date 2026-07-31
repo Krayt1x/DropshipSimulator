@@ -11,18 +11,30 @@ function TilePalette({
 }) {
   const [name, setName] = useState('');
   const [color, setColor] = useState(DEFAULT_COLOR);
+  const [blocksLineOfSight, setBlocksLineOfSight] = useState(false);
+  const [blocksMovement, setBlocksMovement] = useState(false);
+  const [isObjective, setIsObjective] = useState(false);
 
   function handleAdd(e) {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return;
-    onAddTileType({ name: trimmed, color });
+    onAddTileType({
+      name: trimmed,
+      color,
+      blocksLineOfSight,
+      blocksMovement,
+      isObjective,
+    });
     setName('');
+    setBlocksLineOfSight(false);
+    setBlocksMovement(false);
+    setIsObjective(false);
   }
 
   return (
     <div className="card tile-palette">
-      <p className="unit-name">Tile types</p>
+      <p className="unit-name">Terrain types</p>
       <div className="tile-palette-list">
         <button
           type="button"
@@ -56,13 +68,13 @@ function TilePalette({
           </div>
         ))}
         {tileTypes.length === 0 && (
-          <p className="empty">No tile types yet — add one below.</p>
+          <p className="empty">No terrain types yet — add one below.</p>
         )}
       </div>
 
       <form className="tile-palette-form" onSubmit={handleAdd}>
         <div className="field">
-          <label htmlFor="tile-type-name">New tile type</label>
+          <label htmlFor="tile-type-name">New terrain type</label>
           <input
             type="text"
             id="tile-type-name"
@@ -80,7 +92,31 @@ function TilePalette({
             onChange={(e) => setColor(e.target.value)}
           />
         </div>
-        <button type="submit">Add tile type</button>
+        <label className="tile-type-checkbox">
+          <input
+            type="checkbox"
+            checked={blocksLineOfSight}
+            onChange={(e) => setBlocksLineOfSight(e.target.checked)}
+          />
+          Blocks line of sight
+        </label>
+        <label className="tile-type-checkbox">
+          <input
+            type="checkbox"
+            checked={blocksMovement}
+            onChange={(e) => setBlocksMovement(e.target.checked)}
+          />
+          Blocks movement
+        </label>
+        <label className="tile-type-checkbox">
+          <input
+            type="checkbox"
+            checked={isObjective}
+            onChange={(e) => setIsObjective(e.target.checked)}
+          />
+          Objective (grants victory points)
+        </label>
+        <button type="submit">Add terrain type</button>
       </form>
     </div>
   );

@@ -353,6 +353,7 @@ const DiceRoller = forwardRef(function DiceRoller(
             <button
               type="button"
               className="ghost"
+              style={{ marginLeft: 'auto' }}
               disabled={unusedActionDice.length < 2 || !canRoll}
               onClick={toggleExchange}
             >

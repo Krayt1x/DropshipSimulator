@@ -48,17 +48,34 @@ body {
   background: var(--nav-bg);
   padding: 0.75rem 1.5rem;
   display: flex;
-  gap: 1.5rem;
+  justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
+  gap: 1rem;
+  position: relative;
 }
 
+.topnav-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  position: relative;
+}
+
+.topnav-brand {
+  text-decoration: none;
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* Play/Map editor (#172) — inline on desktop, a small dropdown anchored
+   under the left-hand menu button on mobile, since they're only shown at
+   all outside the home page (its own body already has these as tiles). */
 .topnav-links {
   display: contents;
 }
 
 .hamburger-btn {
-  display: none;
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.3);
   color: var(--nav-text);
@@ -66,17 +83,15 @@ body {
   line-height: 1;
   padding: 6px 10px;
   border-radius: 6px;
-  margin-left: auto;
+  cursor: pointer;
+}
+
+.topnav-menu-btn-left {
+  display: none;
 }
 
 [data-theme='dark'] .topnav {
   border-bottom: 2px solid var(--accent);
-}
-
-.topnav strong {
-  color: #fff;
-  font-size: 15px;
-  margin-right: 0.5rem;
 }
 
 .topnav a {
@@ -91,10 +106,46 @@ body {
 }
 
 .topnav-right {
-  margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1rem;
+  position: relative;
+}
+
+/* Settings + in-game controls (#172) — always a dropdown (both desktop and
+   mobile) anchored under the right-hand menu button, rather than sitting
+   inline in the bar. */
+.topnav-settings-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 8px;
+  background: var(--nav-bg);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  min-width: 220px;
+  z-index: 20;
+}
+
+.topnav-settings-menu.open {
+  display: flex;
+}
+
+/* Turn counter + End Turn (#172) — centered in the bar regardless of how
+   wide the menus on either side are. */
+.topnav-turn-slot {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.topnav-turn-slot:empty {
+  display: none;
 }
 
 .player-identity-picker {
@@ -105,32 +156,33 @@ body {
 
 @media (max-width: 700px) {
   .topnav {
-    gap: 0.5rem 1rem;
+    gap: 0.5rem;
     padding: 0.75rem 1rem;
   }
 
-  .hamburger-btn {
+  .topnav-menu-btn-left {
     display: block;
   }
 
   .topnav-links {
     display: none;
-    flex-basis: 100%;
+    position: absolute;
+    left: 0;
+    top: 100%;
+    margin-top: 8px;
+    background: var(--nav-bg);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 10px;
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
-    margin-top: 10px;
+    gap: 8px;
+    min-width: 160px;
+    z-index: 20;
   }
 
   .topnav-links.open {
     display: flex;
-  }
-
-  .topnav-right {
-    margin-left: 0;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
   }
 }
 

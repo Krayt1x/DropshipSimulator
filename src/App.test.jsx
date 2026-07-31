@@ -9,15 +9,23 @@ afterEach(() => {
   window.location.hash = '';
 });
 
+// The End Game control, dark mode toggle, Dropship Builder link, and
+// player identity picker all live behind the settings menu now (#172).
+function openSettingsMenu() {
+  fireEvent.click(screen.getByRole('button', { name: 'Settings menu' }));
+}
+
 describe('App', () => {
   it('shows the End Game control in the top menu only on the Battle page (#132)', () => {
     window.location.hash = '#home';
     render(<App />);
+    openSettingsMenu();
     expect(screen.queryByRole('button', { name: 'End Game' })).toBeNull();
 
     cleanup();
     window.location.hash = '#battle';
     render(<App />);
+    openSettingsMenu();
     expect(screen.getByRole('button', { name: 'End Game' })).toBeDefined();
   });
 
@@ -25,6 +33,7 @@ describe('App', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     window.location.hash = '#battle';
     render(<App />);
+    openSettingsMenu();
 
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
@@ -55,6 +64,7 @@ describe('App', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
     window.location.hash = '#battle';
     render(<App />);
+    openSettingsMenu();
 
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {

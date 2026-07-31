@@ -112,7 +112,10 @@ function PlayerIdentityPicker() {
   // on PlayPage) — letting them swap here would hand control of their own
   // side to the bot and vice versa, since the bot always plays whichever
   // seat `myPlayer` isn't (BattlePage.jsx's `botOwner`).
-  const [gameMode] = useLocalStorageState('dropshipsimulator:gameMode', 'sandbox');
+  const [gameMode] = useLocalStorageState(
+    'dropshipsimulator:gameMode',
+    'sandbox',
+  );
   if (gameMode === 'vs-computer') {
     const me = OWNERS.find((o) => o.id === myPlayer);
     return (
@@ -157,55 +160,88 @@ function PlayerIdentityPicker() {
 
 function AppShell() {
   const [page, setPage] = useState(currentPage);
-  const [menuOpen, setMenuOpen] = useState(false);
+  // Two independent menus (#172) rather than one shared hamburger: site
+  // navigation (Play/Map editor) on the left, settings + in-game controls
+  // on the right — each gets its own toggle instead of dumping everything
+  // into a single dropdown.
+  const [navMenuOpen, setNavMenuOpen] = useState(false);
+  const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
 
   useEffect(() => {
     function onHashChange() {
       setPage(currentPage());
-      setMenuOpen(false);
+      setNavMenuOpen(false);
+      setSettingsMenuOpen(false);
     }
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
+  // Play/Map editor already live as tiles in the home page's own body, so
+  // the nav's copies of those links would just be noise there (#172).
+  const showSiteNav = page !== 'home';
+
   return (
     <>
       <nav className="topnav">
-        <a href="#home" className="topnav-brand">
-          <strong>Dropship Simulator</strong>
-        </a>
-        <button
-          type="button"
-          className="hamburger-btn"
-          aria-label="Menu"
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((current) => !current)}
-        >
-          ☰
-        </button>
-        <div className={`topnav-links ${menuOpen ? 'open' : ''}`}>
-          <a
-            href="#play"
-            className={
-              ['play', 'battle', 'connect'].includes(page) ? 'active' : ''
-            }
-          >
-            Play
+        <div className="topnav-left">
+          <a href="#home" className="topnav-brand" aria-label="Home">
+            ⌂
           </a>
-          <a href="#map" className={page === 'map' ? 'active' : ''}>
-            Map editor
-          </a>
-          {/* BattlePage portals its TurnTracker in here (#136) so the turn
-              counter + End Turn button live in the menu bar instead of the
-              page body, without lifting all of BattlePage's turn state up. */}
-          {page === 'battle' && (
-            <div id="topnav-turn-slot" className="topnav-turn-slot" />
+          {showSiteNav && (
+            <>
+              <button
+                type="button"
+                className="hamburger-btn topnav-menu-btn-left"
+                aria-label="Site menu"
+                aria-expanded={navMenuOpen}
+                onClick={() => setNavMenuOpen((current) => !current)}
+              >
+                ☰
+              </button>
+              <div className={`topnav-links ${navMenuOpen ? 'open' : ''}`}>
+                <a
+                  href="#play"
+                  className={
+                    ['play', 'battle', 'connect'].includes(page) ? 'active' : ''
+                  }
+                >
+                  Play
+                </a>
+                <a href="#map" className={page === 'map' ? 'active' : ''}>
+                  Map editor
+                </a>
+              </div>
+            </>
           )}
-          <div className="topnav-right">
+        </div>
+
+        {/* BattlePage portals its TurnTracker in here (#136) so the turn
+            counter + End Turn button live in the menu bar instead of the
+            page body, without lifting all of BattlePage's turn state up.
+            Centered in the bar (#172) via absolute positioning so it stays
+            centered regardless of how wide the menus on either side are. */}
+        {page === 'battle' && (
+          <div id="topnav-turn-slot" className="topnav-turn-slot" />
+        )}
+
+        <div className="topnav-right">
+          <ConnectionBadge />
+          <button
+            type="button"
+            className="hamburger-btn topnav-menu-btn-right"
+            aria-label="Settings menu"
+            aria-expanded={settingsMenuOpen}
+            onClick={() => setSettingsMenuOpen((current) => !current)}
+          >
+            ☰
+          </button>
+          <div
+            className={`topnav-settings-menu ${settingsMenuOpen ? 'open' : ''}`}
+          >
             {(page === 'battle' || page === 'connect') && (
               <PlayerIdentityPicker />
             )}
-            <ConnectionBadge />
             {page === 'battle' && <EndGameButton />}
             <a href={DROPSHIP_BUILDER_URL} target="_blank" rel="noreferrer">
               Dropship Builder ↗

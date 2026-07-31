@@ -7,6 +7,7 @@ import {
   chooseBotAction,
   pickDeploymentHexes,
 } from './bot.js';
+import { hexDistance } from './hex.js';
 
 const units = [
   {
@@ -42,6 +43,16 @@ const units = [
     hp: 5,
     armor: '0/0/0/0',
   },
+  {
+    id: 5,
+    name: 'A15',
+    manufacturer: 'Corp A',
+    size: 'Small',
+    hp: 6,
+    // Uniform armor on every side so a test can ignore which side a splash
+    // template actually lands on and focus purely on the EV comparison.
+    armor: '2/2/2/2',
+  },
 ];
 
 const equipment = [
@@ -67,6 +78,14 @@ const equipment = [
     range: '6',
     heat_rating: '1/4',
     effects: 'Hits the target tile and all adjacent tiles.',
+  },
+  {
+    id: 13,
+    name: 'Backup Rifle',
+    type: 'Weapon',
+    hit_dice: '1d8',
+    range: '6',
+    heat_rating: '1/6',
   },
 ];
 
@@ -541,5 +560,135 @@ describe('chooseBotAction', () => {
       difficulty: 'tactical',
     });
     expect(result).toBeNull();
+  });
+
+  it('the expert bot holds back a shot that would overheat a weapon when a safer one is available', () => {
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 5, row: 5 },
+      equippedIds: [10, 13],
+      weaponState: {
+        // One more shot from the Long Range Bolt (generate 2, max 6) would
+        // push it to 7 heat and break it; the Backup Rifle is nowhere close.
+        0: { heat: 5, broken: false },
+        1: { heat: 0, broken: false },
+      },
+    });
+    const enemy = makeToken({
+      id: 'enemy1',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 5, row: 6 },
+      currentHp: 100,
+    });
+    const base = {
+      tokens: [bot, enemy],
+      units,
+      equipment,
+      botOwner: 'p2',
+      actionPool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+    };
+
+    // Tactical only ranks by raw expected damage, so it fires the bigger
+    // gun even though doing so breaks it.
+    expect(
+      chooseBotAction({ ...base, difficulty: 'tactical' }).instanceIndex,
+    ).toBe(0);
+
+    // Expert holds the overheating weapon back for the smaller gun that
+    // won't break itself, since neither shot secures a kill anyway.
+    expect(
+      chooseBotAction({ ...base, difficulty: 'expert' }).instanceIndex,
+    ).toBe(1);
+  });
+
+  it('the expert bot requires a bigger safety margin before a splash shot near its own tokens', () => {
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      // Far enough from the blast origin below that the bot doesn't also
+      // catch itself in the template (only the ally at (5,6) does).
+      position: { col: 5, row: 2 },
+      equippedIds: [12],
+      weaponState: { 0: { heat: 0, broken: false } },
+    });
+    const ally = makeToken({
+      id: 'ally1',
+      unitId: 5, // uniform armor 2 on every side
+      owner: 'p2',
+      position: { col: 5, row: 6 },
+    });
+    const enemy = makeToken({
+      id: 'enemy1',
+      unitId: 3, // A30, armor 0 on every side
+      owner: 'p1',
+      position: { col: 6, row: 6 },
+    });
+    const base = {
+      tokens: [bot, ally, enemy],
+      units,
+      equipment,
+      botOwner: 'p2',
+      actionPool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+    };
+
+    // Tactical only asks whether the trade is nominally favorable — the
+    // unarmored enemy takes more expected damage than the armored ally, so
+    // it fires.
+    expect(chooseBotAction({ ...base, difficulty: 'tactical' })).toMatchObject(
+      { type: 'attack', isSplash: true },
+    );
+
+    // Expert wants a clearer margin before risking a blast near its own
+    // model, so the same nominally-favorable trade isn't enough.
+    expect(chooseBotAction({ ...base, difficulty: 'expert' })).toBeNull();
+  });
+
+  it('the expert bot moves toward the most wounded nearby enemy instead of just the nearest one', () => {
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 0, row: 0 },
+      equippedIds: [11], // Chicken Legs, movement 3, no weapon
+    });
+    const nearestHealthy = makeToken({
+      id: 'enemyA',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 3, row: 0 },
+      currentHp: 10,
+    });
+    const fartherWounded = makeToken({
+      id: 'enemyB',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 0, row: 5 },
+      currentHp: 1,
+    });
+    const base = {
+      tokens: [bot, nearestHealthy, fartherWounded],
+      units,
+      equipment,
+      botOwner: 'p2',
+      actionPool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+    };
+
+    const tacticalResult = chooseBotAction({ ...base, difficulty: 'tactical' });
+    expect(
+      hexDistance(tacticalResult.destination, nearestHealthy.position),
+    ).toBeLessThan(
+      hexDistance(tacticalResult.destination, fartherWounded.position),
+    );
+
+    const expertResult = chooseBotAction({ ...base, difficulty: 'expert' });
+    expect(
+      hexDistance(expertResult.destination, fartherWounded.position),
+    ).toBeLessThan(
+      hexDistance(expertResult.destination, nearestHealthy.position),
+    );
   });
 });

@@ -73,6 +73,14 @@ const DEFAULT_TILE_TYPES = [
   { id: 'objective', name: 'Objective', color: '#f97316' },
 ];
 const DEFAULT_DIMENSIONS = { cols: 24, rows: 24 };
+// Winner-modal label for the vs-computer difficulty (#169, extended for the
+// Expert tier) — a lookup instead of a chained ternary now that there are
+// three tiers.
+const BOT_DIFFICULTY_LABELS = {
+  simple: 'Simple',
+  tactical: 'Tactical',
+  expert: 'Expert',
+};
 // Must match .battle-board-viewport's width in index.css.
 const BOARD_WIDTH = 1000;
 // .battle-board-viewport's own padding (1rem each side) + border (1px each
@@ -1780,7 +1788,7 @@ function BattlePage() {
             {gameMode === 'vs-computer' && (
               <p className="unit-meta winner-difficulty">
                 vs Computer ·{' '}
-                {botDifficulty === 'tactical' ? 'Tactical' : 'Simple'}
+                {BOT_DIFFICULTY_LABELS[botDifficulty] ?? 'Simple'}
               </p>
             )}
             <div className="card winner-summary">

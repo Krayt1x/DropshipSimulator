@@ -23,6 +23,16 @@ export function isWeaponUsable(weaponState, item) {
   return !state.broken && !(max && state.heat > max);
 }
 
+// Predicts whether firing right now would push a weapon's heat past its max
+// (breaking it for the rest of the game) — used only by the expert bot,
+// which weighs that risk instead of firing greedily like tactical does.
+function wouldOverheat(weaponState, item) {
+  const { generate, max } = parseHeatRating(item.heat_rating);
+  if (!max) return false;
+  const currentHeat = weaponState?.heat ?? 0;
+  return currentHeat + generate > max;
+}
+
 // Same "target tile and all adjacent tiles" detection BattlePage.jsx uses
 // for its own attackWeapon (#123) — duplicated here rather than shared since
 // that one lives on a derived render-time value, not an exported helper.
@@ -132,10 +142,16 @@ function findAttackOptions({ tokens, units, equipment, botOwner, difficulty }) {
           const enemyEv = ev(enemyHit);
           const friendlyEv = ev(friendlyHit);
           // Simple: fires at anything it can reach. Tactical: only pulls the
-          // trigger if it does more expected damage to enemies than to itself.
-          if (difficulty === 'simple' ? enemyHit.length === 0 : enemyEv <= friendlyEv) {
-            return;
-          }
+          // trigger if it does more expected damage to enemies than to
+          // itself. Expert wants a clearer margin before risking a blast
+          // near its own models, not just a nominally-favorable trade.
+          const rejects =
+            difficulty === 'simple'
+              ? enemyHit.length === 0
+              : difficulty === 'expert'
+                ? enemyEv <= friendlyEv * 1.5
+                : enemyEv <= friendlyEv;
+          if (rejects) return;
           options.push({
             type: 'attack',
             isSplash: true,
@@ -144,6 +160,7 @@ function findAttackOptions({ tokens, units, equipment, botOwner, difficulty }) {
             item,
             origin: enemy.position,
             ev: enemyEv - friendlyEv,
+            overheats: wouldOverheat(attacker.weaponState[instanceIndex], item),
           });
         });
       } else {
@@ -164,6 +181,7 @@ function findAttackOptions({ tokens, units, equipment, botOwner, difficulty }) {
             side: chosenSide,
             ev: expectedDamage(item, unitFor(enemy, units), chosenSide),
             targetHp: enemy.currentHp,
+            overheats: wouldOverheat(attacker.weaponState[instanceIndex], item),
           });
         });
       }
@@ -211,6 +229,24 @@ function closestToken(position, candidates) {
       ? t
       : closest;
   }, null);
+}
+
+// Tactical (and simple) always beeline for whichever enemy happens to be
+// physically closest. Expert instead looks for the most wounded enemy
+// among those roughly as close as the nearest one, so its footwork sets up
+// finishing blows instead of just closing distance to whatever body is
+// nearest.
+function chooseMoveTarget(position, enemyTokens, difficulty) {
+  const nearest = closestToken(position, enemyTokens);
+  if (difficulty !== 'expert' || !nearest) return nearest;
+  const nearestDist = hexDistance(position, nearest.position);
+  const nearbyWounded = enemyTokens.filter(
+    (t) => hexDistance(position, t.position) <= nearestDist + 2,
+  );
+  return nearbyWounded.reduce(
+    (weakest, t) => (t.currentHp < weakest.currentHp ? t : weakest),
+    nearbyWounded[0],
+  );
 }
 
 // Brings a reserve drop pod in with a spare Action die (#157, #158) — aimed
@@ -301,8 +337,8 @@ function findMoveAction({
   for (const token of myTokens) {
     const maxMove = movementForToken(token, equipment);
     if (maxMove <= 0) continue;
-    const nearestEnemy = closestToken(token.position, enemyTokens);
-    if (!nearestEnemy) continue;
+    const moveTarget = chooseMoveTarget(token.position, enemyTokens, difficulty);
+    if (!moveTarget) continue;
 
     const weapons = findUsableWeapons(token, equipment);
     const bestRange = weapons.length
@@ -310,13 +346,14 @@ function findMoveAction({
           ...weapons.map((w) => parseWeaponRange(w.item.range)?.max ?? 0),
         )
       : 0;
-    const currentDist = hexDistance(token.position, nearestEnemy.position);
+    const currentDist = hexDistance(token.position, moveTarget.position);
     if (bestRange > 0 && currentDist <= bestRange) continue;
 
-    const stopDistance = difficulty === 'tactical' && bestRange > 0 ? bestRange : 0;
+    const stopDistance =
+      difficulty !== 'simple' && bestRange > 0 ? bestRange : 0;
     const destination = stepToward(
       token.position,
-      nearestEnemy.position,
+      moveTarget.position,
       maxMove,
       stopDistance,
       isBlocked,
@@ -373,18 +410,39 @@ export function chooseBotAction({
       botOwner,
       difficulty,
     });
-    if (options.length > 0) {
+    // Expert avoids breaking a weapon on a shot that isn't worth the risk —
+    // it only considers an overheating option when nothing safer is on the
+    // table, or when that shot is itself the one that finishes the target.
+    const safeOptions =
+      difficulty === 'expert'
+        ? options.filter(
+            (o) => !o.overheats || (o.targetHp != null && o.ev >= o.targetHp),
+          )
+        : options;
+    const viable = safeOptions.length > 0 ? safeOptions : options;
+    if (viable.length > 0) {
       const chosen =
-        difficulty === 'tactical'
-          ? options.reduce((best, o) => {
+        difficulty === 'simple'
+          ? viable[0]
+          : viable.reduce((best, o) => {
               // Prefer a kill outright, otherwise the highest expected damage.
               const bestIsKill = best.targetHp != null && best.ev >= best.targetHp;
               const oIsKill = o.targetHp != null && o.ev >= o.targetHp;
               if (oIsKill && !bestIsKill) return o;
               if (bestIsKill && !oIsKill) return best;
-              return o.ev > best.ev ? o : best;
-            })
-          : options[0];
+              if (o.ev !== best.ev) return o.ev > best.ev ? o : best;
+              // Expert breaks EV ties toward whichever target is closer to
+              // death, to actually secure a kill on a future shot instead
+              // of spreading damage evenly across the enemy line.
+              if (
+                difficulty === 'expert' &&
+                o.targetHp != null &&
+                best.targetHp != null
+              ) {
+                return o.targetHp < best.targetHp ? o : best;
+              }
+              return best;
+            });
       return { ...chosen, dieId: attackDie.id };
     }
   }

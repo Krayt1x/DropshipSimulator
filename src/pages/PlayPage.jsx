@@ -182,6 +182,13 @@ function PlayPage() {
             >
               Tactical
             </button>
+            <button
+              type="button"
+              className="ghost"
+              onClick={() => chooseDifficulty('expert')}
+            >
+              Expert
+            </button>
           </div>
         </div>
       )}

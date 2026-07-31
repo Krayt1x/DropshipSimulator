@@ -120,6 +120,43 @@ describe('BattlePage', () => {
     expect(screen.getByText(`${a10Hp} / ${a10Hp}`)).toBeDefined();
   });
 
+  it('picks up a list handed off from the in-app builder, same as a pasted export (#188)', () => {
+    const a10 = units.find((u) => u.name === 'A10');
+    const weapon = equipment.find((e) => e.name === 'Long Range Bolt');
+    window.localStorage.setItem(
+      'dropshipsimulator:builder:handoff',
+      JSON.stringify({
+        id: 'handoff-1',
+        listName: 'My Built List',
+        manufacturer: 'Corp A',
+        entries: [
+          {
+            unit: a10,
+            equippedIds: [weapon.id],
+            equippedSides: ['right'],
+            label: undefined,
+          },
+        ],
+      }),
+    );
+
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    expect(
+      screen.getByText('My Built List (Corp A) — 1 unit'),
+    ).toBeDefined();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
+    );
+
+    expect(screen.getByText('Reserve (1)')).toBeDefined();
+    // The handoff is consumed once imported, so it doesn't reappear.
+    expect(
+      window.localStorage.getItem('dropshipsimulator:builder:handoff'),
+    ).toBe(JSON.stringify(null));
+  });
+
   it('adjusts HP on the selected token', () => {
     render(<BattlePage />);
     startDeploymentPhase();

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { parseRosterExport } from '../lib/rosterImport.js';
 import { OWNERS } from '../lib/tokens.js';
+import { useLocalStorageState } from '../lib/storage.js';
 
 // Exported so the vs-computer bot (BattlePage.jsx) can auto-equip itself
 // with the same quick-start list a human can load here (#single-player-vs-computer).
@@ -96,6 +97,13 @@ function RosterImport({ manufacturers, units, equipment, onImport, myPlayer }) {
   const [text, setText] = useState('');
   const [owner, setOwner] = useState(myPlayer ?? OWNERS[0].id);
   const [result, setResult] = useState(null);
+  // Written by BuilderPage.jsx's "Use this list" button (#188) so a list
+  // assembled in the in-app builder lands here the same way a pasted export
+  // would, without round-tripping through text.
+  const [handoff, setHandoff] = useLocalStorageState(
+    'dropshipsimulator:builder:handoff',
+    null,
+  );
   const ownerOptions = myPlayer
     ? OWNERS.filter((o) => o.id === myPlayer)
     : OWNERS;
@@ -103,6 +111,17 @@ function RosterImport({ manufacturers, units, equipment, onImport, myPlayer }) {
   useEffect(() => {
     if (myPlayer) setOwner(myPlayer);
   }, [myPlayer]);
+
+  useEffect(() => {
+    if (!handoff) return;
+    setText('');
+    setResult({
+      listName: handoff.listName,
+      manufacturer: handoff.manufacturer,
+      entries: handoff.entries,
+      warnings: [],
+    });
+  }, [handoff]);
 
   function parse() {
     setResult(parseRosterExport(text, { manufacturers, units, equipment }));
@@ -120,14 +139,20 @@ function RosterImport({ manufacturers, units, equipment, onImport, myPlayer }) {
     onImport({ entries: result.entries, owner });
     setText('');
     setResult(null);
+    setHandoff(null);
   }
 
   return (
     <div className="card token-form">
-      <p className="unit-name">Import roster</p>
+      <div className="reserve-header">
+        <p className="unit-name">Import roster</p>
+        <a href="#builder" className="ghost">
+          Build a list
+        </a>
+      </div>
       <p className="unit-meta">
-        Paste the text from DropshipBuilder's "Share" button on the list builder
-        page.
+        Build a list right here, or paste the text from DropshipBuilder's
+        "Share" button on the list builder page.
       </p>
 
       <div className="field">

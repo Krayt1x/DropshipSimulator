@@ -86,6 +86,13 @@ describe('App', () => {
     confirmSpy.mockRestore();
   });
 
+  it('renders the in-app list builder at #builder (#188)', () => {
+    window.location.hash = '#builder';
+    render(<App />);
+
+    expect(screen.getByText('Build your list')).toBeDefined();
+  });
+
   it('portals the turn tracker into the top menu bar and drops the battle board blurb (#136)', () => {
     window.location.hash = '#battle';
     const { container } = render(<App />);

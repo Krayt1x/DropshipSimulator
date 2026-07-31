@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import ThemeToggle from './components/ThemeToggle.jsx';
 import HomePage from './pages/HomePage.jsx';
 import PlayPage from './pages/PlayPage.jsx';
+import BuilderPage from './pages/BuilderPage.jsx';
 import MapEditorPage from './pages/MapEditorPage.jsx';
 import BattlePage from './pages/BattlePage.jsx';
 import ConnectPage from './pages/ConnectPage.jsx';
@@ -19,6 +20,7 @@ function currentPage() {
   const path = window.location.hash.split('?')[0];
   if (path === '#map') return 'map';
   if (path === '#play') return 'play';
+  if (path === '#builder') return 'builder';
   if (path === '#battle') return 'battle';
   if (path === '#connect') return 'connect';
   return 'home';
@@ -203,7 +205,9 @@ function AppShell() {
                 <a
                   href="#play"
                   className={
-                    ['play', 'battle', 'connect'].includes(page) ? 'active' : ''
+                    ['play', 'battle', 'connect', 'builder'].includes(page)
+                      ? 'active'
+                      : ''
                   }
                 >
                   Play
@@ -256,6 +260,8 @@ function AppShell() {
         <ConnectPage />
       ) : page === 'map' ? (
         <MapEditorPage />
+      ) : page === 'builder' ? (
+        <BuilderPage />
       ) : page === 'play' ? (
         <PlayPage />
       ) : (

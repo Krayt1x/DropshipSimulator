@@ -2107,6 +2107,47 @@ describe('BattlePage', () => {
     );
   });
 
+  it('deploys the bot with the roster chosen on PlayPage, not the default one (#173)', async () => {
+    window.localStorage.setItem(
+      'dropshipsimulator:gameMode',
+      JSON.stringify('vs-computer'),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:botDifficulty',
+      JSON.stringify('simple'),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:myPlayer',
+      JSON.stringify('p1'),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:botRoster',
+      JSON.stringify({ type: 'specific', name: 'Flame Chicken Spam' }),
+    );
+
+    render(<BattlePage />);
+
+    // Flame Chicken Spam is all A10s (plus a Delivery Capsule) — unlike the
+    // default roster, it has no A30 or A20.
+    await vi.waitFor(
+      () => {
+        const currentTokens = JSON.parse(
+          window.localStorage.getItem('dropshipsimulator:battle:tokens') ??
+            '[]',
+        );
+        const botTokens = currentTokens.filter((t) => t.owner === 'p2');
+        expect(botTokens.length).toBeGreaterThan(0);
+        expect(
+          botTokens.every((t) => {
+            const unit = units.find((u) => Number(u.id) === Number(t.unitId));
+            return unit?.name === 'A10' || unit?.name === 'Delivery Capsule';
+          }),
+        ).toBe(true);
+      },
+      { timeout: 15000, interval: 100 },
+    );
+  });
+
   it('does not run any bot logic in sandbox mode', async () => {
     render(<BattlePage />);
 

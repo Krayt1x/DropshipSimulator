@@ -46,11 +46,7 @@ import {
   restartBattle,
 } from '../lib/gameState.js';
 import { parseRosterExport } from '../lib/rosterImport.js';
-import {
-  chooseBotAction,
-  pickDeploymentHexes,
-  sleep,
-} from '../lib/bot.js';
+import { chooseBotAction, pickDeploymentHexes, sleep } from '../lib/bot.js';
 import { resolveDropPod } from '../lib/dropPod.js';
 import BattleBoard from '../components/BattleBoard.jsx';
 import TokenCard from '../components/TokenCard.jsx';
@@ -121,11 +117,19 @@ function BattlePage() {
   // existing behavior, control both sides) or 'vs-computer' (a bot plays
   // whichever seat `myPlayer` isn't). Local-only, never synced to a peer —
   // there's no multiplayer meaning for "am I playing a bot".
-  const [gameMode] = useLocalStorageState('dropshipsimulator:gameMode', 'sandbox');
+  const [gameMode] = useLocalStorageState(
+    'dropshipsimulator:gameMode',
+    'sandbox',
+  );
   const [botDifficulty] = useLocalStorageState(
     'dropshipsimulator:botDifficulty',
     'simple',
   );
+  // Chosen on PlayPage's roster step (#173) — which list the bot deploys:
+  // a random default roster, one picked by name, or a pasted export.
+  const [botRoster] = useLocalStorageState('dropshipsimulator:botRoster', {
+    type: 'random',
+  });
   const botOwner =
     gameMode === 'vs-computer'
       ? (OWNERS.find((o) => o.id !== myPlayer)?.id ?? null)
@@ -451,7 +455,8 @@ function BattlePage() {
   // A model at 0 chassis HP is a wreck — it can't move or attack until
   // someone clicks "Model Destroyed" (#160), same gate as TokenCard's own
   // desktop buttons.
-  const selectedTokenWrecked = Boolean(selectedToken) && selectedToken.currentHp <= 0;
+  const selectedTokenWrecked =
+    Boolean(selectedToken) && selectedToken.currentHp <= 0;
 
   // Game-end detection (#159): a player is out once they have no live,
   // deployed models left on the board — reserve units still in the wings
@@ -1478,7 +1483,9 @@ function BattlePage() {
 
     const target = freshTokens.find((t) => t.id === action.targetId);
     if (!target) return;
-    const targetUnit = units.find((u) => Number(u.id) === Number(target.unitId));
+    const targetUnit = units.find(
+      (u) => Number(u.id) === Number(target.unitId),
+    );
     const targetNumber = sizeNumber(targetUnit?.size) ?? 0;
     const sideArmor = parseArmor(targetUnit?.armor)?.[action.side] ?? 0;
     const hits = countHits(rolled.rolls, targetNumber);
@@ -1677,7 +1684,20 @@ function BattlePage() {
       (t) => t.owner === botOwner,
     );
     if (!hasBotTokens) {
-      const parsed = parseRosterExport(DEFAULT_ROSTERS[0].text, {
+      // Random and "specific by name" both resolve to one of the built-in
+      // default rosters; "import" uses the human's own pasted export
+      // instead (#173). Falls back to the first default roster if a named
+      // one can't be found (e.g. the list of defaults changed).
+      const rosterText =
+        botRoster?.type === 'import'
+          ? botRoster.text
+          : botRoster?.type === 'specific'
+            ? (DEFAULT_ROSTERS.find((r) => r.name === botRoster.name)?.text ??
+              DEFAULT_ROSTERS[0].text)
+            : DEFAULT_ROSTERS[
+                Math.floor(Math.random() * DEFAULT_ROSTERS.length)
+              ].text;
+      const parsed = parseRosterExport(rosterText, {
         units,
         manufacturers,
         equipment,

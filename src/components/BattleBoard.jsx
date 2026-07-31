@@ -20,6 +20,7 @@ function TokenMarker({
   onHover,
   peerHighlight,
   peerMoving,
+  shaking,
 }) {
   const { x, y } = hexToPixel(token.position.col, token.position.row, size);
   const radius = size * 0.62;
@@ -68,71 +69,76 @@ function TokenMarker({
         touchAction: 'none',
       }}
     >
-      <circle
-        cx={0}
-        cy={0}
-        r={radius}
-        fill={ownerColor(token.owner)}
-        stroke={selected ? '#fff' : 'rgba(0,0,0,0.35)'}
-        strokeWidth={selected ? 3 : 1.5}
-      />
-      {peerHighlight && (
+      {/* A CSS transform on this same <g> would replace (not add to) the
+          translate(x,y) attribute above, so the shake-on-hit animation
+          (#183) lives on this inner group instead. */}
+      <g className={shaking ? 'token-hit-shake' : undefined}>
         <circle
-          className={
-            peerMoving
-              ? 'peer-focus-ring peer-focus-ring-moving'
-              : 'peer-focus-ring'
-          }
           cx={0}
           cy={0}
-          r={radius + 6}
-          fill="none"
-          stroke={peerHighlight}
-          strokeWidth={2.5}
-          strokeDasharray="5 4"
+          r={radius}
+          fill={ownerColor(token.owner)}
+          stroke={selected ? '#fff' : 'rgba(0,0,0,0.35)'}
+          strokeWidth={selected ? 3 : 1.5}
         />
-      )}
-      <polygon
-        points="0,-8 6,4 -6,4"
-        fill="#fff"
-        transform={`rotate(${angle}) translate(0,${-radius})`}
-      />
-      <text
-        x={0}
-        y={2}
-        textAnchor="middle"
-        fontSize={size * 0.32}
-        fontWeight="700"
-        fill="#fff"
-      >
-        {initials}
-      </text>
-      <rect
-        x={-barWidth / 2}
-        y={barY}
-        width={barWidth}
-        height={4}
-        rx={2}
-        fill="rgba(0,0,0,0.25)"
-      />
-      <rect
-        x={-barWidth / 2}
-        y={barY}
-        width={barWidth * hpFraction}
-        height={4}
-        rx={2}
-        fill={healthBarColor(hpFraction)}
-      />
-      <text
-        x={0}
-        y={radius + 20}
-        textAnchor="middle"
-        fontSize={size * 0.28}
-        fontWeight="600"
-        fill={token.currentHp <= 0 ? '#dc2626' : 'var(--text-primary)'}
-      >
-        {token.currentHp}/{unit?.hp ?? '?'}
-      </text>
+        {peerHighlight && (
+          <circle
+            className={
+              peerMoving
+                ? 'peer-focus-ring peer-focus-ring-moving'
+                : 'peer-focus-ring'
+            }
+            cx={0}
+            cy={0}
+            r={radius + 6}
+            fill="none"
+            stroke={peerHighlight}
+            strokeWidth={2.5}
+            strokeDasharray="5 4"
+          />
+        )}
+        <polygon
+          points="0,-8 6,4 -6,4"
+          fill="#fff"
+          transform={`rotate(${angle}) translate(0,${-radius})`}
+        />
+        <text
+          x={0}
+          y={2}
+          textAnchor="middle"
+          fontSize={size * 0.32}
+          fontWeight="700"
+          fill="#fff"
+        >
+          {initials}
+        </text>
+        <rect
+          x={-barWidth / 2}
+          y={barY}
+          width={barWidth}
+          height={4}
+          rx={2}
+          fill="rgba(0,0,0,0.25)"
+        />
+        <rect
+          x={-barWidth / 2}
+          y={barY}
+          width={barWidth * hpFraction}
+          height={4}
+          rx={2}
+          fill={healthBarColor(hpFraction)}
+        />
+        <text
+          x={0}
+          y={radius + 20}
+          textAnchor="middle"
+          fontSize={size * 0.28}
+          fontWeight="600"
+          fill={token.currentHp <= 0 ? '#dc2626' : 'var(--text-primary)'}
+        >
+          {token.currentHp}/{unit?.hp ?? '?'}
+        </text>
+      </g>
     </g>
   );
 }
@@ -172,6 +178,72 @@ function DeploySmoke({ position, size }) {
   );
 }
 
+// A few "things" travel from attacker to target when a weapon fires (#183) —
+// BattlePage precomputes each bolt's lane offset/delay (with a little
+// randomness) and the overall length, so this just draws whatever it's
+// handed. Fire-tagged weapons get flame shapes instead of the plain tracer.
+function FireBolts({ effect, size }) {
+  const from = hexToPixel(effect.origin.col, effect.origin.row, size);
+  const to = hexToPixel(effect.target.col, effect.target.row, size);
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const dist = Math.hypot(dx, dy);
+  const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+  const length = effect.length * size;
+
+  return (
+    <g
+      className="fire-bolts"
+      transform={`translate(${from.x},${from.y}) rotate(${angle})`}
+    >
+      {effect.bolts.map((bolt, i) => (
+        // The lane offset is a plain attribute transform on this wrapper so
+        // the travel animation's CSS transform (on the child below) doesn't
+        // clobber it — same reasoning as TokenMarker's shake wrapper.
+        <g key={i} transform={`translate(0, ${bolt.lane * size})`}>
+          {effect.isFire ? (
+            <g
+              className="fire-bolt-flame"
+              style={{
+                '--travel': `${dist}px`,
+                animationDelay: `${bolt.delay}ms`,
+              }}
+            >
+              <g className="fire-flame-flicker">
+                <ellipse
+                  cx={length * 0.45}
+                  rx={length * 0.5}
+                  ry={length * 0.32}
+                  fill="#dc2626"
+                />
+                <ellipse
+                  cx={length * 0.62}
+                  rx={length * 0.28}
+                  ry={length * 0.17}
+                  fill="#fb923c"
+                />
+              </g>
+            </g>
+          ) : (
+            <rect
+              className="fire-bolt-tracer"
+              style={{
+                '--travel': `${dist}px`,
+                animationDelay: `${bolt.delay}ms`,
+              }}
+              x={0}
+              y={-(size * 0.045)}
+              width={length}
+              height={size * 0.09}
+              rx={size * 0.045}
+            />
+          )}
+        </g>
+      ))}
+    </g>
+  );
+}
+
 // Shared by both the local weapon-range highlight and the peer's (#135) —
 // same "is this hex within range and arc" test, just against whichever range
 // spec is passed in.
@@ -196,6 +268,8 @@ function BattleBoard({
   units,
   animatingToken,
   deployEffect,
+  fireEffect,
+  shakingTokenIds,
   selectedTokenId,
   rangeOrigin,
   weaponRange,
@@ -335,6 +409,7 @@ function BattleBoard({
               size={size}
               selected={token.id === selectedTokenId}
               draggable={canControl ? canControl(token) : true}
+              shaking={Boolean(shakingTokenIds?.includes(token.id))}
               onSelect={() =>
                 onHexClick(`${token.position.col},${token.position.row}`)
               }
@@ -349,6 +424,7 @@ function BattleBoard({
             />
           );
         })}
+      {fireEffect && <FireBolts effect={fireEffect} size={size} />}
     </svg>
   );
 }

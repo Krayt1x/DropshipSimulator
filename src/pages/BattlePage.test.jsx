@@ -1105,6 +1105,113 @@ describe('BattlePage', () => {
     }
   });
 
+  it('fires a tracer-bolt volley sized to the hit dice, and shakes the target once damage lands (#183)', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const { container } = render(<BattlePage />);
+    startDeploymentPhase();
+
+    // Long Range Bolt is 2d8 and carries no fire tag, so this should draw
+    // exactly 2 grey tracer bolts, never a flame.
+    importA10ToReserve(['  Right: Long Range Bolt']);
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: [
+          'Test List (Corp A)',
+          'Weight: 20t / 100t',
+          '',
+          'A20 - 20t',
+          '  Right: Long Range Bolt',
+        ].join('\n'),
+      },
+    });
+    const importPanel = screen
+      .getByRole('button', { name: 'Preview import' })
+      .closest('.token-form');
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(
+      within(importPanel).getByRole('button', { name: 'Player 2' }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+    expandDiceRoller();
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'A20' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-4,6'));
+
+    expect(container.querySelectorAll('.token-hit-shake')).toHaveLength(0);
+
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    fireEvent.click(screen.getByTestId('hex-4,6'));
+    fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll to Hit' }));
+
+    expect(container.querySelectorAll('.fire-bolt-tracer')).toHaveLength(2);
+    expect(container.querySelectorAll('.fire-bolt-flame')).toHaveLength(0);
+    // Not yet shaking — the model only shakes once damage is actually applied.
+    expect(container.querySelectorAll('.token-hit-shake')).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply damage' }));
+    expect(container.querySelectorAll('.token-hit-shake')).toHaveLength(1);
+  });
+
+  it('shows flames instead of tracer bolts for a fire-tagged weapon (#183)', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const { container } = render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve(['  Right: Flame Thrower']);
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: [
+          'Test List (Corp A)',
+          'Weight: 20t / 100t',
+          '',
+          'A20 - 20t',
+          '  Right: Long Range Bolt',
+        ].join('\n'),
+      },
+    });
+    const importPanel = screen
+      .getByRole('button', { name: 'Preview import' })
+      .closest('.token-form');
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(
+      within(importPanel).getByRole('button', { name: 'Player 2' }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+    expandDiceRoller();
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'A20' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-4,6'));
+
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    fireEvent.click(screen.getByTestId('hex-4,6'));
+    fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll to Hit' }));
+
+    expect(container.querySelectorAll('.fire-bolt-flame').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('.fire-bolt-tracer')).toHaveLength(0);
+  });
+
   it('shakes the attack modal when a roll lands damage, but not on a miss (#161)', () => {
     render(<BattlePage />);
     startDeploymentPhase();

@@ -205,6 +205,19 @@ function BattlePage() {
     'dropshipsimulator:battle:deployEffect',
     null,
   );
+  // The travelling-projectile effect (#183) — bolts (or flames, for a
+  // fire-tagged weapon) shown moving from attacker to target when a weapon
+  // fires, plus which token(s) are currently shaking from a landed hit.
+  const [fireEffect, setFireEffect] = useSyncedTransientState(
+    'dropshipsimulator:battle:fireEffect',
+    null,
+  );
+  const fireEffectTimeoutRef = useRef(null);
+  const [shakeEffect, setShakeEffect] = useSyncedTransientState(
+    'dropshipsimulator:battle:shakeEffect',
+    null,
+  );
+  const shakeEffectTimeoutRef = useRef(null);
   const deployEffectTimeoutRef = useRef(null);
   const [turnNotice, setTurnNotice] = useSyncedTransientState(
     'dropshipsimulator:battle:turnNotice',
@@ -270,6 +283,62 @@ function BattlePage() {
     deployEffectTimeoutRef.current = setTimeout(
       () => setDeployEffect(null),
       DEPLOY_SMOKE_DURATION_MS,
+    );
+  }
+
+  useEffect(() => {
+    return () => clearTimeout(fireEffectTimeoutRef.current);
+  }, []);
+  useEffect(() => {
+    return () => clearTimeout(shakeEffectTimeoutRef.current);
+  }, []);
+
+  const FIRE_EFFECT_DURATION_MS = 900;
+  const SHAKE_DURATION_MS = 350;
+
+  // A few grey tracer bolts (or flame puffs, for a fire-tagged weapon)
+  // travel from attacker to target when a weapon fires (#183). Count comes
+  // from the hit dice count, length from the die's sides — 2d8 shows fewer,
+  // longer bolts than 4d4's more, shorter ones — with a little randomness
+  // per bolt (lane offset + timing) baked in here so a volley reads as a
+  // ragged burst rather than one rigid line.
+  function triggerFireEffect(originPos, targetPos, item) {
+    if (!originPos || !targetPos) return;
+    const parsed = parseHitDice(item?.hit_dice);
+    const count = parsed ? Math.max(1, Math.min(parsed.count, 6)) : 1;
+    const sides = parsed ? Number(parsed.dieId.slice(1)) : 6;
+    const isFire = itemHasTag(item, 'fire');
+    const length = 0.22 + sides * 0.03;
+    const bolts = Array.from({ length: count }, (_, i) => ({
+      lane: (i - (count - 1) / 2) * 0.18 + (Math.random() - 0.5) * 0.14,
+      delay: i * (isFire ? 90 : 70) + Math.random() * 70,
+    }));
+    clearTimeout(fireEffectTimeoutRef.current);
+    setFireEffect({
+      id: makeKey('fire'),
+      origin: originPos,
+      target: targetPos,
+      isFire,
+      length,
+      bolts,
+    });
+    fireEffectTimeoutRef.current = setTimeout(
+      () => setFireEffect(null),
+      FIRE_EFFECT_DURATION_MS,
+    );
+  }
+
+  // The hit model(s) shake briefly once damage actually lands (#183) — a
+  // miss or a fully-absorbed hit isn't worth calling out, matching the
+  // attack modal's own "only shake on landed damage" rule (#161).
+  function triggerShake(tokenIds) {
+    const ids = tokenIds.filter(Boolean);
+    if (ids.length === 0) return;
+    clearTimeout(shakeEffectTimeoutRef.current);
+    setShakeEffect({ id: makeKey('shake'), tokenIds: ids });
+    shakeEffectTimeoutRef.current = setTimeout(
+      () => setShakeEffect(null),
+      SHAKE_DURATION_MS,
     );
   }
   const [viewportHeight, setViewportHeight] = useState(
@@ -812,6 +881,11 @@ function BattlePage() {
     appendLog(
       `${unitName(attacker)}'s ${attackWeapon.item.name} rolled ${rolled.rolls.join(', ')} vs ${unitName(attackTargetToken)}'s ${attackTarget.side} (TN ${attackTargetNumber}) → ${hits} hit${hits === 1 ? '' : 's'}`,
     );
+    triggerFireEffect(
+      attacker.position,
+      attackTargetToken.position,
+      attackWeapon.item,
+    );
   }
 
   // Shared by both the single-target attack flow and the splash flow
@@ -927,6 +1001,7 @@ function BattlePage() {
       attackResult.damage,
       attackWeapon?.item,
     );
+    if (attackResult.damage > 0) triggerShake([attackTargetToken.id]);
     cancelAttack();
   }
 
@@ -983,6 +1058,7 @@ function BattlePage() {
     appendLog(
       `${unitName(attacker)}'s ${attackWeapon.item.name} hit the blast template at (${attackOrigin.col}, ${attackOrigin.row}), rolling ${rolled.rolls.join(', ')} against ${perTarget.length} target${perTarget.length === 1 ? '' : 's'}`,
     );
+    triggerFireEffect(attacker.position, attackOrigin, attackWeapon.item);
   }
 
   function applySplashDamage() {
@@ -991,6 +1067,11 @@ function BattlePage() {
       const token = tokens.find((t) => t.id === tokenId);
       if (token) applyDamageToToken(token, side, damage, attackWeapon?.item);
     });
+    triggerShake(
+      attackResult.perTarget
+        .filter(({ damage }) => damage > 0)
+        .map(({ tokenId }) => tokenId),
+    );
     cancelAttack();
   }
 
@@ -2105,6 +2186,8 @@ function BattlePage() {
                 units={units}
                 animatingToken={animatingToken}
                 deployEffect={deployEffect}
+                fireEffect={fireEffect}
+                shakingTokenIds={shakeEffect?.tokenIds ?? null}
                 selectedTokenId={selectedTokenId}
                 rangeOrigin={selectedToken?.position ?? null}
                 weaponRange={weaponRange}

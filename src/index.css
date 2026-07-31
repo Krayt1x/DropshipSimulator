@@ -478,6 +478,106 @@ button.danger:hover {
   }
 }
 
+/* Weapon-fire visual effect (#183): a few grey tracer bolts travel from
+   attacker to target when a weapon fires — fewer, larger bolts for a
+   bigger-sided die (e.g. 2d8) and more, smaller ones for a smaller-sided die
+   (e.g. 4d4), per-bolt lane/timing jitter baked into BattleBoard's fireEffect
+   prop rather than here. Fire-tagged weapons animate flame puffs along the
+   same path instead. */
+.fire-bolts {
+  pointer-events: none;
+}
+
+.fire-bolt-tracer {
+  fill: #78716c;
+  animation: fire-bolt-travel var(--fire-duration, 380ms)
+    cubic-bezier(0.3, 0.05, 0.25, 1) forwards;
+}
+
+@keyframes fire-bolt-travel {
+  0% {
+    transform: translateX(0) scaleX(0.4);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  80% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateX(var(--travel)) scaleX(1);
+    opacity: 0;
+  }
+}
+
+.fire-bolt-flame {
+  animation: fire-flame-travel var(--fire-duration, 480ms) ease-in forwards;
+}
+
+@keyframes fire-flame-travel {
+  0% {
+    transform: translateX(0) scale(0.6);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(var(--travel)) scale(1);
+    opacity: 0.95;
+  }
+}
+
+.fire-flame-flicker {
+  animation: fire-flame-flicker 140ms ease-in-out infinite alternate;
+}
+
+@keyframes fire-flame-flicker {
+  from {
+    transform: scale(1, 1);
+  }
+  to {
+    transform: scale(1.12, 0.88);
+  }
+}
+
+/* The hit model shakes briefly once damage actually lands (#183) — nested
+   inside .token-marker's own attribute-based translate(x,y) positioning
+   rather than applied to it directly, since a CSS transform on the same
+   element would replace that positioning instead of adding to it. */
+@keyframes token-hit-shake {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(-2px, 1px);
+  }
+  40% {
+    transform: translate(2px, -1px);
+  }
+  60% {
+    transform: translate(-1.5px, 1px);
+  }
+  80% {
+    transform: translate(1.5px, -1px);
+  }
+}
+
+.token-hit-shake {
+  animation: token-hit-shake 320ms ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fire-bolt-tracer,
+  .fire-bolt-flame,
+  .fire-flame-flicker,
+  .token-hit-shake {
+    animation: none;
+  }
+}
+
 /* Toast announcing whose turn it now is (#131). */
 .turn-toast {
   position: fixed;

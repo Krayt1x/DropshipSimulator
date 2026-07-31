@@ -4,6 +4,7 @@ import {
   hasLineOfSight,
   isMovementPathBlocked,
   objectiveHexesFrom,
+  mergeDefaultTerrainTypes,
 } from './terrain.js';
 
 const terrainTypes = DEFAULT_TERRAIN_TYPES;
@@ -148,5 +149,49 @@ describe('objectiveHexesFrom', () => {
 
   it('returns an empty array when there are no objective tiles', () => {
     expect(objectiveHexesFrom({ '1,1': 'plain' }, terrainTypes)).toEqual([]);
+  });
+});
+
+describe('mergeDefaultTerrainTypes', () => {
+  it('adds back a built-in missing from an older or edited palette (#194)', () => {
+    const stale = DEFAULT_TERRAIN_TYPES.filter((t) => t.id !== 'objective');
+    const merged = mergeDefaultTerrainTypes(stale);
+    expect(merged.find((t) => t.id === 'objective')).toEqual(
+      DEFAULT_TERRAIN_TYPES.find((t) => t.id === 'objective'),
+    );
+    expect(merged).toHaveLength(DEFAULT_TERRAIN_TYPES.length);
+  });
+
+  it('leaves the list untouched when nothing is missing', () => {
+    expect(mergeDefaultTerrainTypes(DEFAULT_TERRAIN_TYPES)).toBe(
+      DEFAULT_TERRAIN_TYPES,
+    );
+  });
+
+  it('preserves a custom terrain type and a user edit to an existing built-in', () => {
+    const edited = DEFAULT_TERRAIN_TYPES.map((t) =>
+      t.id === 'water' ? { ...t, color: '#000000' } : t,
+    );
+    const withCustom = [
+      ...edited,
+      { id: 'rubble', name: 'Rubble', color: '#888', blocksMovement: false },
+    ];
+    const merged = mergeDefaultTerrainTypes(withCustom);
+    expect(merged.find((t) => t.id === 'water').color).toBe('#000000');
+    expect(merged.find((t) => t.id === 'rubble')).toBeDefined();
+    expect(merged).toHaveLength(DEFAULT_TERRAIN_TYPES.length + 1);
+  });
+
+  it('rebuilds the full default set from a completely empty palette', () => {
+    expect(mergeDefaultTerrainTypes([])).toEqual(DEFAULT_TERRAIN_TYPES);
+  });
+});
+
+describe('DEFAULT_TERRAIN_TYPES objective entry (#194)', () => {
+  it('blocks both line of sight and movement, in addition to granting VP', () => {
+    const objective = DEFAULT_TERRAIN_TYPES.find((t) => t.id === 'objective');
+    expect(objective.blocksLineOfSight).toBe(true);
+    expect(objective.blocksMovement).toBe(true);
+    expect(objective.isObjective).toBe(true);
   });
 });

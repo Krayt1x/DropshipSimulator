@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocalStorageState, makeKey } from '../lib/storage.js';
 import { backgroundContainerStyle } from '../lib/mapBackground.js';
-import { DEFAULT_TERRAIN_TYPES } from '../lib/terrain.js';
+import {
+  DEFAULT_TERRAIN_TYPES,
+  mergeDefaultTerrainTypes,
+} from '../lib/terrain.js';
 import HexGrid from '../components/HexGrid.jsx';
 import TilePalette from '../components/TilePalette.jsx';
 import BackgroundPicker from '../components/BackgroundPicker.jsx';
@@ -31,6 +34,12 @@ function MapEditorPage() {
     'dropshipsimulator:mapEditor:tileTypes',
     DEFAULT_TERRAIN_TYPES,
   );
+  // Restores any built-in terrain type missing from an older or edited
+  // palette (#194) — see mergeDefaultTerrainTypes for why this can't just
+  // live in the useLocalStorageState call above.
+  useEffect(() => {
+    setTileTypes((current) => mergeDefaultTerrainTypes(current));
+  }, [setTileTypes]);
   const [dimensions, setDimensions] = useLocalStorageState(
     'dropshipsimulator:mapEditor:dimensions',
     DEFAULT_DIMENSIONS,

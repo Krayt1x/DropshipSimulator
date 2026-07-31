@@ -41,11 +41,25 @@ export const DEFAULT_TERRAIN_TYPES = [
     id: 'objective',
     name: 'Objective',
     color: '#f97316',
-    blocksLineOfSight: false,
-    blocksMovement: false,
+    blocksLineOfSight: true,
+    blocksMovement: true,
     isObjective: true,
   },
 ];
+
+// A browser whose saved terrain types predate one of the built-ins above
+// (or that had one deleted from the Map Editor's palette) would otherwise
+// never see it again, since useLocalStorageState's initial value only
+// applies when the key is completely unset (#194). Called once on mount by
+// both MapEditorPage and BattlePage, this adds back any built-in missing by
+// id, leaving everything else — including a user's own edits to a built-in
+// that's still present, and any custom terrain types they've added — alone.
+export function mergeDefaultTerrainTypes(current) {
+  const existingIds = new Set((current ?? []).map((t) => t.id));
+  const missing = DEFAULT_TERRAIN_TYPES.filter((t) => !existingIds.has(t.id));
+  if (missing.length === 0) return current;
+  return [...(current ?? []), ...missing];
+}
 
 // Terrain types saved before #178 (or added since without the checkboxes
 // ticked) won't have these flags at all — default every one of them to false

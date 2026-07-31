@@ -39,6 +39,7 @@ import {
   DEFAULT_TERRAIN_TYPES,
   hasLineOfSight,
   isMovementPathBlocked,
+  mergeDefaultTerrainTypes,
 } from '../lib/terrain.js';
 import { computeObjectiveVp } from '../lib/victory.js';
 import {
@@ -110,10 +111,16 @@ const ZOOM_STEP = 0.25;
 const PAN_DRAG_THRESHOLD = 5;
 
 function BattlePage() {
-  const [tileTypes] = useLocalStorageState(
+  const [tileTypes, setTileTypes] = useLocalStorageState(
     'dropshipsimulator:mapEditor:tileTypes',
     DEFAULT_TERRAIN_TYPES,
   );
+  // Restores any built-in terrain type missing from an older or edited
+  // palette (#194) — see mergeDefaultTerrainTypes for why this can't just
+  // live in the useLocalStorageState call above.
+  useEffect(() => {
+    setTileTypes((current) => mergeDefaultTerrainTypes(current));
+  }, [setTileTypes]);
   const [dimensions] = useLocalStorageState(
     'dropshipsimulator:mapEditor:dimensions',
     DEFAULT_DIMENSIONS,

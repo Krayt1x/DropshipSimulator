@@ -6,6 +6,22 @@ beforeEach(() => window.localStorage.clear());
 afterEach(cleanup);
 
 describe('MapEditorPage', () => {
+  it('restores a built-in terrain type an older save is missing, on load (#194)', () => {
+    window.localStorage.setItem(
+      'dropshipsimulator:mapEditor:tileTypes',
+      JSON.stringify([
+        { id: 'plain', name: 'Plain', color: '#78716c' },
+        { id: 'buildings', name: 'Buildings', color: '#9ca3af' },
+      ]),
+    );
+
+    render(<MapEditorPage />);
+
+    expect(screen.getByRole('button', { name: 'Forest' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Water' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Objective' })).toBeDefined();
+  });
+
   it('paints a hex with the selected terrain type', () => {
     render(<MapEditorPage />);
 

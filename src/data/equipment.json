@@ -44,7 +44,11 @@
     "name": "Artillery",
     "manufacturer": "Corp A",
     "type": "Weapon",
-    "effects": "Attack rolls are made against the target tile and all adjacent tiles",
+    "effects": "",
+    "effect_stats": [
+      { "stat": "tags", "amount": "Indirect Fire" },
+      { "stat": "tags", "amount": "Splash" }
+    ],
     "weight": 3,
     "size": "Medium",
     "range": "3-9",
@@ -126,7 +130,8 @@
     "name": "Flame Thrower",
     "manufacturer": "Corp A",
     "type": "Weapon",
-    "effects": "Damage is applied as heat",
+    "effects": "",
+    "effect_stats": [{ "stat": "tags", "amount": "Fire" }],
     "weight": 1,
     "size": "Small",
     "range": "3",

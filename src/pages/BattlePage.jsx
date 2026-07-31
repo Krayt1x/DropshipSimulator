@@ -2010,94 +2010,45 @@ function BattlePage() {
       )}
 
       <div className="battle-layout">
-        <div
-          className={`mobile-tab-panel ${mobileTab === 'units' ? 'mobile-tab-panel-active' : ''}`}
-        >
-          {/* Starting deployment happens from here on mobile (#145) — it's
-              where Reserve units are managed, so it's the natural place to
-              re-open deployment for reinforcements. Ending it stays on the
-              Board tab (see the action toolbar below), since that's where
-              you're looking once everything's placed. */}
-          {isMobile && !deploymentPhase && (
-            <button
-              type="button"
-              className="mobile-deploy-phase-btn-units"
-              disabled={!deploymentZonesValid}
-              onClick={() => setDeploymentPhase(true)}
-            >
-              Deploy Phase
-            </button>
-          )}
-          {/* On mobile this instead becomes an "Import" tab inside the
-              Reserve/Roster card below (#146), rather than its own block
-              taking up space above it. */}
-          {!isMobile && rosterImportPanel}
-          {selectedToken && !deploymentPhase && (
-            <TokenCard
-              key={selectedToken.id}
-              token={selectedToken}
-              unit={selectedUnit}
-              equipment={equipment}
-              moving={
-                movingTokenId === selectedToken.id ||
-                dropPodArmed === selectedToken.id
-              }
-              canControl={canControl(selectedToken)}
-              onAdjustHp={adjustHp}
-              onRotate={rotate}
-              onArmMove={() =>
-                setMovingTokenId((current) =>
-                  current === selectedToken.id ? null : selectedToken.id,
-                )
-              }
-              onSetHeat={setHeat}
-              onSetWeaponHp={setWeaponHp}
-              onToggleBroken={toggleBroken}
-              onRollHitDice={rollHitDice}
-              activeRangeIndex={
-                rangeWeapon?.tokenId === selectedToken.id
-                  ? rangeWeapon.instanceIndex
-                  : null
-              }
-              onToggleRange={toggleWeaponRange}
-              onStartAttack={startAttack}
-              activeAttackIndex={
-                attackWeapon?.tokenId === selectedToken.id
-                  ? attackWeapon.instanceIndex
-                  : null
-              }
-              onDestroy={destroySelected}
-              onReturnToReserve={returnSelectedToReserve}
-              onDeselect={() => setSelectedTokenId(null)}
-              deploymentPhase={deploymentPhase}
-              hasActionDie={hasUnusedActionDie()}
-              onArmDropPod={() => armDropPod(selectedToken.id)}
-              hasMoveDie={hasMoveDie}
-              hasAttackDie={hasAttackDie}
+        <div>
+          <div
+            className={`mobile-tab-panel ${mobileTab === 'dice' ? 'mobile-tab-panel-active' : ''}`}
+          >
+            <DiceRoller
+              ref={diceRollerRef}
+              onRoll={handleDiceRoll}
+              actionPool={actionPool}
+              onRollToActionPool={rollToActionPool}
+              onUseActionPoolDie={useActionPoolDie}
+              onExchangeActionDice={exchangeActionDie}
+              activeOwnerDice={activeOwnerDice}
+              canRoll={!myPlayer || myPlayer === turn.active}
+              turn={turn}
             />
-          )}
-          <ReserveRosterPanel
-            reserveTokens={reserveTokens}
-            allTokens={tokens}
-            units={units}
-            myPlayer={myPlayer}
-            selectedTokenId={selectedTokenId}
-            canControl={canControl}
-            onSelect={setSelectedTokenId}
-            onDeploy={deployFromReserve}
-            importPanel={isMobile ? rosterImportPanel : null}
-            deploymentPhase={deploymentPhase}
-            hasActionDie={hasUnusedActionDie()}
-            onDropPod={armDropPod}
-          />
-          <DestroyedList
-            tokens={destroyedTokens}
-            units={units}
-            selectedTokenId={selectedTokenId}
-            canControl={canControl}
-            onSelect={setSelectedTokenId}
-            onReturnToReserve={returnDestroyedToReserve}
-          />
+          </div>
+          <div
+            className={`mobile-tab-panel ${mobileTab === 'log' ? 'mobile-tab-panel-active' : ''}`}
+          >
+            <TurnOrder />
+            <div className="card">
+              <button
+                type="button"
+                className="ghost"
+                style={{ width: '100%' }}
+                disabled={!lastAction}
+                onClick={undoLastAction}
+              >
+                {lastAction?.type === 'rollToPool'
+                  ? 'Undo dice roll'
+                  : lastAction?.type === 'useDie'
+                    ? 'Undo used die'
+                    : lastAction?.type === 'exchange'
+                      ? 'Undo exchange'
+                      : 'Undo last move'}
+              </button>
+            </div>
+            <GameLog entries={logEntries} />
+          </div>
         </div>
         <div
           className={`battle-board-column mobile-tab-panel ${mobileTab === 'board' ? 'mobile-tab-panel-active' : ''}`}
@@ -2360,45 +2311,94 @@ function BattlePage() {
             )}
           </div>
         </div>
-        <div>
-          <div
-            className={`mobile-tab-panel ${mobileTab === 'dice' ? 'mobile-tab-panel-active' : ''}`}
-          >
-            <DiceRoller
-              ref={diceRollerRef}
-              onRoll={handleDiceRoll}
-              actionPool={actionPool}
-              onRollToActionPool={rollToActionPool}
-              onUseActionPoolDie={useActionPoolDie}
-              onExchangeActionDice={exchangeActionDie}
-              activeOwnerDice={activeOwnerDice}
-              canRoll={!myPlayer || myPlayer === turn.active}
-              turn={turn}
+        <div
+          className={`mobile-tab-panel ${mobileTab === 'units' ? 'mobile-tab-panel-active' : ''}`}
+        >
+          {/* Starting deployment happens from here on mobile (#145) — it's
+              where Reserve units are managed, so it's the natural place to
+              re-open deployment for reinforcements. Ending it stays on the
+              Board tab (see the action toolbar below), since that's where
+              you're looking once everything's placed. */}
+          {isMobile && !deploymentPhase && (
+            <button
+              type="button"
+              className="mobile-deploy-phase-btn-units"
+              disabled={!deploymentZonesValid}
+              onClick={() => setDeploymentPhase(true)}
+            >
+              Deploy Phase
+            </button>
+          )}
+          {/* On mobile this instead becomes an "Import" tab inside the
+              Reserve/Roster card below (#146), rather than its own block
+              taking up space above it. */}
+          {!isMobile && rosterImportPanel}
+          {selectedToken && !deploymentPhase && (
+            <TokenCard
+              key={selectedToken.id}
+              token={selectedToken}
+              unit={selectedUnit}
+              equipment={equipment}
+              moving={
+                movingTokenId === selectedToken.id ||
+                dropPodArmed === selectedToken.id
+              }
+              canControl={canControl(selectedToken)}
+              onAdjustHp={adjustHp}
+              onRotate={rotate}
+              onArmMove={() =>
+                setMovingTokenId((current) =>
+                  current === selectedToken.id ? null : selectedToken.id,
+                )
+              }
+              onSetHeat={setHeat}
+              onSetWeaponHp={setWeaponHp}
+              onToggleBroken={toggleBroken}
+              onRollHitDice={rollHitDice}
+              activeRangeIndex={
+                rangeWeapon?.tokenId === selectedToken.id
+                  ? rangeWeapon.instanceIndex
+                  : null
+              }
+              onToggleRange={toggleWeaponRange}
+              onStartAttack={startAttack}
+              activeAttackIndex={
+                attackWeapon?.tokenId === selectedToken.id
+                  ? attackWeapon.instanceIndex
+                  : null
+              }
+              onDestroy={destroySelected}
+              onReturnToReserve={returnSelectedToReserve}
+              onDeselect={() => setSelectedTokenId(null)}
+              deploymentPhase={deploymentPhase}
+              hasActionDie={hasUnusedActionDie()}
+              onArmDropPod={() => armDropPod(selectedToken.id)}
+              hasMoveDie={hasMoveDie}
+              hasAttackDie={hasAttackDie}
             />
-          </div>
-          <div
-            className={`mobile-tab-panel ${mobileTab === 'log' ? 'mobile-tab-panel-active' : ''}`}
-          >
-            <TurnOrder />
-            <div className="card">
-              <button
-                type="button"
-                className="ghost"
-                style={{ width: '100%' }}
-                disabled={!lastAction}
-                onClick={undoLastAction}
-              >
-                {lastAction?.type === 'rollToPool'
-                  ? 'Undo dice roll'
-                  : lastAction?.type === 'useDie'
-                    ? 'Undo used die'
-                    : lastAction?.type === 'exchange'
-                      ? 'Undo exchange'
-                      : 'Undo last move'}
-              </button>
-            </div>
-            <GameLog entries={logEntries} />
-          </div>
+          )}
+          <ReserveRosterPanel
+            reserveTokens={reserveTokens}
+            allTokens={tokens}
+            units={units}
+            myPlayer={myPlayer}
+            selectedTokenId={selectedTokenId}
+            canControl={canControl}
+            onSelect={setSelectedTokenId}
+            onDeploy={deployFromReserve}
+            importPanel={isMobile ? rosterImportPanel : null}
+            deploymentPhase={deploymentPhase}
+            hasActionDie={hasUnusedActionDie()}
+            onDropPod={armDropPod}
+          />
+          <DestroyedList
+            tokens={destroyedTokens}
+            units={units}
+            selectedTokenId={selectedTokenId}
+            canControl={canControl}
+            onSelect={setSelectedTokenId}
+            onReturnToReserve={returnDestroyedToReserve}
+          />
         </div>
       </div>
       <MobileTabBar activeTab={mobileTab} onSelectTab={setMobileTab} />

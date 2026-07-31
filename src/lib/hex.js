@@ -95,6 +95,32 @@ export function hexLine(a, b) {
   return steps;
 }
 
+// BFS over hex neighbors out to maxSteps, stopping at whatever isBlocked
+// rejects — the actual set of hexes a model can reach, respecting terrain
+// and occupancy, rather than the raw hex-distance disc a plain radius check
+// would give (#196). The origin itself is always included (you start there
+// regardless of what's under you, matching isMovementPathBlocked's own
+// convention) and never passed to isBlocked.
+export function reachableHexes(origin, maxSteps, isBlocked) {
+  const originKey = tileKey(origin.col, origin.row);
+  const visited = new Set([originKey]);
+  let frontier = [origin];
+  for (let step = 0; step < maxSteps && frontier.length > 0; step++) {
+    const next = [];
+    for (const hex of frontier) {
+      for (let dir = 0; dir < 6; dir++) {
+        const candidate = neighborHex(hex.col, hex.row, dir);
+        const key = tileKey(candidate.col, candidate.row);
+        if (visited.has(key) || isBlocked?.(candidate)) continue;
+        visited.add(key);
+        next.push(candidate);
+      }
+    }
+    frontier = next;
+  }
+  return visited;
+}
+
 export function hexDistance(a, b) {
   const A = offsetToAxial(a.col, a.row);
   const B = offsetToAxial(b.col, b.row);

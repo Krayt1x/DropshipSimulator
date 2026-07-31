@@ -319,9 +319,7 @@ function BattleBoard({
           : null;
         const inWeaponRange = hexInWeaponRange(weaponRange, col, row);
         const inPeerWeaponRange = hexInWeaponRange(peerWeaponRange, col, row);
-        const inMoveRange =
-          moveRange &&
-          hexDistance(moveRange.origin, { col, row }) <= moveRange.max;
+        const inMoveRange = Boolean(moveRange?.hexes.has(key));
         return (
           <g key={key}>
             <polygon

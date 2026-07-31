@@ -350,6 +350,40 @@ describe('BattlePage', () => {
     expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
   });
 
+  it("keeps the move-range highlight off a hex terrain blocks, without hiding an unblocked hex the same distance away (#196)", () => {
+    // A building sits directly north of the token, 2 hexes away.
+    window.localStorage.setItem(
+      'dropshipsimulator:mapEditor:tiles',
+      JSON.stringify({ '0,2': 'buildings' }),
+    );
+
+    const { container } = render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve(['  Movement: Legs']);
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+    expandDiceRoller();
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
+
+    const highlighted = (col, row) => {
+      const group = container
+        .querySelector(`[data-testid="hex-${col},${row}"]`)
+        .closest('g');
+      return Boolean(
+        group.querySelector('polygon[fill="rgba(34,197,94,0.18)"]'),
+      );
+    };
+
+    expect(highlighted(0, 2)).toBe(false);
+    expect(highlighted(2, 0)).toBe(true);
+  });
+
   it('allows zooming in further than the old 200% cap (#187)', () => {
     render(<BattlePage />);
     const zoomIn = screen.getByRole('button', { name: 'Zoom in' });

@@ -10,6 +10,7 @@ import {
   hexLine,
   nearestSide,
   visibleSides,
+  reachableHexes,
 } from './hex.js';
 
 describe('hex', () => {
@@ -221,5 +222,40 @@ describe('hex', () => {
     expect(hexLine({ col: 2, row: 2 }, { col: 2, row: 2 })).toEqual([
       { col: 2, row: 2 },
     ]);
+  });
+
+  describe('reachableHexes (#196)', () => {
+    it('matches a plain hex-distance disc when nothing blocks', () => {
+      const reachable = reachableHexes({ col: 5, row: 5 }, 2, () => false);
+      for (let col = 0; col < 11; col++) {
+        for (let row = 0; row < 11; row++) {
+          const withinDistance =
+            hexDistance({ col: 5, row: 5 }, { col, row }) <= 2;
+          expect(reachable.has(tileKey(col, row))).toBe(withinDistance);
+        }
+      }
+    });
+
+    it('always includes the origin, even with zero steps', () => {
+      const reachable = reachableHexes({ col: 0, row: 0 }, 0, () => false);
+      expect(reachable.size).toBe(1);
+      expect(reachable.has('0,0')).toBe(true);
+    });
+
+    it('excludes a blocked hex, without giving up on unblocked hexes the same distance away', () => {
+      const isBlocked = (hex) => hex.col === 0 && hex.row === 2;
+      const reachable = reachableHexes({ col: 0, row: 0 }, 2, isBlocked);
+      expect(reachable.has('0,2')).toBe(false);
+      expect(reachable.has('2,0')).toBe(true);
+    });
+
+    it('routes around a blocker instead of stopping dead, when there is room to', () => {
+      // (0,2) blocks a straight line through it, but (1,2) is the same
+      // distance away in a direction the block doesn't sit on.
+      const isBlocked = (hex) => hex.col === 0 && hex.row === 2;
+      const reachable = reachableHexes({ col: 0, row: 0 }, 3, isBlocked);
+      expect(reachable.has('0,2')).toBe(false);
+      expect(reachable.has('1,2')).toBe(true);
+    });
   });
 });

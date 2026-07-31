@@ -20,6 +20,7 @@ import {
   visibleSides,
   neighborHex,
   nearestSide,
+  reachableHexes,
 } from '../lib/hex.js';
 import {
   createToken,
@@ -37,6 +38,7 @@ import {
 } from '../lib/tokens.js';
 import {
   DEFAULT_TERRAIN_TYPES,
+  blocksMovement,
   hasLineOfSight,
   isMovementPathBlocked,
   mergeDefaultTerrainTypes,
@@ -1093,9 +1095,38 @@ function BattlePage() {
     selectedToken?.position && !selectedToken.destroyed
       ? movementForToken(selectedToken)
       : 0;
+  // The highlight itself now respects terrain and occupancy (#196) instead
+  // of showing every hex within a plain hex-distance radius — walking there
+  // via handleHexClick/handleDropToken is blocked the same way regardless,
+  // but a highlight promising a hex you can't actually reach was misleading.
   const moveRange =
     selectedMovement > 0
-      ? { origin: selectedToken.position, max: selectedMovement }
+      ? {
+          origin: selectedToken.position,
+          hexes: reachableHexes(
+            selectedToken.position,
+            selectedMovement,
+            (hex) => {
+              if (
+                hex.col < 0 ||
+                hex.row < 0 ||
+                hex.col >= dimensions.cols ||
+                hex.row >= dimensions.rows
+              ) {
+                return true;
+              }
+              const occupant = tokenAt(`${hex.col},${hex.row}`);
+              if (occupant && occupant.id !== selectedToken.id) return true;
+              if (
+                !tokenHasMovementTag(selectedToken, equipment, 'flying') &&
+                blocksMovement(tiles, tileTypes, hex)
+              ) {
+                return true;
+              }
+              return false;
+            },
+          ),
+        }
       : null;
 
   function canControl(token) {

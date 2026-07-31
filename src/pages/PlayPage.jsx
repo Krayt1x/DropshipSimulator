@@ -8,6 +8,18 @@ import manufacturers from '../data/manufacturers.json';
 import units from '../data/units.json';
 import equipment from '../data/equipment.json';
 
+const DIFFICULTIES = [
+  { id: 'simple', icon: '🙂', label: 'Simple' },
+  { id: 'tactical', icon: '🎯', label: 'Tactical' },
+  { id: 'expert', icon: '🧠', label: 'Expert' },
+];
+
+const MAP_CHOICES = [
+  { id: 'current', icon: '🗺️', label: 'Current map' },
+  { id: 'blank', icon: '⬜', label: 'Blank' },
+  { id: 'import', icon: '📥', label: 'Import…' },
+];
+
 function PlayPage() {
   const [tokens] = useLocalStorageState('dropshipsimulator:battle:tokens', []);
   const hasActiveGame = tokens.length > 0;
@@ -46,17 +58,33 @@ function PlayPage() {
   );
   // A fresh game only — resuming one already in progress (the "Resume Game"
   // banner below) skips this, since that game's mode was already decided
-  // when it started.
-  const [step, setStep] = useState(null); // null | 'mode' | 'difficulty' | 'roster' | 'map'
-  const [rosterChoice, setRosterChoice] = useState(null); // null | 'specific' | 'import'
-  const [specificRosterName, setSpecificRosterName] = useState(
-    DEFAULT_ROSTERS[0]?.name ?? '',
-  );
+  // when it started. Rather than swapping between separate step screens
+  // (#184), each answer just grows this one card downward: Sandbox/Vs CPU
+  // tiles, then (for Vs CPU) difficulty tiles, then the CPU's list, then the
+  // map — each stage staying visible and re-pickable once the next appears.
+  const [expanded, setExpanded] = useState(false);
+  const [mode, setMode] = useState(null); // null | 'sandbox' | 'cpu'
+  const [difficulty, setDifficulty] = useState(null);
+  const [chosenRoster, setChosenRoster] = useState(null); // label of the finalized bot roster
+  const [showRosterImport, setShowRosterImport] = useState(false);
   const [importText, setImportText] = useState('');
   const [importPreview, setImportPreview] = useState(null);
   const [mapChoice, setMapChoice] = useState('current'); // 'current' | 'blank' | 'import'
   const [mapImportText, setMapImportText] = useState('');
   const [mapImportPreview, setMapImportPreview] = useState(null);
+
+  function resetPicker() {
+    setExpanded(false);
+    setMode(null);
+    setDifficulty(null);
+    setChosenRoster(null);
+    setShowRosterImport(false);
+    setImportText('');
+    setImportPreview(null);
+    setMapChoice('current');
+    setMapImportText('');
+    setMapImportPreview(null);
+  }
 
   function handleEndGame() {
     if (
@@ -69,24 +97,31 @@ function PlayPage() {
     resetActiveGame();
   }
 
-  function chooseSandbox() {
-    setGameMode('sandbox');
-    setStep('map');
+  function pickMode(nextMode) {
+    setMode(nextMode);
+    setGameMode(nextMode === 'cpu' ? 'vs-computer' : 'sandbox');
+    setDifficulty(null);
+    setChosenRoster(null);
+    setShowRosterImport(false);
+    setImportText('');
+    setImportPreview(null);
   }
 
-  function chooseDifficulty(difficulty) {
-    setGameMode('vs-computer');
-    setBotDifficulty(difficulty);
+  function pickDifficulty(nextDifficulty) {
+    setDifficulty(nextDifficulty);
+    setBotDifficulty(nextDifficulty);
     // The human always plays Player 1 against the bot, so canControl/canRoll
     // (BattlePage.jsx) restrict them to their own seat the same way hotseat
     // multiplayer identity already does.
     setMyPlayer('p1');
-    setStep('roster');
+    setChosenRoster(null);
+    setShowRosterImport(false);
   }
 
-  function startBattleWith(botRoster) {
+  function chooseRoster(botRoster, label) {
     setBotRoster(botRoster);
-    setStep('map');
+    setChosenRoster(label);
+    setShowRosterImport(false);
   }
 
   function previewImport() {
@@ -113,6 +148,9 @@ function PlayPage() {
     // 'current' leaves whatever's already saved in the Map Editor alone.
     window.location.hash = '#battle';
   }
+
+  const rosterReady = mode === 'cpu' && Boolean(difficulty) && Boolean(chosenRoster);
+  const mapStageReady = mode === 'sandbox' || rosterReady;
 
   return (
     <div className="container home-container">
@@ -152,7 +190,7 @@ function PlayPage() {
           <button
             type="button"
             className="home-tile"
-            onClick={() => setStep('mode')}
+            onClick={() => setExpanded(true)}
           >
             <span className="home-tile-icon">🧍</span>
             <span className="home-tile-title">Single Player</span>
@@ -170,122 +208,99 @@ function PlayPage() {
         </a>
       </div>
 
-      {step === 'mode' && (
+      {expanded && (
         <div className="card" style={{ marginTop: 16 }}>
           <div className="reserve-header">
-            <p className="unit-name">How do you want to play?</p>
-            <button
-              type="button"
-              className="ghost"
-              onClick={() => setStep(null)}
-            >
+            <p className="unit-name">Single Player</p>
+            <button type="button" className="ghost" onClick={resetPicker}>
               Cancel
             </button>
           </div>
-          <div className="token-owner-row" style={{ marginTop: 8 }}>
-            <button type="button" onClick={chooseSandbox}>
-              Sandbox
-            </button>
-            <button
-              type="button"
-              className="ghost"
-              onClick={() => setStep('difficulty')}
-            >
-              vs Computer
-            </button>
-          </div>
-        </div>
-      )}
 
-      {step === 'difficulty' && (
-        <div className="card" style={{ marginTop: 16 }}>
-          <div className="reserve-header">
-            <p className="unit-name">Choose a difficulty</p>
+          <p className="stage-label">How do you want to play?</p>
+          <div className="home-tile-grid">
             <button
               type="button"
-              className="ghost"
-              onClick={() => setStep(null)}
+              className={`home-tile ${mode === 'sandbox' ? 'selected' : ''}`}
+              onClick={() => pickMode('sandbox')}
             >
-              Cancel
-            </button>
-          </div>
-          <div className="token-owner-row" style={{ marginTop: 8 }}>
-            <button type="button" onClick={() => chooseDifficulty('simple')}>
-              Simple
+              <span className="home-tile-icon">🏖️</span>
+              <span className="home-tile-title">Sandbox</span>
+              <span className="home-tile-description">
+                Control both sides yourself.
+              </span>
             </button>
             <button
               type="button"
-              className="ghost"
-              onClick={() => chooseDifficulty('tactical')}
+              className={`home-tile ${mode === 'cpu' ? 'selected' : ''}`}
+              onClick={() => pickMode('cpu')}
             >
-              Tactical
-            </button>
-            <button
-              type="button"
-              className="ghost"
-              onClick={() => chooseDifficulty('expert')}
-            >
-              Expert
-            </button>
-          </div>
-        </div>
-      )}
-
-      {step === 'roster' && (
-        <div className="card" style={{ marginTop: 16 }}>
-          <div className="reserve-header">
-            <p className="unit-name">Which list should the computer play?</p>
-            <button
-              type="button"
-              className="ghost"
-              onClick={() => {
-                setStep(null);
-                setRosterChoice(null);
-                setImportText('');
-                setImportPreview(null);
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-          <div className="token-owner-row" style={{ marginTop: 8 }}>
-            <button
-              type="button"
-              onClick={() => startBattleWith({ type: 'random' })}
-            >
-              Random
-            </button>
-            <button
-              type="button"
-              className={`ghost ${rosterChoice === 'specific' ? 'active' : ''}`}
-              onClick={() => setRosterChoice('specific')}
-            >
-              Specific
+              <span className="home-tile-icon">🖥️</span>
+              <span className="home-tile-title">Vs CPU</span>
+              <span className="home-tile-description">
+                Play against the computer.
+              </span>
             </button>
           </div>
 
-          {rosterChoice === 'specific' && (
-            <div className="field" style={{ marginTop: 12 }}>
-              <label htmlFor="bot-roster-select">List</label>
-              <select
-                id="bot-roster-select"
-                value={
-                  specificRosterName === '__import__'
-                    ? '__import__'
-                    : specificRosterName
-                }
-                onChange={(e) => setSpecificRosterName(e.target.value)}
-              >
-                {DEFAULT_ROSTERS.map((roster) => (
-                  <option key={roster.name} value={roster.name}>
-                    {roster.name}
-                  </option>
+          {mode === 'cpu' && (
+            <div className="cascade-stage">
+              <p className="stage-label">Choose a difficulty</p>
+              <div className="home-tile-grid">
+                {DIFFICULTIES.map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    className={`home-tile ${difficulty === d.id ? 'selected' : ''}`}
+                    onClick={() => pickDifficulty(d.id)}
+                  >
+                    <span className="home-tile-icon">{d.icon}</span>
+                    <span className="home-tile-title">{d.label}</span>
+                  </button>
                 ))}
-                <option value="__import__">Import…</option>
-              </select>
+              </div>
+            </div>
+          )}
 
-              {specificRosterName === '__import__' ? (
-                <div style={{ marginTop: 10 }}>
+          {mode === 'cpu' && difficulty && (
+            <div className="cascade-stage">
+              <p className="stage-label">
+                Which list should the computer play?
+              </p>
+              <div className="tile-palette-list">
+                <button
+                  type="button"
+                  className={`tile-swatch-btn ${chosenRoster === 'Random' ? 'selected' : ''}`}
+                  onClick={() => chooseRoster({ type: 'random' }, 'Random')}
+                >
+                  Random
+                </button>
+                {DEFAULT_ROSTERS.map((roster) => (
+                  <button
+                    key={roster.name}
+                    type="button"
+                    className={`tile-swatch-btn ${chosenRoster === roster.name ? 'selected' : ''}`}
+                    onClick={() =>
+                      chooseRoster(
+                        { type: 'specific', name: roster.name },
+                        roster.name,
+                      )
+                    }
+                  >
+                    {roster.name}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className={`tile-swatch-btn ${showRosterImport ? 'selected' : ''}`}
+                  onClick={() => setShowRosterImport(true)}
+                >
+                  Import…
+                </button>
+              </div>
+
+              {showRosterImport && (
+                <div className="field" style={{ marginTop: 10 }}>
                   <label htmlFor="bot-roster-import-text">Roster export</label>
                   <textarea
                     id="bot-roster-import-text"
@@ -312,7 +327,10 @@ function PlayPage() {
                         !importPreview || importPreview.entries.length === 0
                       }
                       onClick={() =>
-                        startBattleWith({ type: 'import', text: importText })
+                        chooseRoster(
+                          { type: 'import', text: importText },
+                          'Imported list',
+                        )
                       }
                     >
                       Use this list
@@ -331,123 +349,86 @@ function PlayPage() {
                     </p>
                   )}
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  style={{ marginTop: 10 }}
-                  onClick={() =>
-                    startBattleWith({
-                      type: 'specific',
-                      name: specificRosterName,
-                    })
-                  }
-                >
-                  Use this list
-                </button>
               )}
             </div>
           )}
-        </div>
-      )}
 
-      {step === 'map' && (
-        <div className="card" style={{ marginTop: 16 }}>
-          <div className="reserve-header">
-            <p className="unit-name">Which map do you want to play?</p>
-            <button
-              type="button"
-              className="ghost"
-              onClick={() => {
-                setStep(null);
-                setMapChoice('current');
-                setMapImportText('');
-                setMapImportPreview(null);
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-          <div className="token-owner-row" style={{ marginTop: 8 }}>
-            <button
-              type="button"
-              className={`ghost ${mapChoice === 'current' ? 'active' : ''}`}
-              onClick={() => setMapChoice('current')}
-            >
-              Current map
-            </button>
-            <button
-              type="button"
-              className={`ghost ${mapChoice === 'blank' ? 'active' : ''}`}
-              onClick={() => setMapChoice('blank')}
-            >
-              Blank
-            </button>
-            <button
-              type="button"
-              className={`ghost ${mapChoice === 'import' ? 'active' : ''}`}
-              onClick={() => setMapChoice('import')}
-            >
-              Import…
-            </button>
-          </div>
+          {mapStageReady && (
+            <div className="cascade-stage">
+              <p className="stage-label">Which map do you want to play?</p>
+              <div className="home-tile-grid">
+                {MAP_CHOICES.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    className={`home-tile ${mapChoice === m.id ? 'selected' : ''}`}
+                    onClick={() => setMapChoice(m.id)}
+                  >
+                    <span className="home-tile-icon">{m.icon}</span>
+                    <span className="home-tile-title">{m.label}</span>
+                  </button>
+                ))}
+              </div>
 
-          {mapChoice === 'import' && (
-            <div className="field" style={{ marginTop: 12 }}>
-              <label htmlFor="map-import-text">Map export</label>
-              <textarea
-                id="map-import-text"
-                rows={6}
-                placeholder="Paste an exported map here"
-                value={mapImportText}
-                onChange={(e) => {
-                  setMapImportText(e.target.value);
-                  setMapImportPreview(null);
+              {mapChoice === 'import' && (
+                <div className="field" style={{ marginTop: 12 }}>
+                  <label htmlFor="map-import-text">Map export</label>
+                  <textarea
+                    id="map-import-text"
+                    rows={6}
+                    placeholder="Paste an exported map here"
+                    value={mapImportText}
+                    onChange={(e) => {
+                      setMapImportText(e.target.value);
+                      setMapImportPreview(null);
+                    }}
+                  />
+                  <div className="token-owner-row" style={{ marginTop: 8 }}>
+                    <button
+                      type="button"
+                      className="ghost"
+                      disabled={!mapImportText.trim()}
+                      onClick={previewMapImport}
+                    >
+                      Preview import
+                    </button>
+                  </div>
+                  {mapImportPreview && (
+                    <p className="unit-meta" style={{ marginTop: 8 }}>
+                      {mapImportPreview.dimensions.cols} ×{' '}
+                      {mapImportPreview.dimensions.rows},{' '}
+                      {Object.keys(mapImportPreview.tiles).length} tile
+                      {Object.keys(mapImportPreview.tiles).length === 1
+                        ? ''
+                        : 's'}{' '}
+                      painted.
+                    </p>
+                  )}
+                  {mapImportText.trim() && !mapImportPreview && (
+                    <p className="unit-meta" style={{ marginTop: 8 }}>
+                      Preview it to check it&apos;s a valid map export.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  marginTop: 16,
                 }}
-              />
-              <div className="token-owner-row" style={{ marginTop: 8 }}>
+              >
                 <button
                   type="button"
-                  className="ghost"
-                  disabled={!mapImportText.trim()}
-                  onClick={previewMapImport}
+                  disabled={mapChoice === 'import' && !mapImportPreview}
+                  onClick={confirmStartGame}
                 >
-                  Preview import
+                  Start Game
                 </button>
               </div>
-              {mapImportPreview && (
-                <p className="unit-meta" style={{ marginTop: 8 }}>
-                  {mapImportPreview.dimensions.cols} ×{' '}
-                  {mapImportPreview.dimensions.rows},{' '}
-                  {Object.keys(mapImportPreview.tiles).length} tile
-                  {Object.keys(mapImportPreview.tiles).length === 1
-                    ? ''
-                    : 's'}{' '}
-                  painted.
-                </p>
-              )}
-              {mapImportText.trim() && !mapImportPreview && (
-                <p className="unit-meta" style={{ marginTop: 8 }}>
-                  Preview it to check it&apos;s a valid map export.
-                </p>
-              )}
             </div>
           )}
-
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              marginTop: 16,
-            }}
-          >
-            <button
-              type="button"
-              disabled={mapChoice === 'import' && !mapImportPreview}
-              onClick={confirmStartGame}
-            >
-              Start Game
-            </button>
-          </div>
         </div>
       )}
     </div>

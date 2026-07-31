@@ -1508,6 +1508,30 @@ button.danger:hover {
   color: var(--text-secondary);
 }
 
+.home-tile.selected {
+  border-color: var(--accent);
+  border-width: 2px;
+  background: var(--bg-track);
+}
+
+/* The Play page's Single Player picker grows downward one tile row per
+   answer instead of swapping between separate step screens (#184) — each
+   later stage nests under a thin rule so it still reads as "part of the
+   same choice" rather than a fresh, disconnected section. */
+.stage-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 20px 0 10px;
+}
+
+.cascade-stage {
+  padding-left: 14px;
+  border-left: 2px solid var(--border);
+}
+
 .resume-game-row {
   display: flex;
   align-items: stretch;

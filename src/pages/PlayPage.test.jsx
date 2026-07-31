@@ -40,17 +40,21 @@ describe('PlayPage', () => {
     expect(screen.queryByText('How do you want to play?')).toBeNull();
   });
 
-  it('offers Sandbox vs Computer before starting a fresh single-player game', () => {
+  it('offers Sandbox and Vs CPU tiles before starting a fresh single-player game (#184)', () => {
     render(<PlayPage />);
 
     fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
     expect(screen.getByText('How do you want to play?')).toBeDefined();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sandbox' }));
+    fireEvent.click(screen.getByRole('button', { name: /Sandbox/ }));
 
-    // Picking a mode doesn't start the game yet — the map step still needs
-    // an answer (#176).
+    // Picking a mode doesn't start the game yet — the map stage still needs
+    // an answer (#176), and stays visible below the mode tiles rather than
+    // replacing them (#184).
     expect(window.location.hash).toBe('');
+    expect(
+      screen.getByRole('button', { name: /Sandbox/ }).className,
+    ).toContain('selected');
     expect(screen.getByText('Which map do you want to play?')).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
 
@@ -60,25 +64,25 @@ describe('PlayPage', () => {
     );
   });
 
-  it('asks for a difficulty, then a roster, then a map, before starting a vs-computer game (#173, #176)', () => {
+  it('asks for a difficulty, then a roster, then a map, before starting a vs-computer game (#173, #176, #184)', () => {
     render(<PlayPage />);
 
     fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'vs Computer' }));
+    fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
     expect(screen.getByText('Choose a difficulty')).toBeDefined();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Tactical' }));
+    fireEvent.click(screen.getByRole('button', { name: /Tactical/ }));
 
     expect(
       screen.getByText('Which list should the computer play?'),
     ).toBeDefined();
     // Choosing a difficulty alone doesn't start the game yet — the roster
-    // step still needs an answer.
+    // stage still needs an answer.
     expect(window.location.hash).toBe('');
 
     fireEvent.click(screen.getByRole('button', { name: 'Random' }));
 
-    // Nor does picking a roster — the map step comes next (#176).
+    // Nor does picking a roster — the map stage comes next (#176).
     expect(window.location.hash).toBe('');
     expect(screen.getByText('Which map do you want to play?')).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
@@ -99,18 +103,19 @@ describe('PlayPage', () => {
     );
   });
 
-  it('lets the human pick a specific default roster for the bot (#173)', () => {
+  it("lets the human pick a specific default roster for the bot straight off the list (#173, #184)", () => {
     render(<PlayPage />);
 
     fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'vs Computer' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Simple' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Specific' }));
+    fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Simple/ }));
 
-    fireEvent.change(screen.getByLabelText('List'), {
-      target: { value: 'Flame Chicken Spam' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Use this list' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Flame Chicken Spam' }),
+    );
+    expect(
+      screen.getByRole('button', { name: 'Flame Chicken Spam' }).className,
+    ).toContain('selected');
     fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(window.location.hash).toBe('#battle');
@@ -123,13 +128,9 @@ describe('PlayPage', () => {
     render(<PlayPage />);
 
     fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'vs Computer' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Simple' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Specific' }));
-
-    fireEvent.change(screen.getByLabelText('List'), {
-      target: { value: '__import__' },
-    });
+    fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Simple/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Import…' }));
 
     const rosterText = [
       'Test List (Corp A)',
@@ -165,8 +166,8 @@ describe('PlayPage', () => {
     render(<PlayPage />);
 
     fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Sandbox' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Blank' }));
+    fireEvent.click(screen.getByRole('button', { name: /Sandbox/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Blank/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(window.location.hash).toBe('#battle');
@@ -183,7 +184,7 @@ describe('PlayPage', () => {
     render(<PlayPage />);
 
     fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Sandbox' }));
+    fireEvent.click(screen.getByRole('button', { name: /Sandbox/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(

@@ -345,9 +345,49 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByTestId('hex-0,0'));
     expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
+    // The move is undone, but consuming the Move die (a separate step just
+    // before it) is still in the undo history (#186), so the button
+    // switches to that step instead of going back to fully disabled.
+    expect(screen.getByRole('button', { name: 'Undo used die' })).toBeDefined();
+  });
+
+  it('keeps up to 10 steps of undo history, dropping the oldest once full (#186)', () => {
+    render(<BattlePage />);
+    const dice = Array.from({ length: 12 }, (_, i) => ({
+      id: `d${i}`,
+      label: 'Green',
+      value: 'Action',
+      used: false,
+    }));
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:actionPool',
+      JSON.stringify(dice),
+    );
+    // Re-render with the seeded pool in place.
+    cleanup();
+    render(<BattlePage />);
+    expandDiceRoller();
+
+    for (let i = 0; i < 12; i++) {
+      fireEvent.click(screen.getByRole('button', { name: /Action$/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'Use Dice' }));
+    }
+    expect(
+      screen.queryAllByRole('button', { name: /Action$/ })[0]?.textContent,
+    ).toBe('0 Action');
+
+    // 12 dice were used but only the most recent 10 "used die" steps are
+    // still undoable — the first 2 are gone for good. The button falls back
+    // to its default label and disables once the history is fully drained.
+    for (let i = 0; i < 10; i++) {
+      fireEvent.click(screen.getByRole('button', { name: 'Undo used die' }));
+    }
     expect(
       screen.getByRole('button', { name: 'Undo last move' }).disabled,
     ).toBe(true);
+    expect(screen.getByRole('button', { name: /Action$/ }).textContent).toBe(
+      '10 Action',
+    );
   });
 
   it('refunds the spent Move die when undoing a move, for both a short (instant) and long (animated) move (#168)', () => {

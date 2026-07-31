@@ -76,6 +76,8 @@ import units from '../data/units.json';
 import equipment from '../data/equipment.json';
 
 const DEFAULT_DIMENSIONS = { cols: 24, rows: 24 };
+// How many steps "Undo last move" can step back through (#186).
+const MAX_UNDO_HISTORY = 10;
 // Winner-modal label for the vs-computer difficulty (#169, extended for the
 // Expert tier) — a lookup instead of a chained ternary now that there are
 // three tiers.
@@ -157,7 +159,16 @@ function BattlePage() {
   const [attackWeapon, setAttackWeapon] = useState(null);
   const [attackTarget, setAttackTarget] = useState(null);
   const [attackResult, setAttackResult] = useState(null);
-  const [lastAction, setLastAction] = useState(null);
+  // Undo history (#186) — up to MAX_UNDO_HISTORY steps, oldest dropped off
+  // the front once full. `lastAction` (the one "Undo" acts on) is just
+  // whichever entry is most recent.
+  const [actionHistory, setActionHistory] = useState([]);
+  const lastAction = actionHistory[actionHistory.length - 1] ?? null;
+  function pushHistory(action) {
+    setActionHistory((current) =>
+      [...current, action].slice(-MAX_UNDO_HISTORY),
+    );
+  }
   const [zoom, setZoom] = useState(1);
   const diceRollerRef = useRef(null);
   // Which of the 4 panels is showing on narrow (mobile) viewports (#101) —
@@ -366,7 +377,7 @@ function BattlePage() {
       ),
     );
     setActionPool([]);
-    setLastAction(null);
+    setActionHistory([]);
   }
 
   function handleDiceRoll(rolled) {
@@ -375,7 +386,7 @@ function BattlePage() {
 
   function rollToActionPool(dice) {
     setActionPool(dice.map((d) => ({ ...d, used: false })));
-    setLastAction({ type: 'rollToPool', dieIds: dice.map((d) => d.id) });
+    pushHistory({ type: 'rollToPool', dieIds: dice.map((d) => d.id) });
   }
 
   function useActionPoolDie(dieId) {
@@ -383,7 +394,7 @@ function BattlePage() {
     setActionPool((current) =>
       current.map((d) => (d.id === dieId ? { ...d, used: true } : d)),
     );
-    setLastAction({ type: 'useDie', dieId });
+    pushHistory({ type: 'useDie', dieId });
     if (die) appendLog(`Used a ${die.label.toLowerCase()} die: ${die.value}`);
   }
 
@@ -429,7 +440,7 @@ function BattlePage() {
         return d;
       }),
     );
-    setLastAction({ type: 'exchange', spendId, targetId, previousValue });
+    pushHistory({ type: 'exchange', spendId, targetId, previousValue });
     appendLog(
       `Exchanged a ${spendDie.label.toLowerCase()} die to change ${targetDie.label}'s roll from ${previousValue} to ${newValue}`,
     );
@@ -481,7 +492,9 @@ function BattlePage() {
       const token = tokens.find((t) => t.id === tokenId);
       appendLog(`Undid ${token ? unitName(token) + "'s" : 'the'} last move`);
     }
-    setLastAction(null);
+    // Only pop the one step just undone (#186) — the rest of the history
+    // stays available for further undos.
+    setActionHistory((current) => current.slice(0, -1));
   }
 
   const selectedToken = tokens.find((t) => t.id === selectedTokenId) ?? null;
@@ -1062,7 +1075,7 @@ function BattlePage() {
 
   function moveTokenTo(token, col, row, dieId) {
     if (token.position) {
-      setLastAction({
+      pushHistory({
         type: 'move',
         tokenId: token.id,
         position: token.position,

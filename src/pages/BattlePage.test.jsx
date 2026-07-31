@@ -814,10 +814,17 @@ describe('BattlePage', () => {
     ).toBeDefined();
 
     // The target's right-slot weapon took the computed damage on its 5 HP
-    // and broke once it hit 0.
+    // and broke once it hit 0. Scoped to the detailed weapon row (not the
+    // card header's equipment summary, which shows the same "current / max"
+    // text since #175) so the query stays unambiguous.
     fireEvent.click(screen.getByTestId('hex-4,6'));
+    const weaponRow = screen
+      .getByText('Long Range Bolt')
+      .closest('.token-weapon-row');
     expect(
-      screen.getByText(new RegExp(`HP ${Math.max(0, 5 - damage)} / 5`)),
+      within(weaponRow).getByText(
+        new RegExp(`HP ${Math.max(0, 5 - damage)} / 5`),
+      ),
     ).toBeDefined();
     if (damage >= 5) {
       expect(screen.getByRole('checkbox').checked).toBe(true);

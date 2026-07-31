@@ -33,16 +33,23 @@ function UnitCardHeader({ unit, token, equippedItems }) {
       </div>
       {equippedItems.length > 0 && (
         <ul className="roster-import-preview" style={{ marginTop: 8 }}>
-          {equippedItems.map((item, index) => (
-            <li key={item.instanceIndex ?? item.id ?? index}>
-              {item.name}
-              {item.range ? ` · Range ${item.range}` : ''}
-              {item.hit_dice ? ` · Hit ${item.hit_dice}` : ''}
-              {item.heat_rating ? ` · Heat ${item.heat_rating}` : ''}
-              {item.movement ? ` · ${item.movement} move` : ''}
-              {item.hp ? ` · HP ${item.hp}` : ''}
-            </li>
-          ))}
+          {equippedItems.map((item, index) => {
+            const maxItemHp = Number(item.hp) || 0;
+            // Matches TokenCard's own equipment HP readout: current damage
+            // taken lives in weaponState, not the static equipment stat.
+            const currentItemHp =
+              token.weaponState?.[item.instanceIndex]?.hp ?? maxItemHp;
+            return (
+              <li key={item.instanceIndex ?? item.id ?? index}>
+                {item.name}
+                {item.range ? ` · Range ${item.range}` : ''}
+                {item.hit_dice ? ` · Hit ${item.hit_dice}` : ''}
+                {item.heat_rating ? ` · Heat ${item.heat_rating}` : ''}
+                {item.movement ? ` · ${item.movement} move` : ''}
+                {maxItemHp > 0 ? ` · HP ${currentItemHp} / ${maxItemHp}` : ''}
+              </li>
+            );
+          })}
         </ul>
       )}
     </>

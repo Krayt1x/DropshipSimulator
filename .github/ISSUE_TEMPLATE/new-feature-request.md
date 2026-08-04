@@ -1,8 +1,10 @@
 ---
-name: Feature request
+name: New Feature request
 about: Suggest an idea for Dropship Simulator
 title: "[Feature] "
 labels: enhancement
+assignees: ''
+
 ---
 
 ## Problem

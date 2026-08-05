@@ -7,7 +7,7 @@ import { terrainAt } from '../lib/terrain.js';
 // and scaled down to icon size via the SVG viewBox.
 const THUMBNAIL_HEX_SIZE = 6;
 
-function MapThumbnail({ dimensions, tileTypes, tiles, size = 48 }) {
+function MapThumbnail({ dimensions, tileTypes, tiles, size = 120 }) {
   const { width, height } = boardPixelSize(
     dimensions.cols,
     dimensions.rows,

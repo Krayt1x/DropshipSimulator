@@ -1092,7 +1092,7 @@ button.danger:hover {
 }
 
 .map-picker-modal {
-  width: 480px;
+  width: 560px;
   max-width: calc(100vw - 32px);
   max-height: 70vh;
   overflow-y: auto;

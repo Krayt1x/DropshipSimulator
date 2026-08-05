@@ -343,12 +343,12 @@ function TokenCard({
       <div className="token-card-section">
         <label>Facing</label>
         <div className="token-stat-row">
-          <button type="button" className="ghost" onClick={() => onRotate(-1)}>
-            ↺
-          </button>
-          <span>{token.facing + 1} / 6</span>
           <button type="button" className="ghost" onClick={() => onRotate(1)}>
             ↻
+          </button>
+          <span>{token.facing + 1} / 6</span>
+          <button type="button" className="ghost" onClick={() => onRotate(-1)}>
+            ↺
           </button>
         </div>
       </div>

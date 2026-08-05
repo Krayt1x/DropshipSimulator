@@ -120,6 +120,34 @@ describe('BattlePage', () => {
     expect(screen.getByText(`${a10Hp} / ${a10Hp}`)).toBeDefined();
   });
 
+  it('rotates facing clockwise from the left button and counter-clockwise from the right (#197)', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve();
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+
+    // p1's default facing is 4/6 (#facing convention: p1 faces "south",
+    // toward the opposing side) — read it back rather than assuming 1/6.
+    const initialFacing = Number(screen.getByText(/^\d \/ 6$/).textContent[0]);
+    const [clockwise, counterClockwise] = screen.getAllByRole('button', {
+      name: /↻|↺/,
+    });
+    expect(clockwise.textContent).toBe('↻');
+    expect(counterClockwise.textContent).toBe('↺');
+
+    fireEvent.click(clockwise);
+    expect(
+      screen.getByText(`${(initialFacing % 6) + 1} / 6`),
+    ).toBeDefined();
+
+    fireEvent.click(counterClockwise);
+    expect(screen.getByText(`${initialFacing} / 6`)).toBeDefined();
+  });
+
   it('picks up a list handed off from the in-app builder, same as a pasted export (#188)', () => {
     const a10 = units.find((u) => u.name === 'A10');
     const weapon = equipment.find((e) => e.name === 'Long Range Bolt');

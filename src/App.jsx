@@ -210,18 +210,6 @@ function AppShell() {
                 >
                   Play
                 </a>
-                <a
-                  href="#builder"
-                  className={page === 'builder' ? 'active' : ''}
-                >
-                  Builder
-                </a>
-                <a
-                  href="#manage"
-                  className={page === 'manage' ? 'active' : ''}
-                >
-                  Manage
-                </a>
                 <a href="#map" className={page === 'map' ? 'active' : ''}>
                   Map editor
                 </a>
@@ -257,6 +245,15 @@ function AppShell() {
               <PlayerIdentityPicker />
             )}
             {page === 'battle' && <EndGameButton />}
+            {/* Builder/Manage moved here from the left-hand site nav
+                (#217) — dark mode stays last so it's always at the bottom
+                of this menu regardless of which of the above show. */}
+            <a href="#builder" className={page === 'builder' ? 'active' : ''}>
+              Builder
+            </a>
+            <a href="#manage" className={page === 'manage' ? 'active' : ''}>
+              Manage
+            </a>
             <ThemeToggle />
           </div>
         </div>

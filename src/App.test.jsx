@@ -1,5 +1,11 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  cleanup,
+  within,
+} from '@testing-library/react';
 import App from './App.jsx';
 
 beforeEach(() => window.localStorage.clear());
@@ -119,6 +125,32 @@ describe('App', () => {
     render(<App />);
     expect(screen.getByRole('link', { name: 'Builder' }).className).toContain(
       'active',
+    );
+  });
+
+  it('moves Builder/Manage into the settings menu, with dark mode last (#217)', () => {
+    window.location.hash = '#play';
+    render(<App />);
+
+    const siteMenu = screen
+      .getByRole('button', { name: 'Site menu' })
+      .parentElement.querySelector('.topnav-links');
+    expect(within(siteMenu).queryByRole('link', { name: 'Builder' })).toBeNull();
+    expect(within(siteMenu).queryByRole('link', { name: 'Manage' })).toBeNull();
+
+    const settingsMenu = screen
+      .getByRole('button', { name: 'Settings menu' })
+      .parentElement.querySelector('.topnav-settings-menu');
+    expect(
+      within(settingsMenu).getByRole('link', { name: 'Builder' }),
+    ).toBeDefined();
+    expect(
+      within(settingsMenu).getByRole('link', { name: 'Manage' }),
+    ).toBeDefined();
+
+    // Dark mode toggle is the last item, regardless of what else shows.
+    expect(settingsMenu.lastElementChild).toBe(
+      screen.getByRole('button', { name: 'Toggle dark mode' }),
     );
   });
 

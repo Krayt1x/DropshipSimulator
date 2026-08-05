@@ -591,17 +591,11 @@ export function chooseBotAction({
     }
   }
 
-  // Weapons in range get priority; otherwise use a spare Action die to bring
-  // in a reserve drop pod before falling back to repositioning (#157, #158).
-  const dropPodAction = findDropPodAction({
-    tokens,
-    units,
-    botOwner,
-    actionPool,
-    enemyTokens,
-  });
-  if (dropPodAction) return dropPodAction;
-
+  // Weapons in range get priority; otherwise reposition an already-deployed
+  // model before spending a spare Action die on a reserve drop pod — a pod
+  // competes for the exact same spare Action die a real model needs to close
+  // in with, and a model already on the board is always worth more than one
+  // still waiting in reserve (#157, #158, #230).
   const moveArgs = {
     tokens,
     equipment,
@@ -614,6 +608,16 @@ export function chooseBotAction({
   };
   const moveAction = findMoveAction(moveArgs);
   if (moveAction) return moveAction;
+
+  const dropPodAction = findDropPodAction({
+    tokens,
+    units,
+    botOwner,
+    actionPool,
+    enemyTokens,
+  });
+  if (dropPodAction) return dropPodAction;
+
   // No Move (or Action) die to spend, but exchanging into one would let a
   // token that actually wants to move do so this turn (#200).
   if (!pickDie(actionPool, 'Move') && computeMoveCandidate(moveArgs)) {

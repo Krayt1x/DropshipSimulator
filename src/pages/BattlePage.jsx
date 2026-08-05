@@ -2053,6 +2053,7 @@ function BattlePage() {
         dimensions,
         tiles,
         terrainTypes: tileTypes,
+        scenario,
       });
       if (!action) break;
 

@@ -604,6 +604,112 @@ describe('chooseBotAction', () => {
     expect(result).toMatchObject({ type: 'move', tokenId: 'bot1' });
   });
 
+  it('moves toward an uncovered objective instead of the enemy under the "First to 11" scenario (#233)', () => {
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 0, row: 0 },
+      equippedIds: [11], // Chicken Legs, movement only — nothing to attack with
+    });
+    const enemy = makeToken({
+      id: 'enemy1',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 9, row: 0 },
+    });
+    const tiles = { '0,4': 'objective' };
+    const result = chooseBotAction({
+      tokens: [bot, enemy],
+      units,
+      equipment,
+      botOwner: 'p2',
+      actionPool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+      difficulty: 'simple',
+      dimensions: { cols: 10, rows: 10 },
+      tiles,
+      terrainTypes,
+      scenario: 'first-to-11',
+    });
+    expect(result).toMatchObject({ type: 'move', tokenId: 'bot1' });
+    expect(
+      hexDistance(result.destination, { col: 0, row: 4 }),
+    ).toBeLessThan(hexDistance(bot.position, { col: 0, row: 4 }));
+  });
+
+  it('ignores objectives and keeps chasing the enemy under the default Annihilation scenario', () => {
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 0, row: 0 },
+      equippedIds: [11],
+    });
+    const enemy = makeToken({
+      id: 'enemy1',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 9, row: 0 },
+    });
+    const tiles = { '0,4': 'objective' };
+    const result = chooseBotAction({
+      tokens: [bot, enemy],
+      units,
+      equipment,
+      botOwner: 'p2',
+      actionPool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+      difficulty: 'simple',
+      dimensions: { cols: 10, rows: 10 },
+      tiles,
+      terrainTypes,
+      // No scenario passed — matches vs-computer's own default the same
+      // way an unset gameScenario resolves to 'annihilation' (#232).
+    });
+    expect(result).toMatchObject({ type: 'move', tokenId: 'bot1' });
+    expect(
+      hexDistance(result.destination, enemy.position),
+    ).toBeLessThan(hexDistance(bot.position, enemy.position));
+  });
+
+  it('stops redirecting to an objective once it is already uncontested-held (#233)', () => {
+    const holder = makeToken({
+      id: 'holder1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 0, row: 3 }, // adjacent to the objective at (0,4)
+    });
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 0, row: 0 },
+      equippedIds: [11],
+    });
+    const enemy = makeToken({
+      id: 'enemy1',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 9, row: 0 },
+    });
+    const tiles = { '0,4': 'objective' };
+    const result = chooseBotAction({
+      tokens: [holder, bot, enemy],
+      units,
+      equipment,
+      botOwner: 'p2',
+      actionPool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+      difficulty: 'simple',
+      dimensions: { cols: 10, rows: 10 },
+      tiles,
+      terrainTypes,
+      scenario: 'first-to-11',
+    });
+    expect(result).toMatchObject({ type: 'move', tokenId: 'bot1' });
+    expect(
+      hexDistance(result.destination, enemy.position),
+    ).toBeLessThan(hexDistance(bot.position, enemy.position));
+  });
+
   it('does not drop a pod without a spare Action die', () => {
     const pod = makeToken({
       id: 'pod1',

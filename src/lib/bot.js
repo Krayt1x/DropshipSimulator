@@ -13,7 +13,11 @@ import {
   tokenHasMovementTag,
   equippedItemsForSide,
 } from './tokens.js';
-import { hasLineOfSight, blocksMovement } from './terrain.js';
+import {
+  hasLineOfSight,
+  blocksMovement,
+  objectiveHexesFrom,
+} from './terrain.js';
 import { parseArmor } from './combat.js';
 import { parseHitDice, DICE_COLORS, DIE_TYPES } from './dice.js';
 
@@ -417,6 +421,25 @@ export function stepToward(from, to, maxSteps, stopDistance, isBlocked) {
   return current;
 }
 
+// Objective hexes (#178) the bot doesn't already have uncontested — same
+// "adjacent and nobody's contesting it" rule computeObjectiveVp scores by
+// (src/lib/victory.js), reimplemented here since the bot only needs the
+// hexes themselves, not the VP total.
+function uncoveredObjectiveHexes({ objectiveHexes, myTokens, enemyTokens }) {
+  return objectiveHexes.filter((hex) => {
+    const secured = myTokens.some((t) => {
+      if (hexDistance(t.position, hex) !== 1) return false;
+      const contested = enemyTokens.some(
+        (e) =>
+          hexDistance(e.position, hex) === 1 ||
+          hexDistance(e.position, t.position) === 1,
+      );
+      return !contested;
+    });
+    return !secured;
+  });
+}
+
 // The actual "is there a useful move" decision, kept separate from the
 // Move-die check (#200) so an exchange can be attempted when the answer is
 // yes but the pool has no Move (or Action) die to spend on it yet.
@@ -428,6 +451,7 @@ function computeMoveCandidate({
   dimensions,
   tiles,
   terrainTypes,
+  scenario,
 }) {
   const myTokens = tokens.filter(
     (t) => t.owner === botOwner && t.position && !t.destroyed,
@@ -443,6 +467,18 @@ function computeMoveCandidate({
       .map((t) => `${t.position.col},${t.position.row}`),
   );
 
+  // The "First to 11" scenario (#232) is won by holding objectives, not by
+  // wiping out the enemy — without this the bot just kept fighting toward
+  // the nearest enemy regardless of scenario and never went near an
+  // objective (#233).
+  const objectiveHexes =
+    scenario === 'first-to-11' && tiles && terrainTypes
+      ? objectiveHexesFrom(tiles, terrainTypes)
+      : [];
+  const uncovered = objectiveHexes.length
+    ? uncoveredObjectiveHexes({ objectiveHexes, myTokens, enemyTokens })
+    : [];
+
   for (const token of myTokens) {
     const maxMove = movementForToken(token, equipment);
     if (maxMove <= 0) continue;
@@ -457,20 +493,34 @@ function computeMoveCandidate({
           hex.col >= dimensions.cols ||
           hex.row >= dimensions.rows)) ||
       (tiles && terrainTypes && !flies && blocksMovement(tiles, terrainTypes, hex));
-    const moveTarget = chooseMoveTarget(token.position, enemyTokens, difficulty);
-    if (!moveTarget) continue;
-
     const weapons = findUsableWeapons(token, equipment);
     const bestRange = weapons.length
       ? Math.max(
           ...weapons.map((w) => parseWeaponRange(w.item.range)?.max ?? 0),
         )
       : 0;
-    const currentDist = hexDistance(token.position, moveTarget.position);
-    if (bestRange > 0 && currentDist <= bestRange) continue;
 
-    const stopDistance =
-      difficulty !== 'simple' && bestRange > 0 ? bestRange : 0;
+    // Holding an uncovered objective outranks chasing the enemy while the
+    // scenario has one on offer — attacking is decided separately, earlier
+    // in chooseBotAction, so this only affects idle/out-of-range models'
+    // repositioning, never whether an in-range shot gets taken.
+    let moveTarget;
+    let stopDistance;
+    if (uncovered.length > 0) {
+      const nearestObjective = uncovered.reduce((best, hex) => {
+        const dist = hexDistance(token.position, hex);
+        return !best || dist < best.dist ? { hex, dist } : best;
+      }, null);
+      moveTarget = { position: nearestObjective.hex };
+      stopDistance = 0;
+    } else {
+      moveTarget = chooseMoveTarget(token.position, enemyTokens, difficulty);
+      if (!moveTarget) continue;
+      const currentDist = hexDistance(token.position, moveTarget.position);
+      if (bestRange > 0 && currentDist <= bestRange) continue;
+      stopDistance = difficulty !== 'simple' && bestRange > 0 ? bestRange : 0;
+    }
+
     const destination = stepToward(
       token.position,
       moveTarget.position,
@@ -510,6 +560,7 @@ export function chooseBotAction({
   dimensions,
   tiles,
   terrainTypes,
+  scenario,
 }) {
   // Clean up a wrecked model before doing anything else with it (#154) —
   // doesn't need an enemy on the board or spend an action-pool die, matching
@@ -605,6 +656,7 @@ export function chooseBotAction({
     dimensions,
     tiles,
     terrainTypes,
+    scenario,
   };
   const moveAction = findMoveAction(moveArgs);
   if (moveAction) return moveAction;

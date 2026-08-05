@@ -8,6 +8,7 @@ import { useLocalStorageState } from '../lib/storage.js';
 export const DEFAULT_ROSTERS = [
   {
     name: 'Default A Corp List',
+    manufacturer: 'Corp A',
     text: [
       'Default A Corp List (Corp A)',
       'Weight: 99t / 100t',
@@ -41,6 +42,7 @@ export const DEFAULT_ROSTERS = [
   },
   {
     name: 'Flame Chicken Spam',
+    manufacturer: 'Corp A',
     text: [
       'Flame Chicken Spam (Corp A)',
       'Weight: 100t / 100t',

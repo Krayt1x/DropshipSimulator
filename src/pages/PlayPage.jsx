@@ -65,6 +65,10 @@ function PlayPage() {
   const [expanded, setExpanded] = useState(false);
   const [mode, setMode] = useState(null); // null | 'sandbox' | 'cpu'
   const [difficulty, setDifficulty] = useState(null);
+  // Which manufacturer's lists to offer (#198) — chosen before the specific
+  // list, rather than showing every default roster from every manufacturer
+  // in one flat pile.
+  const [rosterManufacturer, setRosterManufacturer] = useState(null);
   const [chosenRoster, setChosenRoster] = useState(null); // label of the finalized bot roster
   const [showRosterImport, setShowRosterImport] = useState(false);
   const [importText, setImportText] = useState('');
@@ -75,6 +79,7 @@ function PlayPage() {
     setExpanded(false);
     setMode(null);
     setDifficulty(null);
+    setRosterManufacturer(null);
     setChosenRoster(null);
     setShowRosterImport(false);
     setImportText('');
@@ -97,6 +102,7 @@ function PlayPage() {
     setMode(nextMode);
     setGameMode(nextMode === 'cpu' ? 'vs-computer' : 'sandbox');
     setDifficulty(null);
+    setRosterManufacturer(null);
     setChosenRoster(null);
     setShowRosterImport(false);
     setImportText('');
@@ -110,6 +116,13 @@ function PlayPage() {
     // (BattlePage.jsx) restrict them to their own seat the same way hotseat
     // multiplayer identity already does.
     setMyPlayer('p1');
+    setRosterManufacturer(null);
+    setChosenRoster(null);
+    setShowRosterImport(false);
+  }
+
+  function pickRosterManufacturer(manufacturer) {
+    setRosterManufacturer(manufacturer);
     setChosenRoster(null);
     setShowRosterImport(false);
   }
@@ -252,17 +265,44 @@ function PlayPage() {
           {mode === 'cpu' && difficulty && (
             <div className="cascade-stage">
               <p className="stage-label">
+                Which manufacturer should the computer play? (#198)
+              </p>
+              <div className="tile-palette-list">
+                {manufacturers.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    className={`tile-swatch-btn ${rosterManufacturer === m ? 'selected' : ''}`}
+                    onClick={() => pickRosterManufacturer(m)}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {mode === 'cpu' && difficulty && rosterManufacturer && (
+            <div className="cascade-stage">
+              <p className="stage-label">
                 Which list should the computer play?
               </p>
               <div className="tile-palette-list">
                 <button
                   type="button"
                   className={`tile-swatch-btn ${chosenRoster === 'Random' ? 'selected' : ''}`}
-                  onClick={() => chooseRoster({ type: 'random' }, 'Random')}
+                  onClick={() =>
+                    chooseRoster(
+                      { type: 'random', manufacturer: rosterManufacturer },
+                      'Random',
+                    )
+                  }
                 >
                   Random
                 </button>
-                {DEFAULT_ROSTERS.map((roster) => (
+                {DEFAULT_ROSTERS.filter(
+                  (roster) => roster.manufacturer === rosterManufacturer,
+                ).map((roster) => (
                   <button
                     key={roster.name}
                     type="button"
@@ -285,6 +325,14 @@ function PlayPage() {
                   Import…
                 </button>
               </div>
+              {DEFAULT_ROSTERS.every(
+                (roster) => roster.manufacturer !== rosterManufacturer,
+              ) && (
+                <p className="unit-meta" style={{ marginTop: 8 }}>
+                  No default lists for {rosterManufacturer} yet — Random will
+                  pull from another manufacturer, or import a list instead.
+                </p>
+              )}
 
               {showRosterImport && (
                 <div className="field" style={{ marginTop: 10 }}>

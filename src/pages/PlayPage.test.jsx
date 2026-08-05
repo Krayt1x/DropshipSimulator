@@ -79,11 +79,14 @@ describe('PlayPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Tactical/ }));
 
+    // Picking a difficulty alone doesn't start the game yet — a
+    // manufacturer (#198) and then a roster still need an answer.
+    expect(window.location.hash).toBe('');
+    fireEvent.click(screen.getByRole('button', { name: 'Corp A' }));
+
     expect(
       screen.getByText('Which list should the computer play?'),
     ).toBeDefined();
-    // Choosing a difficulty alone doesn't start the game yet — the roster
-    // stage still needs an answer.
     expect(window.location.hash).toBe('');
 
     fireEvent.click(screen.getByRole('button', { name: 'Random' }));
@@ -105,8 +108,43 @@ describe('PlayPage', () => {
       JSON.stringify('p1'),
     );
     expect(window.localStorage.getItem('dropshipsimulator:botRoster')).toBe(
-      JSON.stringify({ type: 'random' }),
+      JSON.stringify({ type: 'random', manufacturer: 'Corp A' }),
     );
+  });
+
+  it('lists each catalogue manufacturer, then only that manufacturer\'s default rosters (#198)', () => {
+    render(<PlayPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Simple/ }));
+
+    expect(
+      screen.getByText('Which manufacturer should the computer play? (#198)'),
+    ).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Corp A' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Corp B' })).toBeDefined();
+    // The roster stage doesn't appear until a manufacturer is chosen.
+    expect(
+      screen.queryByText('Which list should the computer play?'),
+    ).toBeNull();
+
+    // Corp B has no default rosters in this catalogue — only Random and
+    // Import should be on offer, with a note explaining why.
+    fireEvent.click(screen.getByRole('button', { name: 'Corp B' }));
+    expect(screen.getByRole('button', { name: 'Random' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Import…' })).toBeDefined();
+    expect(screen.queryByText('Default A Corp List')).toBeNull();
+    expect(screen.getByText(/No default lists for Corp B yet/)).toBeDefined();
+
+    // Switching to Corp A shows its own default rosters instead.
+    fireEvent.click(screen.getByRole('button', { name: 'Corp A' }));
+    expect(
+      screen.getByRole('button', { name: 'Default A Corp List' }),
+    ).toBeDefined();
+    expect(
+      screen.getByRole('button', { name: 'Flame Chicken Spam' }),
+    ).toBeDefined();
   });
 
   it("lets the human pick a specific default roster for the bot straight off the list (#173, #184)", () => {
@@ -115,6 +153,7 @@ describe('PlayPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
     fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
     fireEvent.click(screen.getByRole('button', { name: /Simple/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Corp A' }));
 
     fireEvent.click(
       screen.getByRole('button', { name: 'Flame Chicken Spam' }),
@@ -136,6 +175,7 @@ describe('PlayPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
     fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
     fireEvent.click(screen.getByRole('button', { name: /Simple/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Corp A' }));
     fireEvent.click(screen.getByRole('button', { name: 'Import…' }));
 
     const rosterText = [
@@ -208,6 +248,7 @@ describe('PlayPage', () => {
     expect(screen.getByRole('button', { name: 'Expert' })).toBeDefined();
 
     fireEvent.click(screen.getByRole('button', { name: 'Tactical' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Corp A' }));
     fireEvent.click(screen.getByRole('button', { name: 'Random' }));
 
     const mapStage = screen

@@ -1976,16 +1976,22 @@ function BattlePage() {
       // Random and "specific by name" both resolve to one of the built-in
       // default rosters; "import" uses the human's own pasted export
       // instead (#173). Falls back to the first default roster if a named
-      // one can't be found (e.g. the list of defaults changed).
+      // one can't be found (e.g. the list of defaults changed). Random is
+      // scoped to whichever manufacturer was chosen on PlayPage (#198),
+      // falling back to the full list if that manufacturer has none.
+      const randomPool = botRoster?.manufacturer
+        ? DEFAULT_ROSTERS.filter(
+            (r) => r.manufacturer === botRoster.manufacturer,
+          )
+        : [];
+      const pool = randomPool.length > 0 ? randomPool : DEFAULT_ROSTERS;
       const rosterText =
         botRoster?.type === 'import'
           ? botRoster.text
           : botRoster?.type === 'specific'
             ? (DEFAULT_ROSTERS.find((r) => r.name === botRoster.name)?.text ??
               DEFAULT_ROSTERS[0].text)
-            : DEFAULT_ROSTERS[
-                Math.floor(Math.random() * DEFAULT_ROSTERS.length)
-              ].text;
+            : pool[Math.floor(Math.random() * pool.length)].text;
       const parsed = parseRosterExport(rosterText, {
         units,
         manufacturers,

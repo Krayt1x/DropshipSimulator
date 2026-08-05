@@ -1156,6 +1156,25 @@ button.danger:hover {
   opacity: 0.6;
 }
 
+.attack-side-armor {
+  display: block;
+  font-size: 10px;
+  font-weight: 400;
+  opacity: 0.75;
+  margin-top: 2px;
+}
+
+.attack-side-detail {
+  background: var(--bg-page);
+  border-radius: 8px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+}
+
+.attack-side-detail p {
+  margin: 2px 0;
+}
+
 .attack-roll-btn {
   width: 100%;
   background: #dc2626;

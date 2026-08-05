@@ -36,6 +36,7 @@ import {
   isDropPodUnit,
   itemHasTag,
   tokenHasMovementTag,
+  equippedItemsForSide,
 } from '../lib/tokens.js';
 import {
   DEFAULT_TERRAIN_TYPES,
@@ -797,6 +798,26 @@ function BattlePage() {
           attackerToken.position,
         )
       : null;
+
+  // Per-side armor/equipment breakdown for the attack-side picker (#204),
+  // so the attacker can see what they're actually about to shoot at before
+  // committing to a side.
+  const attackSideInfo = attackTargetToken
+    ? Object.fromEntries(
+        ['front', 'left', 'right', 'rear'].map((s) => [
+          s,
+          {
+            armor: effectiveSideArmor(
+              attackTargetToken,
+              attackTargetUnit,
+              s,
+              equipment,
+            ),
+            items: equippedItemsForSide(attackTargetToken, s, equipment),
+          },
+        ]),
+      )
+    : null;
 
   // Artillery-style weapons roll once against every model under a 7-tile
   // splash template (the targeted tile plus its 6 neighbors) instead of a
@@ -2390,6 +2411,7 @@ function BattlePage() {
                 targetSizeLabel={attackTargetUnit?.size}
                 targetNumber={attackTargetNumber}
                 visibleSides={attackVisibleSides}
+                sideInfo={attackSideInfo}
                 side={attackTarget.side}
                 onPickSide={pickAttackSide}
                 result={attackResult}

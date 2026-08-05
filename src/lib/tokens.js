@@ -209,3 +209,21 @@ const SLOT_BY_TYPE = {
 export function slotForType(type) {
   return SLOT_BY_TYPE[type] ?? '—';
 }
+
+// The equipment sitting in a token's left/right slot, for the attack-side
+// picker (#204) — front/rear have no slot equipment of their own, so this
+// always returns [] for any side other than 'left'/'right'.
+export function equippedItemsForSide(token, side, equipment) {
+  if (side !== 'left' && side !== 'right') return [];
+  if (!token?.equippedIds) return [];
+  return token.equippedIds
+    .map((id, index) => {
+      if (token.weaponState[index]?.side !== side) return null;
+      const item = equipment.find((e) => Number(e.id) === Number(id));
+      if (!item) return null;
+      const maxHp = Number(item.hp) || 0;
+      const hp = token.weaponState[index]?.hp ?? maxHp;
+      return { name: item.name, hp, maxHp, broken: Boolean(token.weaponState[index]?.broken) };
+    })
+    .filter(Boolean);
+}

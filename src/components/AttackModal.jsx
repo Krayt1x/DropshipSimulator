@@ -14,6 +14,7 @@ function AttackModal({
   targetSizeLabel,
   targetNumber,
   visibleSides,
+  sideInfo,
   side,
   onPickSide,
   result,
@@ -42,6 +43,7 @@ function AttackModal({
         <div className="attack-side-picker">
           {SIDES.map((s) => {
             const notVisible = visibleSides && !visibleSides.includes(s.id);
+            const info = sideInfo?.[s.id];
             return (
               <button
                 type="button"
@@ -52,10 +54,38 @@ function AttackModal({
                 onClick={() => onPickSide(s.id)}
               >
                 {s.label}
+                {info && (
+                  // Hidden from the accessible name, matching the terrain
+                  // pill convention (#215) — otherwise
+                  // getByRole('button', { name: 'Right' }) breaks once an
+                  // armor caption renders inside the button.
+                  <span className="attack-side-armor" aria-hidden="true">
+                    Armor {info.armor}
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
+
+        {side && sideInfo?.[side] && (
+          <div className="attack-side-detail">
+            <p className="unit-meta">Armor: {sideInfo[side].armor}</p>
+            {(side === 'left' || side === 'right') && (
+              <p className="unit-meta">
+                Equipment:{' '}
+                {sideInfo[side].items.length === 0
+                  ? 'none'
+                  : sideInfo[side].items
+                      .map(
+                        (item) =>
+                          `${item.name} (${item.broken ? 'Broken' : `${item.hp}/${item.maxHp} HP`})`,
+                      )
+                      .join(', ')}
+              </p>
+            )}
+          </div>
+        )}
 
         <p className="unit-meta">
           Hit dice: {hitDice || '—'} · Heat +{heatGenerate ?? 0} on roll

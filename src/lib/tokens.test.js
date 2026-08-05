@@ -5,6 +5,7 @@ import {
   parseHeatRating,
   itemHasTag,
   deployedDiceByOwner,
+  equippedItemsForSide,
 } from './tokens.js';
 
 describe('tokens', () => {
@@ -138,6 +139,41 @@ describe('tokens', () => {
       ];
       const totals = deployedDiceByOwner(tokens, [unit]);
       expect(totals.p1).toEqual({ red: 1, blue: 2, green: 0 });
+    });
+  });
+
+  describe('equippedItemsForSide (#204)', () => {
+    const equipment = [
+      { id: 1, name: 'Long Range Bolt', hp: 5 },
+      { id: 2, name: 'Flame Thrower', hp: 3 },
+    ];
+    const token = {
+      equippedIds: [1, 2],
+      weaponState: {
+        0: { heat: 0, broken: false, side: 'right' },
+        1: { heat: 0, broken: true, side: 'left', hp: 0 },
+      },
+    };
+
+    it('lists the item equipped in the given side, with its current HP', () => {
+      expect(equippedItemsForSide(token, 'right', equipment)).toEqual([
+        { name: 'Long Range Bolt', hp: 5, maxHp: 5, broken: false },
+      ]);
+    });
+
+    it('reports a broken item and its reduced HP', () => {
+      expect(equippedItemsForSide(token, 'left', equipment)).toEqual([
+        { name: 'Flame Thrower', hp: 0, maxHp: 3, broken: true },
+      ]);
+    });
+
+    it('returns nothing for front/rear, which have no slot equipment', () => {
+      expect(equippedItemsForSide(token, 'front', equipment)).toEqual([]);
+      expect(equippedItemsForSide(token, 'rear', equipment)).toEqual([]);
+    });
+
+    it('returns nothing for a token with no equipment', () => {
+      expect(equippedItemsForSide(null, 'right', equipment)).toEqual([]);
     });
   });
 });

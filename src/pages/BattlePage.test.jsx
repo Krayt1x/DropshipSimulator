@@ -1281,7 +1281,17 @@ describe('BattlePage', () => {
       screen.getByText(new RegExp(`Target: A20 \\(${a20.size}\\)`)),
     ).toBeDefined();
 
+    // The side picker itself shows each side's armor stat, and picking a
+    // side reveals its equipped items and their HP (#204).
+    expect(
+      screen.getByRole('button', { name: 'Right' }).textContent,
+    ).toContain(`Armor ${rightArmor}`);
     fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+    expect(screen.getByText(`Armor: ${rightArmor}`)).toBeDefined();
+    expect(
+      screen.getByText('Equipment: Long Range Bolt (5/5 HP)'),
+    ).toBeDefined();
+
     fireEvent.click(screen.getByRole('button', { name: 'Roll to Hit' }));
 
     // Math.random mocked to 0 -> both dice roll a 1, which is <= any real

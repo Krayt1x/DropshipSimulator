@@ -138,7 +138,14 @@ describe('tokens', () => {
         },
       ];
       const totals = deployedDiceByOwner(tokens, [unit]);
-      expect(totals.p1).toEqual({ red: 1, blue: 2, green: 0 });
+      expect(totals.p1).toEqual({
+        red: 1,
+        blue: 2,
+        green: 0,
+        yellow: 0,
+        purple: 0,
+        orange: 0,
+      });
     });
   });
 

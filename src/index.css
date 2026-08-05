@@ -1873,7 +1873,19 @@ button.danger:hover {
 }
 
 .die-icon.green {
+  background: #16a34a;
+}
+
+.die-icon.yellow {
   background: #eab308;
+}
+
+.die-icon.purple {
+  background: #9333ea;
+}
+
+.die-icon.orange {
+  background: #f97316;
 }
 
 .pill-badge {

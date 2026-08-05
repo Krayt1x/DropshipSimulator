@@ -4,6 +4,7 @@
 // (see builderConstants.js's armorStringToFields/armorFieldsToString) —
 // `editing` is pre-split by the caller (ManagePage) before being passed in.
 import { UNIT_SIZES } from '../lib/builderConstants.js';
+import { DICE_COLORS } from '../lib/dice.js';
 
 function UnitForm({ manufacturers, editing, onSubmit, onCancel }) {
   return (
@@ -140,41 +141,23 @@ function UnitForm({ manufacturers, editing, onSubmit, onCancel }) {
 
       <div
         className="stat-grid"
-        style={{ marginTop: 10, gridTemplateColumns: '1fr' }}
+        style={{ marginTop: 10, gridTemplateColumns: 'repeat(3, 1fr)' }}
       >
-        <div className="field">
-          <label htmlFor="dice_blue">Blue dice</label>
-          <input
-            type="number"
-            id="dice_blue"
-            name="dice_blue"
-            min="0"
-            step="1"
-            defaultValue={editing?.dice_blue ?? 0}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="dice_red">Red dice</label>
-          <input
-            type="number"
-            id="dice_red"
-            name="dice_red"
-            min="0"
-            step="1"
-            defaultValue={editing?.dice_red ?? 0}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="dice_green">Green dice</label>
-          <input
-            type="number"
-            id="dice_green"
-            name="dice_green"
-            min="0"
-            step="1"
-            defaultValue={editing?.dice_green ?? 0}
-          />
-        </div>
+        {DICE_COLORS.map((color) => (
+          <div className="field" key={color}>
+            <label htmlFor={`dice_${color}`}>
+              {color.charAt(0).toUpperCase() + color.slice(1)} dice
+            </label>
+            <input
+              type="number"
+              id={`dice_${color}`}
+              name={`dice_${color}`}
+              min="0"
+              step="1"
+              defaultValue={editing?.[`dice_${color}`] ?? 0}
+            />
+          </div>
+        ))}
       </div>
 
       <div className="stat-grid" style={{ marginTop: 10 }}>

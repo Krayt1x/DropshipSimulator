@@ -65,7 +65,7 @@ const SECTIONS = [
     terms: [
       {
         term: 'Action Pool',
-        body: 'The dice rolled at the start of your turn, spent on moving and attacking. Rolled automatically from your dice color counts (see each unit\'s Blue/Red/Green dice).',
+        body: 'The dice rolled at the start of your turn, spent on moving and attacking. Rolled automatically from your dice color counts (see each unit\'s Blue/Red/Green/Yellow/Purple/Orange dice).',
       },
       {
         term: 'Move / Attack / Action faces',

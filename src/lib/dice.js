@@ -1,6 +1,6 @@
 import actionDice from '../data/actionDice.json';
 
-export const DICE_COLORS = ['blue', 'red', 'green'];
+export const DICE_COLORS = ['blue', 'red', 'green', 'yellow', 'purple', 'orange'];
 export const ACTION_DICE_SIDE_KEYS = [
   'side1',
   'side2',

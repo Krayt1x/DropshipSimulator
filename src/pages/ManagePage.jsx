@@ -7,10 +7,10 @@
 // truth going forward, not something re-merged against an external seed.
 //
 // Action dice are shown read-only here rather than editable: the game
-// engine hardcodes exactly 3 colors (blue/red/green, see dice.js's
-// DICE_COLORS and every unit's dice_blue/dice_red/dice_green fields), so
-// letting someone add/rename/delete a die color the way DropshipBuilder
-// does would silently break that assumption instead of doing anything.
+// engine hardcodes a fixed set of colors (see dice.js's DICE_COLORS and
+// every unit's dice_<color> fields), so letting someone add/rename/delete
+// a die color the way DropshipBuilder does would silently break that
+// assumption instead of doing anything.
 import { Fragment, useState } from 'react';
 import {
   UNIT_SIZES,
@@ -24,7 +24,7 @@ import {
   armorStringToFields,
   armorFieldsToString,
 } from '../lib/builderConstants.js';
-import { DIE_TYPES } from '../lib/dice.js';
+import { DIE_TYPES, DICE_COLORS } from '../lib/dice.js';
 import { useCatalogue, nextId, purgeCatalogueCache } from '../lib/catalogue.js';
 import UnitForm from '../components/UnitForm.jsx';
 import EquipmentForm from '../components/EquipmentForm.jsx';
@@ -234,9 +234,12 @@ function ManagePage() {
       max_weight: Number(form.get('max_weight')) || 0,
       max_drop_weight: Number(form.get('max_drop_weight')) || 0,
       hp: Number(form.get('hp')) || 0,
-      dice_blue: Math.max(0, Number(form.get('dice_blue')) || 0),
-      dice_red: Math.max(0, Number(form.get('dice_red')) || 0),
-      dice_green: Math.max(0, Number(form.get('dice_green')) || 0),
+      ...Object.fromEntries(
+        DICE_COLORS.map((color) => [
+          `dice_${color}`,
+          Math.max(0, Number(form.get(`dice_${color}`)) || 0),
+        ]),
+      ),
       left_slots: Math.max(0, Number(form.get('left_slots')) || 0),
       right_slots: Math.max(0, Number(form.get('right_slots')) || 0),
       head_slots: Math.max(0, Number(form.get('head_slots')) || 0),
@@ -294,7 +297,7 @@ function ManagePage() {
       if (Array.isArray(parsed)) {
         effectStats = parsed.filter((e) => {
           if (!EFFECT_STATS.some((s) => s.key === e.stat)) return false;
-          if (e.stat === 'dice') return ['blue', 'red', 'green'].includes(e.amount);
+          if (e.stat === 'dice') return DICE_COLORS.includes(e.amount);
           if (e.stat === 'tags') {
             return EQUIPMENT_TAGS.some((t) => t.key === e.amount);
           }

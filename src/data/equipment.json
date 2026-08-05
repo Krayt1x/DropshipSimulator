@@ -188,5 +188,20 @@
     "effects": "Only apply the Heat Effect that you rolled on the table.",
     "weight": 1,
     "no_drop_pod": true
+  },
+  {
+    "id": 16,
+    "name": "Armor Plate",
+    "manufacturer": "Corp A",
+    "type": "Weapon",
+    "size": "Small",
+    "effects": "Adds +1 armor to the side it's equipped on (front and rear if equipped in the Head slot) while unbroken.",
+    "effect_stats": [{ "stat": "tags", "amount": "armor_plate" }],
+    "weight": 1,
+    "range": "",
+    "heat_rating": "",
+    "hit_dice": "",
+    "hp": 5,
+    "no_drop_pod": true
   }
 ]

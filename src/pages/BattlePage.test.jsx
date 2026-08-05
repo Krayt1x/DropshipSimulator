@@ -1324,6 +1324,73 @@ describe('BattlePage', () => {
     }
   });
 
+  it('reduces damage to a side with an unbroken Armor Plate equipped there (#203)', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const a20 = units.find((u) => u.name === 'A20');
+    const weapon = equipment.find((e) => e.name === 'Long Range Bolt');
+    const dieSides = Number(weapon.hit_dice.match(/d(\d+)/)[1]);
+    const rightArmor = parseArmor(a20.armor).right;
+    const hits = 2;
+    // The defender's Right-slot Armor Plate adds +1 to right armor, on top
+    // of the unit's own base value.
+    const damage = calculateDamage(dieSides, rightArmor + 1, hits);
+
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve(['  Right: Long Range Bolt']);
+
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: [
+          'Test List (Corp A)',
+          'Weight: 21t / 100t',
+          '',
+          'A20 - 20t',
+          '  Right: Armor Plate',
+        ].join('\n'),
+      },
+    });
+    const importPanel = screen
+      .getByRole('button', { name: 'Preview import' })
+      .closest('.token-form');
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(
+      within(importPanel).getByRole('button', { name: 'Player 2' }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+    expandDiceRoller();
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'A20' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-4,6'));
+
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    fireEvent.click(screen.getByTestId('hex-4,6'));
+    fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll to Hit' }));
+
+    const modal = screen
+      .getByText(/Which side are you hitting/)
+      .closest('.attack-modal');
+    expect(within(modal).getByText(/2 hits/)).toBeDefined();
+    expect(
+      within(modal).getByText(new RegExp(`${damage} damage`)),
+    ).toBeDefined();
+    // Sanity check that the plate is actually doing something — without it
+    // this would be the base (unreduced) figure.
+    expect(damage).toBeLessThan(calculateDamage(dieSides, rightArmor, hits));
+  });
+
   it('fires a tracer-bolt volley sized to the hit dice, and shakes the target once damage lands (#183)', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     const { container } = render(<BattlePage />);

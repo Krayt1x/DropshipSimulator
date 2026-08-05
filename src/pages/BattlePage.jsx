@@ -45,10 +45,10 @@ import {
 } from '../lib/terrain.js';
 import { computeObjectiveVp } from '../lib/victory.js';
 import {
-  parseArmor,
   rollAttackDice,
   countHits,
   calculateDamage,
+  effectiveSideArmor,
 } from '../lib/combat.js';
 import {
   DEFAULT_TURN,
@@ -892,8 +892,12 @@ function BattlePage() {
           : t,
       ),
     );
-    const armor = parseArmor(attackTargetUnit?.armor);
-    const sideArmor = armor?.[attackTarget.side] ?? 0;
+    const sideArmor = effectiveSideArmor(
+      attackTargetToken,
+      attackTargetUnit,
+      attackTarget.side,
+      equipment,
+    );
     const hits = countHits(rolled.rolls, attackTargetNumber ?? 0);
     const damage = calculateDamage(rolled.sides, sideArmor, hits);
     setAttackResult({
@@ -1066,7 +1070,7 @@ function BattlePage() {
       const unit = units.find((u) => Number(u.id) === Number(token.unitId));
       const side = splashSideFor(token);
       const targetNumber = sizeNumber(unit?.size);
-      const sideArmor = parseArmor(unit?.armor)?.[side] ?? 0;
+      const sideArmor = effectiveSideArmor(token, unit, side, equipment);
       const hits = countHits(rolled.rolls, targetNumber);
       const damage = calculateDamage(rolled.sides, sideArmor, hits);
       return {
@@ -1523,7 +1527,7 @@ function BattlePage() {
 
     hits.forEach(({ token: hitToken }) => {
       const unit = units.find((u) => Number(u.id) === Number(hitToken.unitId));
-      const sideArmor = parseArmor(unit?.armor)?.rear ?? 0;
+      const sideArmor = effectiveSideArmor(hitToken, unit, 'rear', equipment);
       const damage = calculateDamage(10, sideArmor, 1);
       applyDamageToToken(hitToken, 'rear', damage, null);
     });
@@ -1761,7 +1765,7 @@ function BattlePage() {
       hitTokens.forEach((token) => {
         const unit = units.find((u) => Number(u.id) === Number(token.unitId));
         const side = nearestSide(token.position, token.facing, action.origin);
-        const sideArmor = parseArmor(unit?.armor)?.[side] ?? 0;
+        const sideArmor = effectiveSideArmor(token, unit, side, equipment);
         const hits = countHits(rolled.rolls, sizeNumber(unit?.size) ?? 0);
         const damage = calculateDamage(rolled.sides, sideArmor, hits);
         applyDamageToToken(token, side, damage, action.item);
@@ -1778,7 +1782,12 @@ function BattlePage() {
       (u) => Number(u.id) === Number(target.unitId),
     );
     const targetNumber = sizeNumber(targetUnit?.size) ?? 0;
-    const sideArmor = parseArmor(targetUnit?.armor)?.[action.side] ?? 0;
+    const sideArmor = effectiveSideArmor(
+      target,
+      targetUnit,
+      action.side,
+      equipment,
+    );
     const hits = countHits(rolled.rolls, targetNumber);
     const damage = calculateDamage(rolled.sides, sideArmor, hits);
     appendLog(
@@ -1848,7 +1857,7 @@ function BattlePage() {
 
     hits.forEach(({ token: hitToken }) => {
       const unit = units.find((u) => Number(u.id) === Number(hitToken.unitId));
-      const sideArmor = parseArmor(unit?.armor)?.rear ?? 0;
+      const sideArmor = effectiveSideArmor(hitToken, unit, 'rear', equipment);
       const damage = calculateDamage(10, sideArmor, 1);
       applyDamageToToken(hitToken, 'rear', damage, null);
     });

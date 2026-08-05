@@ -7,6 +7,7 @@ import {
 import {
   WEIGHT_SEGMENT_COLORS,
   requiredTypeForSlot,
+  matchesSlotType,
   computeRosterStats,
   itemStatSummary,
 } from '../lib/rosterEntry.js';
@@ -134,8 +135,8 @@ function RosterConfigPanel({
 
   function weaponUsage(slot) {
     const requiredType = requiredTypeForSlot(slot);
-    const slotOptions = unitEquipment.filter(
-      (item) => (item.type ?? 'Movement') === requiredType,
+    const slotOptions = unitEquipment.filter((item) =>
+      matchesSlotType(item, requiredType),
     );
     const equippedItems = (entry.equipment?.[slot] ?? [])
       .filter(Boolean)

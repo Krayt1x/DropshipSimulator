@@ -6,6 +6,7 @@ import {
   weaponSlotCost,
   armorLabel,
 } from './builderConstants.js';
+import { itemHasTag } from './tokens.js';
 
 export const WEIGHT_SEGMENT_COLORS = [
   '#1d4ed8',
@@ -19,6 +20,16 @@ export function requiredTypeForSlot(slot) {
   if (slot === 'Movement') return 'Movement';
   if (slot === 'Head') return 'Augment';
   return 'Weapon';
+}
+
+// Whether `item` can be equipped where `requiredType` is expected — always
+// true for a plain type match, plus one deliberate exception: Armor Plate
+// (#203) is a Weapon (so it gets the HP-tracking/Broken UI a Head-slot
+// Augment doesn't) but can also go in the Head slot, protecting front and
+// rear there instead of whichever side a Left/Right slot would.
+export function matchesSlotType(item, requiredType) {
+  if ((item.type ?? 'Movement') === requiredType) return true;
+  return requiredType === 'Augment' && itemHasTag(item, 'armor_plate');
 }
 
 function actionDiceSummary(item) {
@@ -59,8 +70,8 @@ export function computeRosterStats(entry, units, equipment, totalWeight) {
 
   function resolveEquippedItems(slot) {
     const requiredType = requiredTypeForSlot(slot);
-    const slotOptions = unitEquipment.filter(
-      (item) => (item.type ?? 'Movement') === requiredType,
+    const slotOptions = unitEquipment.filter((item) =>
+      matchesSlotType(item, requiredType),
     );
     return (entry.equipment?.[slot] ?? [])
       .map((id) => slotOptions.find((item) => Number(item.id) === Number(id)))
@@ -141,8 +152,8 @@ export function computeRosterStats(entry, units, equipment, totalWeight) {
   } else {
     SLOTS.forEach((slot) => {
       const requiredType = requiredTypeForSlot(slot);
-      const slotOptions = unitEquipment.filter(
-        (item) => (item.type ?? 'Movement') === requiredType,
+      const slotOptions = unitEquipment.filter((item) =>
+        matchesSlotType(item, requiredType),
       );
       const ids = entry.equipment?.[slot] ?? [];
       ids.forEach((selectedId, i) => {

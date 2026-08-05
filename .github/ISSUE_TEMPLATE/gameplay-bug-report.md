@@ -1,5 +1,5 @@
 ---
-name: Bug report
+name: Gameplay Bug Report
 about: Report something that isn't working
 title: "[Bug] "
 labels: bug, question

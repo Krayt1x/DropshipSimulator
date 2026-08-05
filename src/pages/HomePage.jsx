@@ -23,7 +23,7 @@ function HomePage() {
       >
         A game-state manager for the Dropship tabletop wargame.
       </p>
-      <div className="home-tile-grid">
+      <div className="home-tile-grid two-col-mobile-grid">
         {TILES.map((tile) => (
           <a className="home-tile" key={tile.href} href={tile.href}>
             <span className="home-tile-icon">{tile.icon}</span>

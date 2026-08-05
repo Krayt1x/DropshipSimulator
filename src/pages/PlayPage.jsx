@@ -270,7 +270,7 @@ function PlayPage() {
           </button>
         </div>
       )}
-      <div className="home-tile-grid play-mode-grid">
+      <div className="home-tile-grid two-col-mobile-grid">
         {hasActiveGame ? (
           <a className="home-tile" href="#battle">
             <span className="home-tile-icon">🧍</span>
@@ -311,7 +311,7 @@ function PlayPage() {
           </div>
 
           <p className="stage-label">How do you want to play?</p>
-          <div className="home-tile-grid play-mode-grid">
+          <div className="home-tile-grid two-col-mobile-grid">
             <button
               type="button"
               className={`home-tile ${mode === 'sandbox' ? 'selected' : ''}`}
@@ -878,7 +878,7 @@ function PlayPage() {
           {mapStageReady && (
             <div className="cascade-stage">
               <p className="stage-label">Which scenario do you want to play?</p>
-              <div className="home-tile-grid play-mode-grid">
+              <div className="home-tile-grid two-col-mobile-grid">
                 {SCENARIOS.map((s) => (
                   <button
                     key={s.id}

@@ -1704,13 +1704,12 @@ button.danger:hover {
   background: var(--bg-track);
 }
 
-/* On mobile, the mode-choice and difficulty grids collapse to a single
-   column by .home-tile-grid's own breakpoint below — these two modifiers
-   override that specifically for the Play page (#231) so Single
-   Player/Multiplayer and Sandbox/Vs CPU stay 2 across, and difficulty stays
-   3 across in one row, instead of stacking. */
+/* On mobile, a two-tile-wide grid otherwise collapses to a single column by
+   .home-tile-grid's own breakpoint below — this modifier keeps it 2 across
+   instead of stacking (#231, reused on the home page for #235). The
+   difficulty grid gets its own 3-across modifier alongside it. */
 @media (max-width: 700px) {
-  .home-tile-grid.play-mode-grid,
+  .home-tile-grid.two-col-mobile-grid,
   .home-tile-grid.play-difficulty-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
@@ -1720,21 +1719,21 @@ button.danger:hover {
     grid-template-columns: repeat(3, 1fr);
   }
 
-  .play-mode-grid .home-tile,
+  .two-col-mobile-grid .home-tile,
   .play-difficulty-grid .home-tile {
     padding: 14px 6px;
   }
 
-  .play-mode-grid .home-tile-icon {
+  .two-col-mobile-grid .home-tile-icon {
     font-size: 22px;
   }
 
-  .play-mode-grid .home-tile-title,
+  .two-col-mobile-grid .home-tile-title,
   .play-difficulty-grid .home-tile-title {
     font-size: 13px;
   }
 
-  .play-mode-grid .home-tile-description {
+  .two-col-mobile-grid .home-tile-description {
     font-size: 11px;
   }
 }

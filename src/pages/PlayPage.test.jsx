@@ -506,11 +506,11 @@ describe('PlayPage grid layout (#231)', () => {
     render(<PlayPage />);
 
     const topGrid = screen.getByRole('link', { name: /Multiplayer/ }).closest('.home-tile-grid');
-    expect(topGrid.className).toContain('play-mode-grid');
+    expect(topGrid.className).toContain('two-col-mobile-grid');
 
     fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
     const modeGrid = screen.getByRole('button', { name: /Sandbox/ }).closest('.home-tile-grid');
-    expect(modeGrid.className).toContain('play-mode-grid');
+    expect(modeGrid.className).toContain('two-col-mobile-grid');
   });
 
   it('marks the difficulty grid so it stays 3-up in one row on mobile', () => {

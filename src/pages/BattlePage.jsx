@@ -645,13 +645,22 @@ function BattlePage() {
     ).length;
   const p1ModelsRemaining = modelsOnBoard('p1');
   const p2ModelsRemaining = modelsOnBoard('p2');
-  const winner = deploymentPhase
-    ? null
-    : p1ModelsRemaining === 0 && p2ModelsRemaining > 0
-      ? 'p2'
-      : p2ModelsRemaining === 0 && p1ModelsRemaining > 0
-        ? 'p1'
-        : null;
+  // A game only "ends" once someone has actually claimed a seat — vs-computer
+  // always sets myPlayer, and so does each human in a real multiplayer match
+  // (the PlayerIdentityPicker, still shown in 'sandbox' gameMode since that
+  // field really just means "is there a bot", not "is anyone playing for
+  // real"). With no seat claimed at all, it's one person freely controlling
+  // both sides to test/build scenarios — wiping one out (e.g. clearing the
+  // board to start over) isn't a real loss there, so it never auto-ends the
+  // game (#216).
+  const winner =
+    deploymentPhase || !myPlayer
+      ? null
+      : p1ModelsRemaining === 0 && p2ModelsRemaining > 0
+        ? 'p2'
+        : p2ModelsRemaining === 0 && p1ModelsRemaining > 0
+          ? 'p1'
+          : null;
   const loser = winner === 'p1' ? 'p2' : winner === 'p2' ? 'p1' : null;
 
   // Highlights for the winner screen (#193): every mech that dealt damage

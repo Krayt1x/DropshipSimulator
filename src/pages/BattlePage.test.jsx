@@ -1418,6 +1418,15 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-4,6'));
 
+    // Claims a seat (#216) now that both sides are on the board — a winner
+    // only ever declares once someone has, otherwise this is untethered
+    // sandbox play. Done via a live publish rather than localStorage before
+    // render, since claiming p1 up front would have blocked placing p2's
+    // own token above.
+    act(() => {
+      publish('dropshipsimulator:myPlayer', 'p1');
+    });
+
     // Wound A20 down close to death first (manual HP adjustment, not a real
     // attack — shouldn't show up in the damage chart on its own).
     const a20HpMinusButton = () => screen.getAllByRole('button', { name: '−' })[0];
@@ -2658,6 +2667,15 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-6,5'));
 
+    // Claims a seat (#216) now that both sides are on the board — a winner
+    // only ever declares once someone has, otherwise this is untethered
+    // sandbox play. Done via a live publish rather than localStorage before
+    // render, since claiming p1 up front would have blocked placing p2's
+    // own token above.
+    act(() => {
+      publish('dropshipsimulator:myPlayer', 'p1');
+    });
+
     expect(screen.queryByText(/Wins!/)).toBeNull();
 
     // A20 is still the selected token from placing it — no need to
@@ -2773,6 +2791,14 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-6,5'));
 
+    // Claims a seat (#216) — sandbox gameMode, but played as a real match
+    // rather than one person freely running both sides. Done via a live
+    // publish rather than localStorage before render, since claiming p1 up
+    // front would have blocked placing p2's own token above.
+    act(() => {
+      publish('dropshipsimulator:myPlayer', 'p1');
+    });
+
     const a20 = units.find((u) => u.name === 'A20');
     const chassisHpMinusButton = () =>
       screen.getAllByRole('button', { name: '−' })[0];
@@ -2796,12 +2822,50 @@ describe('BattlePage', () => {
     expect(screen.queryByText(/Wins!/)).toBeNull();
   });
 
+  it('never declares a winner in untethered sandbox play, even with one side wiped out (#216)', () => {
+    const a10 = units.find((u) => u.name === 'A10');
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:deploymentPhase',
+      JSON.stringify(false),
+    );
+    // No myPlayer claimed — one person is freely running both sides, the
+    // same as if they'd picked "Sandbox" on the Play screen.
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:tokens',
+      JSON.stringify([
+        {
+          id: 'p1-token',
+          unitId: a10.id,
+          owner: 'p1',
+          position: { col: 5, row: 5 },
+          facing: 0,
+          currentHp: a10.hp,
+          equippedIds: [],
+          weaponState: {},
+          destroyed: false,
+        },
+      ]),
+    );
+
+    render(<BattlePage />);
+
+    // Player 2 has zero models on the board, which would normally end the
+    // game (#159) — but with nobody having claimed a seat, this is just
+    // sandbox play (e.g. clearing the board to start over), not a real loss.
+    expect(screen.queryByText(/Wins!/)).toBeNull();
+  });
+
   it('does not let a drop pod count as defending the board (#159)', () => {
     const deliveryCapsule = units.find((u) => u.name === 'Delivery Capsule');
     const a10 = units.find((u) => u.name === 'A10');
     window.localStorage.setItem(
       'dropshipsimulator:battle:deploymentPhase',
       JSON.stringify(false),
+    );
+    // A claimed seat (#216) — otherwise this is untethered sandbox play.
+    window.localStorage.setItem(
+      'dropshipsimulator:myPlayer',
+      JSON.stringify('p1'),
     );
     window.localStorage.setItem(
       'dropshipsimulator:battle:tokens',

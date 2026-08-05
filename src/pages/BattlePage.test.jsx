@@ -2793,9 +2793,15 @@ describe('BattlePage', () => {
       .closest('.mobile-attack-picker');
     expect(picker).not.toBeNull();
 
-    fireEvent.click(
-      within(picker).getByRole('button', { name: 'Long Range Bolt' }),
-    );
+    // Shows the weapon's slot and hit dice so a mobile player doesn't have
+    // to leave the picker to check them (#207).
+    const weaponBtn = within(picker).getByRole('button', {
+      name: 'Long Range Bolt',
+    });
+    expect(weaponBtn.textContent).toContain('Slot Right');
+    expect(weaponBtn.textContent).toContain('Hit 2d8');
+
+    fireEvent.click(weaponBtn);
 
     // Picker closes and the FAB now reads "Cancel attack" — same armed
     // state the TokenCard's own per-weapon Attack button drives.

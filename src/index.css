@@ -2089,6 +2089,12 @@ button.danger:hover {
     font-weight: 600;
   }
 
+  .mobile-attack-picker-meta {
+    display: block;
+    font-weight: 400;
+    margin-top: 2px;
+  }
+
   .mobile-attack-picker-item:disabled {
     color: var(--text-muted);
     cursor: not-allowed;

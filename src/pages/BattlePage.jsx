@@ -37,6 +37,7 @@ import {
   itemHasTag,
   tokenHasMovementTag,
   equippedItemsForSide,
+  slotForType,
 } from '../lib/tokens.js';
 import {
   DEFAULT_TERRAIN_TYPES,
@@ -2538,6 +2539,21 @@ function BattlePage() {
                       {overheated && (
                         <span className="badge-overheated">OVERHEATED</span>
                       )}
+                      {/* Hidden from the accessible name (#215's
+                          precedent) so getByRole('button', { name:
+                          'Long Range Bolt' })-style queries stay exact. */}
+                      <span
+                        className="unit-meta mobile-attack-picker-meta"
+                        aria-hidden="true"
+                      >
+                        Slot{' '}
+                        {state.side === 'left'
+                          ? 'Left'
+                          : state.side === 'right'
+                            ? 'Right'
+                            : slotForType(item.type)}{' '}
+                        · Hit {item.hit_dice || '—'}
+                      </span>
                     </button>
                   );
                 })}

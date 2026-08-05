@@ -270,13 +270,41 @@ describe('PlayPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
     fireEvent.click(screen.getByRole('button', { name: /Sandbox/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Blank/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Current map' }));
+    fireEvent.click(
+      within(screen.getByText('Choose a map').closest('.map-picker-modal')).getByRole(
+        'button',
+        { name: /Blank/ },
+      ),
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(window.location.hash).toBe('#battle');
     expect(
       JSON.parse(window.localStorage.getItem('dropshipsimulator:mapEditor:tiles')),
     ).toEqual({});
+  });
+
+  it('lists every pre-existing map in the picker modal, not just Blank (#222)', () => {
+    render(<PlayPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Sandbox/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Current map' }));
+
+    const modal = screen.getByText('Choose a map').closest('.map-picker-modal');
+    fireEvent.click(within(modal).getByRole('button', { name: /Map 1/ }));
+    // The picker closes and the opener button now shows the chosen map.
+    expect(screen.queryByText('Choose a map')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Map 1' })).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+
+    expect(
+      JSON.parse(
+        window.localStorage.getItem('dropshipsimulator:mapEditor:tiles'),
+      )['7,12'],
+    ).toBe('objective');
   });
 
   it('leaves the saved map alone when "Current map" is kept (#176)', () => {
@@ -328,14 +356,20 @@ describe('PlayPage', () => {
     const mapStage = screen
       .getByText('Which map do you want to play?')
       .closest('.cascade-stage');
-    expect(
+    fireEvent.click(
       within(mapStage).getByRole('button', { name: 'Current map' }),
+    );
+    const mapPickerModal = screen
+      .getByText('Choose a map')
+      .closest('.map-picker-modal');
+    expect(
+      within(mapPickerModal).getByRole('button', { name: /Current map/ }),
     ).toBeDefined();
     expect(
-      within(mapStage).getByRole('button', { name: 'Blank' }),
+      within(mapPickerModal).getByRole('button', { name: /Blank/ }),
     ).toBeDefined();
     expect(
-      within(mapStage).queryByRole('button', { name: /Import/ }),
+      within(mapPickerModal).queryByRole('button', { name: /Import/ }),
     ).toBeNull();
     expect(screen.queryByLabelText('Map export')).toBeNull();
   });

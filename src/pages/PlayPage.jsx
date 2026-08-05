@@ -14,10 +14,6 @@ const DIFFICULTIES = [
 
 // Importing a map here was removed (#191) — map creation/maintenance is a
 // Map Editor concern now, not something to redo on every new game.
-const MAP_CHOICES = [
-  { id: 'current', label: 'Current map' },
-  { id: 'blank', label: 'Blank' },
-];
 
 function PlayPage() {
   const { manufacturers, units, equipment } = useCatalogue();
@@ -87,7 +83,10 @@ function PlayPage() {
   const [showPlayerRosterImport, setShowPlayerRosterImport] = useState(false);
   const [playerImportText, setPlayerImportText] = useState('');
   const [playerImportPreview, setPlayerImportPreview] = useState(null);
-  const [mapChoice, setMapChoice] = useState('current'); // 'current' | 'blank'
+  // 'current', or a DEFAULT_MAPS entry's name (#222) — picked from a modal
+  // listing every pre-existing map instead of a hardcoded Current/Blank pair.
+  const [mapChoice, setMapChoice] = useState('current');
+  const [mapPickerOpen, setMapPickerOpen] = useState(false);
 
   function resetPicker() {
     setExpanded(false);
@@ -104,6 +103,7 @@ function PlayPage() {
     setPlayerImportText('');
     setPlayerImportPreview(null);
     setMapChoice('current');
+    setMapPickerOpen(false);
   }
 
   function handleEndGame() {
@@ -188,11 +188,13 @@ function PlayPage() {
   }
 
   function confirmStartGame() {
-    if (mapChoice === 'blank') {
-      const blank = DEFAULT_MAPS.find((m) => m.name === 'Blank');
-      setMapDimensions(blank.dimensions);
-      setMapTileTypes(blank.tileTypes);
-      setMapTiles(blank.tiles);
+    if (mapChoice !== 'current') {
+      const chosen = DEFAULT_MAPS.find((m) => m.name === mapChoice);
+      if (chosen) {
+        setMapDimensions(chosen.dimensions);
+        setMapTileTypes(chosen.tileTypes);
+        setMapTiles(chosen.tiles);
+      }
     }
     // 'current' leaves whatever's already saved in the Map Editor alone.
     window.location.hash = '#battle';
@@ -570,18 +572,13 @@ function PlayPage() {
           {mapStageReady && (
             <div className="cascade-stage">
               <p className="stage-label">Which map do you want to play?</p>
-              <div className="home-tile-grid">
-                {MAP_CHOICES.map((m) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    className={`home-tile ${mapChoice === m.id ? 'selected' : ''}`}
-                    onClick={() => setMapChoice(m.id)}
-                  >
-                    <span className="home-tile-title">{m.label}</span>
-                  </button>
-                ))}
-              </div>
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => setMapPickerOpen(true)}
+              >
+                {mapChoice === 'current' ? 'Current map' : mapChoice}
+              </button>
 
               <div
                 style={{
@@ -596,6 +593,56 @@ function PlayPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {mapPickerOpen && (
+        <div
+          className="map-picker-overlay"
+          onClick={() => setMapPickerOpen(false)}
+        >
+          <div className="card map-picker-modal" onClick={(e) => e.stopPropagation()}>
+            <p className="unit-name">Choose a map</p>
+            <div className="home-tile-grid">
+              <button
+                type="button"
+                className={`home-tile ${mapChoice === 'current' ? 'selected' : ''}`}
+                onClick={() => {
+                  setMapChoice('current');
+                  setMapPickerOpen(false);
+                }}
+              >
+                <span className="home-tile-title">Current map</span>
+                <span className="home-tile-description">
+                  Whatever's already saved in the Map Editor.
+                </span>
+              </button>
+              {DEFAULT_MAPS.map((m) => (
+                <button
+                  key={m.name}
+                  type="button"
+                  className={`home-tile ${mapChoice === m.name ? 'selected' : ''}`}
+                  onClick={() => {
+                    setMapChoice(m.name);
+                    setMapPickerOpen(false);
+                  }}
+                >
+                  <span className="home-tile-title">{m.name}</span>
+                  <span className="home-tile-description">
+                    {m.dimensions.cols} × {m.dimensions.rows}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="ghost"
+              style={{ marginTop: 16 }}
+              onClick={() => setMapPickerOpen(false)}
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -1598,6 +1598,13 @@ button.danger:hover {
   background: var(--bg-track);
 }
 
+/* A small rendered preview of a map's terrain (#226), used as a pre-made
+   map tile's icon instead of a generic emoji. */
+.map-thumbnail {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
 /* The Play page's Single Player picker grows downward one tile row per
    answer instead of swapping between separate step screens (#184) — each
    later stage nests under a thin rule so it still reads as "part of the

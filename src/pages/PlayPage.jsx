@@ -5,6 +5,7 @@ import { parseRosterExport } from '../lib/rosterImport.js';
 import { DEFAULT_ROSTERS } from '../components/RosterImport.jsx';
 import { DEFAULT_MAPS } from '../lib/maps.js';
 import { useCatalogue } from '../lib/catalogue.js';
+import MapThumbnail from '../components/MapThumbnail.jsx';
 
 const DIFFICULTIES = [
   { id: 'simple', label: 'Simple' },
@@ -47,15 +48,15 @@ function PlayPage() {
   // Write-only here — BattlePage.jsx reads these on mount once the game
   // actually starts (#176). Left untouched entirely when the human keeps
   // whatever's already in the Map Editor ("Current map").
-  const [, setMapDimensions] = useLocalStorageState(
+  const [currentMapDimensions, setMapDimensions] = useLocalStorageState(
     'dropshipsimulator:mapEditor:dimensions',
     DEFAULT_MAPS[0].dimensions,
   );
-  const [, setMapTileTypes] = useLocalStorageState(
+  const [currentMapTileTypes, setMapTileTypes] = useLocalStorageState(
     'dropshipsimulator:mapEditor:tileTypes',
     DEFAULT_MAPS[0].tileTypes,
   );
-  const [, setMapTiles] = useLocalStorageState(
+  const [currentMapTiles, setMapTiles] = useLocalStorageState(
     'dropshipsimulator:mapEditor:tiles',
     {},
   );
@@ -612,6 +613,11 @@ function PlayPage() {
                   setMapPickerOpen(false);
                 }}
               >
+                <MapThumbnail
+                  dimensions={currentMapDimensions}
+                  tileTypes={currentMapTileTypes}
+                  tiles={currentMapTiles}
+                />
                 <span className="home-tile-title">Current map</span>
                 <span className="home-tile-description">
                   Whatever's already saved in the Map Editor.
@@ -627,6 +633,11 @@ function PlayPage() {
                     setMapPickerOpen(false);
                   }}
                 >
+                  <MapThumbnail
+                    dimensions={m.dimensions}
+                    tileTypes={m.tileTypes}
+                    tiles={m.tiles}
+                  />
                   <span className="home-tile-title">{m.name}</span>
                   <span className="home-tile-description">
                     {m.dimensions.cols} × {m.dimensions.rows}

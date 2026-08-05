@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocalStorageState } from '../lib/storage.js';
 import { DEFAULT_MAPS, DEFAULT_MAP_DIMENSIONS } from '../lib/maps.js';
 import { DEFAULT_TERRAIN_TYPES } from '../lib/terrain.js';
+import MapThumbnail from '../components/MapThumbnail.jsx';
 
 // The Map Editor's landing page (#218): just two tiles, "Pre-made maps" and
 // "Map creator" (#223) — picking a pre-made layout opens a modal (same
@@ -82,7 +83,11 @@ function MapViewPage() {
                   className="home-tile"
                   onClick={() => loadMap(map)}
                 >
-                  <span className="home-tile-icon">🗺️</span>
+                  <MapThumbnail
+                    dimensions={map.dimensions}
+                    tileTypes={map.tileTypes}
+                    tiles={map.tiles}
+                  />
                   <span className="home-tile-title">{map.name}</span>
                   <span className="home-tile-description">
                     {map.dimensions.cols} × {map.dimensions.rows}

@@ -99,6 +99,29 @@ describe('App', () => {
     expect(screen.getByText('Build your list')).toBeDefined();
   });
 
+  it('splits the map editor into a #map layout picker and a #map/edit Creator (#218)', () => {
+    window.location.hash = '#map';
+    render(<App />);
+
+    // #map is the View landing page — layout tiles, not the paint tools yet.
+    expect(screen.getByRole('link', { name: /Blank/ })).toBeDefined();
+    expect(screen.queryByLabelText('Columns')).toBeNull();
+    expect(
+      screen.getByRole('link', { name: 'Map editor' }).className,
+    ).toContain('active');
+
+    fireEvent.click(screen.getByRole('link', { name: /Blank/ }));
+    window.location.hash = '#map/edit';
+    fireEvent(window, new Event('hashchange'));
+
+    // #map/edit is the actual Creator — same nav item stays active there too.
+    expect(screen.getByLabelText('Columns')).toBeDefined();
+    expect(
+      screen.getByRole('link', { name: 'Map editor' }).className,
+    ).toContain('active');
+    expect(screen.getByRole('link', { name: '← Map layouts' })).toBeDefined();
+  });
+
   it('renders the catalogue Manage page at #manage, with its own top-nav menu item (#199)', () => {
     window.location.hash = '#manage';
     render(<App />);

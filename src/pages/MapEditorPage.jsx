@@ -139,6 +139,9 @@ function MapEditorPage() {
 
   return (
     <div className="container-wide">
+      <a href="#map" className="ghost" style={{ marginBottom: 16 }}>
+        ← Map layouts
+      </a>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Map editor</h1>
       <p className="unit-meta" style={{ marginBottom: 20 }}>
         Build a hex battlefield by defining your own terrain types and

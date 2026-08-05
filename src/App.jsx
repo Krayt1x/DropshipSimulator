@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage.jsx';
 import PlayPage from './pages/PlayPage.jsx';
 import BuilderPage from './pages/BuilderPage.jsx';
 import ManagePage from './pages/ManagePage.jsx';
+import MapViewPage from './pages/MapViewPage.jsx';
 import MapEditorPage from './pages/MapEditorPage.jsx';
 import BattlePage from './pages/BattlePage.jsx';
 import ConnectPage from './pages/ConnectPage.jsx';
@@ -17,6 +18,9 @@ import { resetActiveGame } from './lib/gameState.js';
 
 function currentPage() {
   const path = window.location.hash.split('?')[0];
+  // #map is the View landing page (pre-made layouts, #218); #map/edit is
+  // the actual Creator (today's paint/build/export UI).
+  if (path === '#map/edit') return 'map-edit';
   if (path === '#map') return 'map';
   if (path === '#play') return 'play';
   if (path === '#builder') return 'builder';
@@ -210,7 +214,12 @@ function AppShell() {
                 >
                   Play
                 </a>
-                <a href="#map" className={page === 'map' ? 'active' : ''}>
+                <a
+                  href="#map"
+                  className={
+                    ['map', 'map-edit'].includes(page) ? 'active' : ''
+                  }
+                >
                   Map editor
                 </a>
               </div>
@@ -262,8 +271,10 @@ function AppShell() {
         <BattlePage />
       ) : page === 'connect' ? (
         <ConnectPage />
-      ) : page === 'map' ? (
+      ) : page === 'map-edit' ? (
         <MapEditorPage />
+      ) : page === 'map' ? (
+        <MapViewPage />
       ) : page === 'builder' ? (
         <BuilderPage />
       ) : page === 'manage' ? (

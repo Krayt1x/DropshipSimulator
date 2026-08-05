@@ -2924,13 +2924,14 @@ describe('BattlePage', () => {
       .closest('.mobile-attack-picker');
     expect(picker).not.toBeNull();
 
-    // Shows the weapon's slot and hit dice so a mobile player doesn't have
-    // to leave the picker to check them (#207).
+    // Shows the weapon's slot, hit dice, and current heat so a mobile
+    // player doesn't have to leave the picker to check them (#207, #229).
     const weaponBtn = within(picker).getByRole('button', {
       name: 'Long Range Bolt',
     });
     expect(weaponBtn.textContent).toContain('Slot Right');
     expect(weaponBtn.textContent).toContain('Hit 2d8');
+    expect(weaponBtn.textContent).toContain('Heat 0/6');
 
     fireEvent.click(weaponBtn);
 
@@ -2938,6 +2939,46 @@ describe('BattlePage', () => {
     // state the TokenCard's own per-weapon Attack button drives.
     expect(screen.queryByText('Choose a weapon')).toBeNull();
     expect(screen.getByRole('button', { name: 'Cancel attack' })).toBeDefined();
+  });
+
+  it('color-codes a weapon\'s heat in the mobile weapon picker once it reaches its max (#229)', () => {
+    const a10 = units.find((u) => u.name === 'A10');
+    const longRangeBolt = equipment.find((e) => e.name === 'Long Range Bolt');
+    const { max } = parseHeatRating(longRangeBolt.heat_rating);
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:tokens',
+      JSON.stringify([
+        {
+          id: 'token-1',
+          unitId: a10.id,
+          owner: 'p1',
+          position: { col: 5, row: 5 },
+          facing: 0,
+          currentHp: a10.hp,
+          equippedIds: [longRangeBolt.id],
+          weaponState: { 0: { heat: max, broken: false } },
+          destroyed: false,
+        },
+      ]),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:actionPool',
+      JSON.stringify([{ id: 'test-attack-die', label: 'Red', value: 'Attack' }]),
+    );
+
+    render(<BattlePage />);
+    fireEvent.click(screen.getByTestId('token-token-1'));
+    fireEvent.click(screen.getByRole('button', { name: /^Weapons \(/ }));
+
+    const picker = screen
+      .getByText('Choose a weapon')
+      .closest('.mobile-attack-picker');
+    const weaponBtn = within(picker).getByRole('button', {
+      name: 'Long Range Bolt',
+    });
+    expect(weaponBtn.textContent).toContain(`Heat ${max}/${max}`);
+    const heatSpan = within(weaponBtn).getByText(`${max}/${max}`);
+    expect(heatSpan.style.color).toBe('rgb(245, 158, 11)');
   });
 
   it('deploys itself and takes a full turn automatically in vs-computer mode', async () => {

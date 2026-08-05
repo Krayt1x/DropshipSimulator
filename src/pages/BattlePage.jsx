@@ -2671,6 +2671,23 @@ function BattlePage() {
                             ? 'Right'
                             : slotForType(item.type)}{' '}
                         · Hit {item.hit_dice || '—'}
+                        {max ? (
+                          <>
+                            {' '}
+                            · Heat{' '}
+                            <span
+                              style={
+                                state.heat > max
+                                  ? { color: '#dc2626', fontWeight: 700 }
+                                  : state.heat === max
+                                    ? { color: '#f59e0b' }
+                                    : undefined
+                              }
+                            >
+                              {state.heat}/{max}
+                            </span>
+                          </>
+                        ) : null}
                       </span>
                     </button>
                   );

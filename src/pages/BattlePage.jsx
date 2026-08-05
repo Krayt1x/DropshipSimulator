@@ -1441,6 +1441,21 @@ function BattlePage() {
           }
         } else if (!tokenAt(key)) {
           animateMove(movingToken, col, row);
+          // Jumps back to the Units tab so the next reserve unit can be
+          // picked without a manual tab switch (#201) — but only if one is
+          // actually left to deploy, otherwise there's nothing to jump back
+          // for and the Board tab is more useful.
+          if (deploymentPhase) {
+            const otherReserveRemains = tokens.some(
+              (t) =>
+                t.id !== movingToken.id &&
+                !t.position &&
+                !t.destroyed &&
+                canControl(t) &&
+                !isDropPodToken(t),
+            );
+            if (otherReserveRemains) setMobileTab('units');
+          }
         }
       }
       setMovingTokenId(null);

@@ -2313,6 +2313,50 @@ describe('BattlePage', () => {
     expect(screen.getByText('Reserve (0)')).toBeDefined();
   });
 
+  it('returns to the Units tab after deploying, but only while another reserve unit is left to place (#201)', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: [
+          'Test List (Corp A)',
+          'Weight: 26t / 100t',
+          '',
+          'A10 - 6t',
+          'A20 - 20t',
+        ].join('\n'),
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 2 units to reserve' }),
+    );
+
+    fireEvent.click(
+      screen.getAllByRole('button', { name: 'Deploy to board' })[0],
+    );
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+
+    // A20 is still in reserve, so it jumps back to the Units tab to pick it.
+    expect(
+      document
+        .querySelector('.battle-board-column')
+        .className.includes('mobile-tab-panel-active'),
+    ).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy to board' }));
+    fireEvent.click(screen.getByTestId('hex-0,4'));
+
+    // Nothing left in reserve, so it stays put on the Board tab.
+    expect(
+      document
+        .querySelector('.battle-board-column')
+        .className.includes('mobile-tab-panel-active'),
+    ).toBe(true);
+    expect(screen.getByText('Reserve (0)')).toBeDefined();
+  });
+
   it('renders the full Player 1/Player 2/End Turn panel inline next to the heading on mobile (#141)', () => {
     vi.stubGlobal('matchMedia', () => ({
       matches: true,

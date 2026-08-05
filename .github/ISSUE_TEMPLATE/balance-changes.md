@@ -1,7 +1,7 @@
 ---
 name: Balance Changes
 about: Suggest an idea for Dropship Simulator
-title: "[Feature] "
+title: "[Balance] "
 labels: Balance, enhancement, question
 assignees: ''
 

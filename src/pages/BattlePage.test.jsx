@@ -304,7 +304,7 @@ describe('BattlePage', () => {
     expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
   });
 
-  it('blocks a longer move that would pass through an occupied hex (#181)', () => {
+  it('routes around a single occupied hex in the way instead of blocking the whole move (#214)', () => {
     vi.useFakeTimers();
     render(<BattlePage />);
     startDeploymentPhase();
@@ -330,7 +330,8 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
-    // A20 sits directly between (0,0) and (0,8), blocking the straight path.
+    // A20 sits directly between (0,0) and (0,8) on the straight line, but
+    // there's open space on either side of it to detour through.
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-0,4'));
@@ -343,9 +344,64 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByTestId('hex-0,8'));
     finishMoveAnimation();
 
-    // (0,8) itself was empty, but the A20 in the way still blocked the move.
+    // A10 routed around A20 rather than being blocked by it (#214) — A20
+    // itself never moved and still can't be landed on/through directly
+    // (covered separately by the "occupied hex" test above).
     fireEvent.click(screen.getByTestId('hex-0,8'));
+    expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
+    fireEvent.click(screen.getByTestId('hex-0,0'));
     expect(screen.queryByText('A10', { selector: 'p.unit-name' })).toBeNull();
+  });
+
+  it('still blocks a move when no route around the obstacles exists (#214)', () => {
+    vi.useFakeTimers();
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    // A10 sits in column 0 (the board's left edge), with three other
+    // models forming a solid wall directly in front of it — (0,1) itself,
+    // plus (1,1) and (1,0) closing off the only hexes that would otherwise
+    // let it slip around that wall — so there's nowhere left to detour
+    // through on the way to (0,2).
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: [
+          'Test List (Corp A)',
+          'Weight: 24t / 100t',
+          '',
+          'A10 - 6t',
+          'A10 - 6t',
+          'A10 - 6t',
+          'A10 - 6t',
+        ].join('\n'),
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 4 units to reserve' }),
+    );
+
+    endDeploymentPhase();
+
+    const placeAt = (col, row) => {
+      fireEvent.click(screen.getAllByRole('button', { name: 'A10' })[0]);
+      fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+      fireEvent.click(screen.getByTestId(`hex-${col},${row}`));
+    };
+
+    placeAt(0, 0);
+    placeAt(0, 1);
+    placeAt(1, 1);
+    placeAt(1, 0);
+
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    expandDiceRoller();
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
+    fireEvent.click(screen.getByTestId('hex-0,2'));
+    finishMoveAnimation();
+
     fireEvent.click(screen.getByTestId('hex-0,0'));
     expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
   });

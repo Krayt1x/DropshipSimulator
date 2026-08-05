@@ -40,7 +40,6 @@ import {
   DEFAULT_TERRAIN_TYPES,
   blocksMovement,
   hasLineOfSight,
-  isMovementPathBlocked,
   mergeDefaultTerrainTypes,
 } from '../lib/terrain.js';
 import { computeObjectiveVp } from '../lib/victory.js';
@@ -1091,43 +1090,63 @@ function BattlePage() {
     return Number(movementItem?.movement) || 0;
   }
 
-  const selectedMovement =
-    selectedToken?.position && !selectedToken.destroyed
-      ? movementForToken(selectedToken)
-      : 0;
-  // The highlight itself now respects terrain and occupancy (#196) instead
-  // of showing every hex within a plain hex-distance radius — walking there
-  // via handleHexClick/handleDropToken is blocked the same way regardless,
-  // but a highlight promising a hex you can't actually reach was misleading.
-  const moveRange =
-    selectedMovement > 0
-      ? {
-          origin: selectedToken.position,
-          hexes: reachableHexes(
-            selectedToken.position,
-            selectedMovement,
-            (hex) => {
-              if (
-                hex.col < 0 ||
-                hex.row < 0 ||
-                hex.col >= dimensions.cols ||
-                hex.row >= dimensions.rows
-              ) {
-                return true;
-              }
-              const occupant = tokenAt(`${hex.col},${hex.row}`);
-              if (occupant && occupant.id !== selectedToken.id) return true;
-              if (
-                !tokenHasMovementTag(selectedToken, equipment, 'flying') &&
-                blocksMovement(tiles, tileTypes, hex)
-              ) {
-                return true;
-              }
-              return false;
-            },
-          ),
-        }
-      : null;
+  // Shared by the move-range highlight and the actual move-legality checks
+  // in handleHexClick/handleDropToken — a hex only counts as reachable if
+  // it isn't off the board, isn't occupied by another model, and (unless
+  // the mover is flying) isn't blocked terrain.
+  function isBlockedHexFor(token) {
+    return (hex) => {
+      if (
+        hex.col < 0 ||
+        hex.row < 0 ||
+        hex.col >= dimensions.cols ||
+        hex.row >= dimensions.rows
+      ) {
+        return true;
+      }
+      const occupant = tokenAt(`${hex.col},${hex.row}`);
+      if (occupant && occupant.id !== token.id) return true;
+      if (
+        !tokenHasMovementTag(token, equipment, 'flying') &&
+        blocksMovement(tiles, tileTypes, hex)
+      ) {
+        return true;
+      }
+      return false;
+    };
+  }
+
+  // Powers the move-range highlight (#196): which hexes a token could reach
+  // within its own movement stat, routing around terrain/models rather than
+  // just showing every hex within a plain hex-distance radius.
+  function reachableHexesForToken(token) {
+    const movement =
+      token?.position && !token.destroyed ? movementForToken(token) : 0;
+    if (movement <= 0) return null;
+    return {
+      origin: token.position,
+      hexes: reachableHexes(token.position, movement, isBlockedHexFor(token)),
+    };
+  }
+
+  const moveRange = reachableHexesForToken(selectedToken);
+
+  // Actual move legality for handleHexClick/handleDropToken (#214): a move
+  // is only blocked by terrain, board edges, and other models — not by
+  // whatever the straight line between the two points happens to cross —
+  // so a model can route around an obstacle it has the movement to go
+  // around, the same way the (distance-capped) highlight above already
+  // does. Distance itself was never capped for an actual move (only a
+  // Move/Action die is spent per move, regardless of how far it travels),
+  // so this uses an effectively unlimited step count rather than the
+  // mover's own movement stat.
+  function isHexReachableFor(token, col, row) {
+    if (!token?.position) return false;
+    const maxSteps = dimensions.cols + dimensions.rows;
+    return reachableHexes(token.position, maxSteps, isBlockedHexFor(token)).has(
+      `${col},${row}`,
+    );
+  }
 
   function canControl(token) {
     return !myPlayer || token.owner === myPlayer;
@@ -1206,18 +1225,6 @@ function BattlePage() {
     );
   }
 
-  // A model can't move onto, or pass through, a hex another model already
-  // occupies (#181) — checked along the whole straight line between the two
-  // points, not just the destination, so a longer move can't hop over
-  // something standing in the way.
-  function isPathOccupied(from, to, excludeTokenId) {
-    return hexLine(from, to)
-      .slice(1)
-      .some((hex) => {
-        const occupant = tokenAt(`${hex.col},${hex.row}`);
-        return occupant && occupant.id !== excludeTokenId;
-      });
-  }
 
   function placeTokenAt(tokenId, col, row) {
     setTokens((current) =>
@@ -1386,18 +1393,13 @@ function BattlePage() {
         // move spends a Move (or Action) die and is blocked without one
         // (#162).
         if (movingToken.position) {
-          // Water/buildings block a move that isn't already flying (#178);
-          // another model standing on or across the path blocks it too
-          // (#181).
-          const blocked =
-            (!tokenHasMovementTag(movingToken, equipment, 'flying') &&
-              isMovementPathBlocked(
-                movingToken.position,
-                { col, row },
-                tiles,
-                tileTypes,
-              )) ||
-            isPathOccupied(movingToken.position, { col, row }, movingToken.id);
+          // A hex is only a legal destination if it's actually reachable
+          // within the mover's movement — routing around terrain and other
+          // models the same way the move-range highlight does (#196) —
+          // rather than only checking the straight line between the two
+          // points, which blocked a move that had plenty of movement to
+          // spare to go around an obstacle (#214).
+          const blocked = !isHexReachableFor(movingToken, col, row);
           const die = !blocked && pickActionDie('Move');
           if (die) {
             // Order matters: both calls set lastAction, and a short move
@@ -1431,14 +1433,10 @@ function BattlePage() {
     // already-deployed one spends a Move (or Action) die and is blocked
     // without one (#162).
     if (token.position) {
-      // Water/buildings block a move that isn't already flying (#178);
-      // another model along the path blocks it too (#181) — the destination
-      // itself is already covered by the tokenAt check above.
-      if (
-        (!tokenHasMovementTag(token, equipment, 'flying') &&
-          isMovementPathBlocked(token.position, { col, row }, tiles, tileTypes)) ||
-        isPathOccupied(token.position, { col, row }, token.id)
-      ) {
+      // Same reachability check as handleHexClick (#214) — routes around
+      // terrain and other models instead of only checking the straight
+      // line between the two points.
+      if (!isHexReachableFor(token, col, row)) {
         return;
       }
       const die = pickActionDie('Move');

@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import {
   render,
   screen,
@@ -12,6 +12,7 @@ beforeEach(() => window.localStorage.clear());
 afterEach(() => {
   cleanup();
   window.location.hash = '';
+  vi.unstubAllGlobals();
 });
 
 describe('PlayPage', () => {
@@ -382,5 +383,118 @@ describe('PlayPage', () => {
 
     expect(screen.queryByText('How do you want to play?')).toBeNull();
     expect(window.location.hash).toBe('');
+  });
+});
+
+describe('PlayPage mobile roster picker (#224)', () => {
+  function stubMobile() {
+    vi.stubGlobal('matchMedia', () => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+  }
+
+  it('shows the player and CPU pickers side by side instead of the sequential desktop stages', () => {
+    stubMobile();
+    render(<PlayPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Tactical' }));
+
+    expect(screen.queryByText('Which manufacturer should the computer play? (#198)')).toBeNull();
+    expect(screen.queryByText('Which manufacturer will you play? (#202)')).toBeNull();
+
+    const stage = screen
+      .getByText("Choose your list and the computer's (#224)")
+      .closest('.cascade-stage');
+    expect(within(stage).getByText('You (#202)')).toBeDefined();
+    expect(within(stage).getByText('Computer (#198)')).toBeDefined();
+  });
+
+  it('lets the player and CPU be picked independently, in either order', () => {
+    stubMobile();
+    render(<PlayPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Tactical' }));
+
+    const stage = screen
+      .getByText("Choose your list and the computer's (#224)")
+      .closest('.cascade-stage');
+    const playerColumn = within(stage).getByText('You (#202)').parentElement;
+    const cpuColumn = within(stage).getByText('Computer (#198)').parentElement;
+
+    // Pick the player's list first...
+    fireEvent.click(within(playerColumn).getByRole('button', { name: 'Corp A' }));
+    fireEvent.click(
+      within(playerColumn).getByRole('button', { name: 'Default A Corp List' }),
+    );
+    // ...then the CPU's — picking the CPU's list afterward shouldn't wipe out
+    // the player's already-finalized choice (#224).
+    fireEvent.click(within(cpuColumn).getByRole('button', { name: 'Corp A' }));
+    fireEvent.click(within(cpuColumn).getByRole('button', { name: 'Random' }));
+
+    expect(
+      within(playerColumn).getByRole('button', { name: 'Default A Corp List' })
+        .className,
+    ).toContain('selected');
+    expect(
+      JSON.parse(window.localStorage.getItem('dropshipsimulator:playerRoster')),
+    ).toEqual({ type: 'specific', name: 'Default A Corp List' });
+  });
+
+  it('expands a list\'s description underneath it when picked', () => {
+    stubMobile();
+    render(<PlayPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Tactical' }));
+
+    const stage = screen
+      .getByText("Choose your list and the computer's (#224)")
+      .closest('.cascade-stage');
+    const cpuColumn = within(stage).getByText('Computer (#198)').parentElement;
+
+    fireEvent.click(within(cpuColumn).getByRole('button', { name: 'Corp A' }));
+    expect(within(cpuColumn).queryByText(/Weight:/)).toBeNull();
+
+    fireEvent.click(
+      within(cpuColumn).getByRole('button', { name: 'Default A Corp List' }),
+    );
+    expect(within(cpuColumn).getByText(/Weight:/)).toBeDefined();
+
+    // Picking a different list collapses the first one's description.
+    fireEvent.click(
+      within(cpuColumn).getByRole('button', { name: 'Flame Chicken Spam' }),
+    );
+    expect(
+      within(cpuColumn).getAllByText(/Weight:/).length,
+    ).toBe(1);
+  });
+
+  it('still lets the map be picked once both lists are chosen on mobile', () => {
+    stubMobile();
+    render(<PlayPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Tactical' }));
+
+    const stage = screen
+      .getByText("Choose your list and the computer's (#224)")
+      .closest('.cascade-stage');
+    const playerColumn = within(stage).getByText('You (#202)').parentElement;
+    const cpuColumn = within(stage).getByText('Computer (#198)').parentElement;
+
+    fireEvent.click(within(playerColumn).getByRole('button', { name: 'Corp A' }));
+    fireEvent.click(within(playerColumn).getByRole('button', { name: 'Random' }));
+    fireEvent.click(within(cpuColumn).getByRole('button', { name: 'Corp A' }));
+    fireEvent.click(within(cpuColumn).getByRole('button', { name: 'Random' }));
+
+    expect(screen.getByText('Which map do you want to play?')).toBeDefined();
   });
 });

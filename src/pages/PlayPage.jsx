@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocalStorageState } from '../lib/storage.js';
 import { resetActiveGame } from '../lib/gameState.js';
 import { parseRosterExport } from '../lib/rosterImport.js';
@@ -20,6 +20,22 @@ function PlayPage() {
   const { manufacturers, units, equipment } = useCatalogue();
   const [tokens] = useLocalStorageState('dropshipsimulator:battle:tokens', []);
   const hasActiveGame = tokens.length > 0;
+  // On mobile the player/CPU list pickers sit side by side instead of one
+  // above the other (#224), so both can be filled in without scrolling past
+  // the other — tracked via matchMedia, matching the same breakpoint the
+  // home-tile grid already collapses to a single column at.
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window.matchMedia === 'function'
+      ? window.matchMedia('(max-width: 700px)').matches
+      : false,
+  );
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return undefined;
+    const mql = window.matchMedia('(max-width: 700px)');
+    const handler = (e) => setIsMobile(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
   const [, setMyPlayer] = useLocalStorageState(
     'dropshipsimulator:myPlayer',
     null,
@@ -159,9 +175,6 @@ function PlayPage() {
     setBotRoster(botRoster);
     setChosenRoster(label);
     setShowRosterImport(false);
-    setPlayerRosterManufacturer(null);
-    setChosenPlayerRoster(null);
-    setShowPlayerRosterImport(false);
   }
 
   function previewImport() {
@@ -316,7 +329,7 @@ function PlayPage() {
             </div>
           )}
 
-          {mode === 'cpu' && difficulty && (
+          {!isMobile && mode === 'cpu' && difficulty && (
             <div className="cascade-stage">
               <p className="stage-label">
                 Which manufacturer should the computer play? (#198)
@@ -336,7 +349,7 @@ function PlayPage() {
             </div>
           )}
 
-          {mode === 'cpu' && difficulty && rosterManufacturer && (
+          {!isMobile && mode === 'cpu' && difficulty && rosterManufacturer && (
             <div className="cascade-stage">
               <p className="stage-label">
                 Which list should the computer play?
@@ -442,7 +455,7 @@ function PlayPage() {
             </div>
           )}
 
-          {botRosterReady && (
+          {!isMobile && botRosterReady && (
             <div className="cascade-stage">
               <p className="stage-label">
                 Which manufacturer will you play? (#202)
@@ -462,7 +475,7 @@ function PlayPage() {
             </div>
           )}
 
-          {botRosterReady && playerRosterManufacturer && (
+          {!isMobile && botRosterReady && playerRosterManufacturer && (
             <div className="cascade-stage">
               <p className="stage-label">Which list will you play?</p>
               <div className="tile-palette-list">
@@ -567,6 +580,257 @@ function PlayPage() {
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {isMobile && mode === 'cpu' && difficulty && (
+            <div className="cascade-stage">
+              <p className="stage-label">
+                Choose your list and the computer's (#224)
+              </p>
+              <div className="roster-picker-columns">
+                <div>
+                  <p className="roster-picker-column-label">You (#202)</p>
+                  <div className="tile-palette-list">
+                    {manufacturers.map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        className={`tile-swatch-btn ${playerRosterManufacturer === m ? 'selected' : ''}`}
+                        onClick={() => pickPlayerRosterManufacturer(m)}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                  {playerRosterManufacturer && (
+                    <>
+                      <div className="tile-palette-list" style={{ marginTop: 8 }}>
+                        <button
+                          type="button"
+                          className={`tile-swatch-btn ${chosenPlayerRoster === 'Random' ? 'selected' : ''}`}
+                          onClick={() =>
+                            choosePlayerRoster(
+                              { type: 'random', manufacturer: playerRosterManufacturer },
+                              'Random',
+                            )
+                          }
+                        >
+                          Random
+                        </button>
+                        {DEFAULT_ROSTERS.filter(
+                          (roster) => roster.manufacturer === playerRosterManufacturer,
+                        ).map((roster) => (
+                          <div key={roster.name} className="roster-accordion-item">
+                            <button
+                              type="button"
+                              className={`tile-swatch-btn ${chosenPlayerRoster === roster.name ? 'selected' : ''}`}
+                              onClick={() =>
+                                choosePlayerRoster(
+                                  { type: 'specific', name: roster.name },
+                                  roster.name,
+                                )
+                              }
+                            >
+                              {roster.name}
+                            </button>
+                            {chosenPlayerRoster === roster.name && (
+                              <pre className="roster-accordion-description">
+                                {roster.text}
+                              </pre>
+                            )}
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          className={`tile-swatch-btn ${showPlayerRosterImport ? 'selected' : ''}`}
+                          onClick={() => setShowPlayerRosterImport((v) => !v)}
+                        >
+                          Import…
+                        </button>
+                      </div>
+                      {DEFAULT_ROSTERS.every(
+                        (roster) => roster.manufacturer !== playerRosterManufacturer,
+                      ) && (
+                        <p className="unit-meta" style={{ marginTop: 8 }}>
+                          No default lists for {playerRosterManufacturer} yet
+                          — Random will pull from another manufacturer, or
+                          import a list instead.
+                        </p>
+                      )}
+                      {showPlayerRosterImport && (
+                        <div className="field" style={{ marginTop: 10 }}>
+                          <label htmlFor="player-roster-import-text-mobile">
+                            Roster export
+                          </label>
+                          <textarea
+                            id="player-roster-import-text-mobile"
+                            rows={6}
+                            placeholder="Paste your exported list here"
+                            value={playerImportText}
+                            onChange={(e) => {
+                              setPlayerImportText(e.target.value);
+                              setPlayerImportPreview(null);
+                            }}
+                          />
+                          <div className="token-owner-row" style={{ marginTop: 8 }}>
+                            <button
+                              type="button"
+                              className="ghost"
+                              disabled={!playerImportText.trim()}
+                              onClick={previewPlayerImport}
+                            >
+                              Preview import
+                            </button>
+                            <button
+                              type="button"
+                              disabled={
+                                !playerImportPreview ||
+                                playerImportPreview.entries.length === 0
+                              }
+                              onClick={() =>
+                                choosePlayerRoster(
+                                  { type: 'import', text: playerImportText },
+                                  'Imported list',
+                                )
+                              }
+                            >
+                              Use this list
+                            </button>
+                          </div>
+                          {playerImportPreview && (
+                            <p className="unit-meta" style={{ marginTop: 8 }}>
+                              {playerImportPreview.entries.length > 0
+                                ? `${playerImportPreview.entries.length} unit${playerImportPreview.entries.length === 1 ? '' : 's'} found.`
+                                : 'No units found in this export.'}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+                <div>
+                  <p className="roster-picker-column-label">Computer (#198)</p>
+                  <div className="tile-palette-list">
+                    {manufacturers.map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        className={`tile-swatch-btn ${rosterManufacturer === m ? 'selected' : ''}`}
+                        onClick={() => pickRosterManufacturer(m)}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                  {rosterManufacturer && (
+                    <>
+                      <div className="tile-palette-list" style={{ marginTop: 8 }}>
+                        <button
+                          type="button"
+                          className={`tile-swatch-btn ${chosenRoster === 'Random' ? 'selected' : ''}`}
+                          onClick={() =>
+                            chooseRoster(
+                              { type: 'random', manufacturer: rosterManufacturer },
+                              'Random',
+                            )
+                          }
+                        >
+                          Random
+                        </button>
+                        {DEFAULT_ROSTERS.filter(
+                          (roster) => roster.manufacturer === rosterManufacturer,
+                        ).map((roster) => (
+                          <div key={roster.name} className="roster-accordion-item">
+                            <button
+                              type="button"
+                              className={`tile-swatch-btn ${chosenRoster === roster.name ? 'selected' : ''}`}
+                              onClick={() =>
+                                chooseRoster(
+                                  { type: 'specific', name: roster.name },
+                                  roster.name,
+                                )
+                              }
+                            >
+                              {roster.name}
+                            </button>
+                            {chosenRoster === roster.name && (
+                              <pre className="roster-accordion-description">
+                                {roster.text}
+                              </pre>
+                            )}
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          className={`tile-swatch-btn ${showRosterImport ? 'selected' : ''}`}
+                          onClick={() => setShowRosterImport((v) => !v)}
+                        >
+                          Import…
+                        </button>
+                      </div>
+                      {DEFAULT_ROSTERS.every(
+                        (roster) => roster.manufacturer !== rosterManufacturer,
+                      ) && (
+                        <p className="unit-meta" style={{ marginTop: 8 }}>
+                          No default lists for {rosterManufacturer} yet —
+                          Random will pull from another manufacturer, or
+                          import a list instead.
+                        </p>
+                      )}
+                      {showRosterImport && (
+                        <div className="field" style={{ marginTop: 10 }}>
+                          <label htmlFor="bot-roster-import-text-mobile">
+                            Roster export
+                          </label>
+                          <textarea
+                            id="bot-roster-import-text-mobile"
+                            rows={6}
+                            placeholder="Paste your exported list here"
+                            value={importText}
+                            onChange={(e) => {
+                              setImportText(e.target.value);
+                              setImportPreview(null);
+                            }}
+                          />
+                          <div className="token-owner-row" style={{ marginTop: 8 }}>
+                            <button
+                              type="button"
+                              className="ghost"
+                              disabled={!importText.trim()}
+                              onClick={previewImport}
+                            >
+                              Preview import
+                            </button>
+                            <button
+                              type="button"
+                              disabled={
+                                !importPreview || importPreview.entries.length === 0
+                              }
+                              onClick={() =>
+                                chooseRoster(
+                                  { type: 'import', text: importText },
+                                  'Imported list',
+                                )
+                              }
+                            >
+                              Use this list
+                            </button>
+                          </div>
+                          {importPreview && (
+                            <p className="unit-meta" style={{ marginTop: 8 }}>
+                              {importPreview.entries.length > 0
+                                ? `${importPreview.entries.length} unit${importPreview.entries.length === 1 ? '' : 's'} found.`
+                                : 'No units found in this export.'}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 

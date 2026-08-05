@@ -4,6 +4,7 @@ import { emptyDiceTotals } from './tokens.js';
 export const DEFAULT_TURN = { number: 1, active: 'p1' };
 export const DEFAULT_BANKED_DICE = emptyDiceTotals();
 export const DEFAULT_VICTORY_POINTS = { p1: 0, p2: 0 };
+export const DEFAULT_SCENARIO = 'annihilation';
 export const DEFAULT_MATCH_STATS = {};
 
 const BATTLE_RESET_VALUES = {
@@ -39,6 +40,9 @@ export function resetActiveGame() {
     // picker (a direct link, a stale tab) never silently resumes vs-computer
     // mode and auto-deploys a bot opponent nobody asked for this time.
     'dropshipsimulator:gameMode': 'sandbox',
+    // Same reasoning for the win-condition scenario (#232) — a stale/direct
+    // visit shouldn't silently resume "First to 11" nobody chose this time.
+    'dropshipsimulator:gameScenario': DEFAULT_SCENARIO,
   });
 }
 

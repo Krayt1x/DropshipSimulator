@@ -750,6 +750,119 @@ describe('BattlePage', () => {
     expect(screen.getByText(/scored 1 victory point/)).toBeDefined();
   });
 
+  it('declares a winner once a side reaches 11 victory points in the "First to 11" scenario (#232)', () => {
+    const a10 = units.find((u) => u.name === 'A10');
+    window.localStorage.setItem(
+      'dropshipsimulator:gameScenario',
+      JSON.stringify('first-to-11'),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:myPlayer',
+      JSON.stringify('p1'),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:deploymentPhase',
+      JSON.stringify(false),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:victoryPoints',
+      JSON.stringify({ p1: 10, p2: 0 }),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:tokens',
+      JSON.stringify([
+        {
+          id: 'token-1',
+          unitId: a10.id,
+          owner: 'p1',
+          position: { col: 0, row: 0 },
+          facing: 0,
+          currentHp: a10.hp,
+          equippedIds: [],
+          weaponState: {},
+          destroyed: false,
+        },
+        // A living enemy model so this only wins via the VP threshold, not
+        // by annihilation (which would otherwise fire immediately since
+        // this side has zero models on the board).
+        {
+          id: 'token-2',
+          unitId: a10.id,
+          owner: 'p2',
+          position: { col: 9, row: 9 },
+          facing: 0,
+          currentHp: a10.hp,
+          equippedIds: [],
+          weaponState: {},
+          destroyed: false,
+        },
+      ]),
+    );
+    // (1,0) is adjacent to (0,0) and already an objective tile (#178).
+    window.localStorage.setItem(
+      'dropshipsimulator:mapEditor:tiles',
+      JSON.stringify({ '1,0': 'objective' }),
+    );
+
+    render(<BattlePage />);
+    expect(screen.queryByText(/Wins!/)).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+
+    expect(screen.getByText('🏆 11')).toBeDefined();
+    expect(screen.getByText('Player 1 Wins!')).toBeDefined();
+    expect(
+      screen.getByText('Player 1 reached 11 victory points first.'),
+    ).toBeDefined();
+  });
+
+  it('does not end the game at 11 victory points under the default Annihilation scenario', () => {
+    const a10 = units.find((u) => u.name === 'A10');
+    window.localStorage.setItem(
+      'dropshipsimulator:myPlayer',
+      JSON.stringify('p1'),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:deploymentPhase',
+      JSON.stringify(false),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:victoryPoints',
+      JSON.stringify({ p1: 11, p2: 0 }),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:tokens',
+      JSON.stringify([
+        {
+          id: 'p1-token',
+          unitId: a10.id,
+          owner: 'p1',
+          position: { col: 5, row: 5 },
+          facing: 0,
+          currentHp: a10.hp,
+          equippedIds: [],
+          weaponState: {},
+          destroyed: false,
+        },
+        {
+          id: 'p2-token',
+          unitId: a10.id,
+          owner: 'p2',
+          position: { col: 6, row: 5 },
+          facing: 0,
+          currentHp: a10.hp,
+          equippedIds: [],
+          weaponState: {},
+          destroyed: false,
+        },
+      ]),
+    );
+
+    render(<BattlePage />);
+
+    expect(screen.queryByText(/Wins!/)).toBeNull();
+  });
+
   it('shows a toast naming whose turn it now is, then auto-dismisses it (#131)', () => {
     vi.useFakeTimers();
     render(<BattlePage />);

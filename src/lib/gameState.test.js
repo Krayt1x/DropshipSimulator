@@ -13,6 +13,10 @@ describe('restartBattle', () => {
       'dropshipsimulator:gameMode',
       JSON.stringify('vs-computer'),
     );
+    window.localStorage.setItem(
+      'dropshipsimulator:gameScenario',
+      JSON.stringify('first-to-11'),
+    );
 
     restartBattle();
 
@@ -28,10 +32,14 @@ describe('restartBattle', () => {
       ),
     ).toBe(true);
     // Unlike resetActiveGame(), a rematch in vs-computer mode should stay
-    // in vs-computer mode instead of dropping to sandbox.
+    // in vs-computer mode instead of dropping to sandbox — same for the
+    // scenario picked for this match (#232).
     expect(window.localStorage.getItem('dropshipsimulator:gameMode')).toBe(
       JSON.stringify('vs-computer'),
     );
+    expect(
+      window.localStorage.getItem('dropshipsimulator:gameScenario'),
+    ).toBe(JSON.stringify('first-to-11'));
   });
 });
 
@@ -47,5 +55,18 @@ describe('resetActiveGame', () => {
     expect(window.localStorage.getItem('dropshipsimulator:gameMode')).toBe(
       JSON.stringify('sandbox'),
     );
+  });
+
+  it('also resets the scenario back to annihilation (#232)', () => {
+    window.localStorage.setItem(
+      'dropshipsimulator:gameScenario',
+      JSON.stringify('first-to-11'),
+    );
+
+    resetActiveGame();
+
+    expect(
+      window.localStorage.getItem('dropshipsimulator:gameScenario'),
+    ).toBe(JSON.stringify('annihilation'));
   });
 });

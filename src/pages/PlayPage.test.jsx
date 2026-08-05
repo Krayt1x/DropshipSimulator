@@ -549,3 +549,48 @@ describe('PlayPage grid layout (#231)', () => {
     expect(document.body.textContent).not.toMatch(/\(#\d+\)/);
   });
 });
+
+describe('PlayPage scenario picker (#232)', () => {
+  it('shows a scenario stage after the map stage, defaulting to Annihilation', () => {
+    render(<PlayPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Sandbox/ }));
+
+    expect(
+      screen.getByText('Which scenario do you want to play?'),
+    ).toBeDefined();
+    expect(
+      screen.getByRole('button', { name: /Annihilation/ }).className,
+    ).toContain('selected');
+    expect(
+      screen.getByRole('button', { name: /First to 11/ }).className,
+    ).not.toContain('selected');
+  });
+
+  it('commits the chosen scenario to storage when Start Game is pressed', () => {
+    render(<PlayPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Sandbox/ }));
+    fireEvent.click(screen.getByRole('button', { name: /First to 11/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+
+    expect(window.location.hash).toBe('#battle');
+    expect(
+      window.localStorage.getItem('dropshipsimulator:gameScenario'),
+    ).toBe(JSON.stringify('first-to-11'));
+  });
+
+  it('defaults to Annihilation in storage when the scenario stage is never touched', () => {
+    render(<PlayPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Sandbox/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+
+    expect(
+      window.localStorage.getItem('dropshipsimulator:gameScenario'),
+    ).toBe(JSON.stringify('annihilation'));
+  });
+});

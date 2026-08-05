@@ -58,6 +58,7 @@ import {
   DEFAULT_BANKED_DICE,
   DEFAULT_VICTORY_POINTS,
   DEFAULT_MATCH_STATS,
+  DEFAULT_SCENARIO,
   resetActiveGame,
   restartBattle,
 } from '../lib/gameState.js';
@@ -159,6 +160,13 @@ function BattlePage() {
   const [botDifficulty] = useLocalStorageState(
     'dropshipsimulator:botDifficulty',
     'simple',
+  );
+  // Alternative win condition (#232) chosen on PlayPage alongside the map —
+  // 'annihilation' is the game's original always-on behavior, wiping out
+  // every enemy model; anything else adds another way to win alongside it.
+  const [scenario] = useLocalStorageState(
+    'dropshipsimulator:gameScenario',
+    DEFAULT_SCENARIO,
   );
   // Chosen on PlayPage's roster step (#173) — which list the bot deploys:
   // a random default roster, one picked by name, or a pasted export.
@@ -654,15 +662,29 @@ function BattlePage() {
   // both sides to test/build scenarios — wiping one out (e.g. clearing the
   // board to start over) isn't a real loss there, so it never auto-ends the
   // game (#216).
-  const winner =
-    deploymentPhase || !myPlayer
+  const annihilationWinner =
+    p1ModelsRemaining === 0 && p2ModelsRemaining > 0
+      ? 'p2'
+      : p2ModelsRemaining === 0 && p1ModelsRemaining > 0
+        ? 'p1'
+        : null;
+  // Alternative win condition (#232): whoever reaches the scenario's victory
+  // point target first wins, checked alongside annihilation rather than
+  // instead of it — annihilation always takes priority if both are somehow
+  // true at once.
+  const scenarioVpTarget = scenario === 'first-to-11' ? 11 : null;
+  const scenarioWinner =
+    scenarioVpTarget == null
       ? null
-      : p1ModelsRemaining === 0 && p2ModelsRemaining > 0
-        ? 'p2'
-        : p2ModelsRemaining === 0 && p1ModelsRemaining > 0
-          ? 'p1'
+      : (victoryPoints.p1 ?? 0) >= scenarioVpTarget
+        ? 'p1'
+        : (victoryPoints.p2 ?? 0) >= scenarioVpTarget
+          ? 'p2'
           : null;
+  const winner =
+    deploymentPhase || !myPlayer ? null : (annihilationWinner ?? scenarioWinner);
   const loser = winner === 'p1' ? 'p2' : winner === 'p2' ? 'p1' : null;
+  const wonByAnnihilation = winner != null && winner === annihilationWinner;
 
   // Highlights for the winner screen (#193): every mech that dealt damage
   // and/or scored a kill this match, ranked by damage dealt. Built off
@@ -2252,7 +2274,9 @@ function BattlePage() {
             <div className="winner-trophy">🏆</div>
             <h1 className="winner-heading">{ownerLabel(winner)} Wins!</h1>
             <p className="unit-meta winner-reason">
-              {ownerLabel(loser)} has no models left on the board.
+              {wonByAnnihilation
+                ? `${ownerLabel(loser)} has no models left on the board.`
+                : `${ownerLabel(winner)} reached ${scenarioVpTarget} victory points first.`}
             </p>
             {gameMode === 'vs-computer' && (
               <p className="unit-meta winner-difficulty">

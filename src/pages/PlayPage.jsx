@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocalStorageState } from '../lib/storage.js';
-import { resetActiveGame } from '../lib/gameState.js';
+import { resetActiveGame, DEFAULT_SCENARIO } from '../lib/gameState.js';
 import { parseRosterExport } from '../lib/rosterImport.js';
 import { DEFAULT_ROSTERS } from '../components/RosterImport.jsx';
 import { DEFAULT_MAPS } from '../lib/maps.js';
@@ -11,6 +11,22 @@ const DIFFICULTIES = [
   { id: 'simple', label: 'Simple' },
   { id: 'tactical', label: 'Tactical' },
   { id: 'expert', label: 'Expert' },
+];
+
+// Alternative win conditions (#232) — 'annihilation' is the game's original,
+// always-on behavior (wipe out every enemy model); anything else here is an
+// alternative way to end the match instead.
+const SCENARIOS = [
+  {
+    id: 'annihilation',
+    label: 'Annihilation',
+    description: 'Wipe out every enemy model.',
+  },
+  {
+    id: 'first-to-11',
+    label: 'First to 11',
+    description: 'First player to reach 11 victory points wins.',
+  },
 ];
 
 // Importing a map here was removed (#191) — map creation/maintenance is a
@@ -104,6 +120,13 @@ function PlayPage() {
   // listing every pre-existing map instead of a hardcoded Current/Blank pair.
   const [mapChoice, setMapChoice] = useState('current');
   const [mapPickerOpen, setMapPickerOpen] = useState(false);
+  // Which win condition this match uses (#232) — committed to storage only
+  // once Start Game is pressed, same as the map choice above.
+  const [scenario, setScenario] = useState(DEFAULT_SCENARIO);
+  const [, setGameScenario] = useLocalStorageState(
+    'dropshipsimulator:gameScenario',
+    DEFAULT_SCENARIO,
+  );
 
   function resetPicker() {
     setExpanded(false);
@@ -121,6 +144,7 @@ function PlayPage() {
     setPlayerImportPreview(null);
     setMapChoice('current');
     setMapPickerOpen(false);
+    setScenario(DEFAULT_SCENARIO);
   }
 
   function handleEndGame() {
@@ -211,6 +235,7 @@ function PlayPage() {
       }
     }
     // 'current' leaves whatever's already saved in the Map Editor alone.
+    setGameScenario(scenario);
     window.location.hash = '#battle';
   }
 
@@ -847,6 +872,27 @@ function PlayPage() {
               <p className="unit-meta" style={{ marginTop: 8 }}>
                 {mapChoice === 'current' ? 'Current map' : mapChoice}
               </p>
+            </div>
+          )}
+
+          {mapStageReady && (
+            <div className="cascade-stage">
+              <p className="stage-label">Which scenario do you want to play?</p>
+              <div className="home-tile-grid play-mode-grid">
+                {SCENARIOS.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className={`home-tile ${scenario === s.id ? 'selected' : ''}`}
+                    onClick={() => setScenario(s.id)}
+                  >
+                    <span className="home-tile-title">{s.label}</span>
+                    <span className="home-tile-description">
+                      {s.description}
+                    </span>
+                  </button>
+                ))}
+              </div>
 
               <div
                 style={{

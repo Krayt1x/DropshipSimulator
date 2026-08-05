@@ -224,6 +224,35 @@ describe('BattlePage', () => {
     expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
   });
 
+  it('rotates a token to face the direction it moves in (#208)', () => {
+    vi.useFakeTimers();
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve();
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+
+    // p1 defaults to facing 4/6 (south, toward p2's side) — moving
+    // south-east to (1,0) should spin it to face 3/6 instead.
+    expect(screen.getByText('4 / 6')).toBeDefined();
+
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    expandDiceRoller();
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
+    fireEvent.click(screen.getByTestId('hex-1,0'));
+    finishMoveAnimation();
+
+    fireEvent.click(screen.getByTestId('hex-1,0'));
+    expect(screen.getByText('3 / 6')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo last move' }));
+    expect(screen.getByText('4 / 6')).toBeDefined();
+  });
+
   it('moves an on-board token by dragging it to a new hex', () => {
     vi.useFakeTimers();
     const { container } = render(<BattlePage />);

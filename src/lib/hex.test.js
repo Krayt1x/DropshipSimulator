@@ -11,6 +11,7 @@ import {
   nearestSide,
   visibleSides,
   reachableHexes,
+  directionFacing,
 } from './hex.js';
 
 describe('hex', () => {
@@ -256,6 +257,27 @@ describe('hex', () => {
       const reachable = reachableHexes({ col: 0, row: 0 }, 3, isBlocked);
       expect(reachable.has('0,2')).toBe(false);
       expect(reachable.has('1,2')).toBe(true);
+    });
+  });
+
+  describe('directionFacing (#208)', () => {
+    it('returns the exact direction for an immediate neighbor', () => {
+      const origin = { col: 3, row: 3 };
+      for (let dir = 0; dir < 6; dir++) {
+        const neighbor = neighborHex(origin.col, origin.row, dir);
+        expect(directionFacing(origin, neighbor)).toBe(dir);
+      }
+    });
+
+    it('picks the best-fit direction for a hex several steps away in a straight line', () => {
+      const origin = { col: 0, row: 0 };
+      let far = origin;
+      for (let i = 0; i < 4; i++) far = neighborHex(far.col, far.row, 2);
+      expect(directionFacing(origin, far)).toBe(2);
+    });
+
+    it('returns null when the two hexes are the same', () => {
+      expect(directionFacing({ col: 1, row: 1 }, { col: 1, row: 1 })).toBeNull();
     });
   });
 });

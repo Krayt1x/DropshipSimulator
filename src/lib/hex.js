@@ -257,3 +257,26 @@ export function visibleSides(target, facing, from, size = hexSize()) {
   const leaning = distLo <= distHi ? ccwNeighbor : cwNeighbor;
   return [quadrant.side, leaning];
 }
+
+// The facing (0-5) that best points from `from` toward `to` — a model spins
+// to face this way as it moves (#208), rather than keeping whatever facing
+// it happened to have before the move. Returns null when the two hexes are
+// the same (nothing to point toward).
+export function directionFacing(from, to, size = hexSize()) {
+  if (from.col === to.col && from.row === to.row) return null;
+  const f = hexToPixel(from.col, from.row, size);
+  const t = hexToPixel(to.col, to.row, size);
+  const targetAngle = (Math.atan2(t.y - f.y, t.x - f.x) * 180) / Math.PI;
+  let best = 0;
+  let bestDiff = Infinity;
+  for (let dir = 0; dir < 6; dir++) {
+    const diff = Math.abs(
+      normalizeAngle(targetAngle - directionAngleDeg(from, dir, size)),
+    );
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      best = dir;
+    }
+  }
+  return best;
+}

@@ -21,6 +21,7 @@ import {
   neighborHex,
   nearestSide,
   reachableHexes,
+  directionFacing,
 } from '../lib/hex.js';
 import {
   createToken,
@@ -567,13 +568,19 @@ function BattlePage() {
       );
       appendLog('Undid an Exchange');
     } else if (lastAction.type === 'move') {
-      const { tokenId, position, previousWeaponState, dieId } = lastAction;
+      const { tokenId, position, previousWeaponState, previousFacing, dieId } =
+        lastAction;
       const occupant = tokenAt(`${position.col},${position.row}`);
       if (!occupant || occupant.id === tokenId) {
         setTokens((current) =>
           current.map((t) =>
             t.id === tokenId
-              ? { ...t, position, weaponState: previousWeaponState }
+              ? {
+                  ...t,
+                  position,
+                  weaponState: previousWeaponState,
+                  facing: previousFacing ?? t.facing,
+                }
               : t,
           ),
         );
@@ -1256,11 +1263,17 @@ function BattlePage() {
 
   function moveTokenTo(token, col, row, dieId) {
     if (token.position) {
+      // Spins to face the direction it's actually moving in (#208) rather
+      // than keeping whatever facing it had before — falls back to the
+      // token's current facing on the (never-expected) same-hex case
+      // directionFacing itself guards against.
+      const facing = directionFacing(token.position, { col, row }) ?? token.facing;
       pushHistory({
         type: 'move',
         tokenId: token.id,
         position: token.position,
         previousWeaponState: token.weaponState,
+        previousFacing: token.facing,
         // Recorded so "Undo last move" can also refund the Move die a human
         // move spent (#162), rather than just restoring position (#168).
         dieId,
@@ -1271,7 +1284,9 @@ function BattlePage() {
       const weaponState = bumpMovementHeat(token);
       setTokens((current) =>
         current.map((t) =>
-          t.id === token.id ? { ...t, position: { col, row }, weaponState } : t,
+          t.id === token.id
+            ? { ...t, position: { col, row }, weaponState, facing }
+            : t,
         ),
       );
     } else {

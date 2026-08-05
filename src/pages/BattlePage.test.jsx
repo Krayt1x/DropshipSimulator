@@ -2755,6 +2755,44 @@ describe('BattlePage', () => {
     );
   });
 
+  it("pre-fills the human's reserve from the list chosen on PlayPage (#202)", async () => {
+    window.localStorage.setItem(
+      'dropshipsimulator:gameMode',
+      JSON.stringify('vs-computer'),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:botDifficulty',
+      JSON.stringify('simple'),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:myPlayer',
+      JSON.stringify('p1'),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:playerRoster',
+      JSON.stringify({ type: 'specific', name: 'Flame Chicken Spam' }),
+    );
+
+    render(<BattlePage />);
+
+    // Only p1's reserve is pre-filled — placement is still a manual step,
+    // so nothing gets a position from this alone.
+    await vi.waitFor(() => {
+      const currentTokens = JSON.parse(
+        window.localStorage.getItem('dropshipsimulator:battle:tokens') ?? '[]',
+      );
+      const playerTokens = currentTokens.filter((t) => t.owner === 'p1');
+      expect(playerTokens.length).toBeGreaterThan(0);
+      expect(playerTokens.every((t) => !t.position)).toBe(true);
+      expect(
+        playerTokens.every((t) => {
+          const unit = units.find((u) => Number(u.id) === Number(t.unitId));
+          return unit?.name === 'A10' || unit?.name === 'Delivery Capsule';
+        }),
+      ).toBe(true);
+    });
+  });
+
   it('does not run any bot logic in sandbox mode', async () => {
     render(<BattlePage />);
 

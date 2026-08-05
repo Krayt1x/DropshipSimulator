@@ -41,6 +41,13 @@ function PlayPage() {
   const [, setBotRoster] = useLocalStorageState('dropshipsimulator:botRoster', {
     type: 'random',
   });
+  // Same shape as botRoster, but for the human's own side (#202) — read once
+  // by BattlePage.jsx to pre-fill the player's reserve the same way the
+  // bot's is pre-filled, instead of only the bot arriving ready to go.
+  const [, setPlayerRoster] = useLocalStorageState(
+    'dropshipsimulator:playerRoster',
+    null,
+  );
   // Write-only here — BattlePage.jsx reads these on mount once the game
   // actually starts (#176). Left untouched entirely when the human keeps
   // whatever's already in the Map Editor ("Current map").
@@ -73,6 +80,13 @@ function PlayPage() {
   const [showRosterImport, setShowRosterImport] = useState(false);
   const [importText, setImportText] = useState('');
   const [importPreview, setImportPreview] = useState(null);
+  // Mirrors the bot's manufacturer/roster/import picker state above, but for
+  // the human's own list (#202).
+  const [playerRosterManufacturer, setPlayerRosterManufacturer] = useState(null);
+  const [chosenPlayerRoster, setChosenPlayerRoster] = useState(null);
+  const [showPlayerRosterImport, setShowPlayerRosterImport] = useState(false);
+  const [playerImportText, setPlayerImportText] = useState('');
+  const [playerImportPreview, setPlayerImportPreview] = useState(null);
   const [mapChoice, setMapChoice] = useState('current'); // 'current' | 'blank'
 
   function resetPicker() {
@@ -84,6 +98,11 @@ function PlayPage() {
     setShowRosterImport(false);
     setImportText('');
     setImportPreview(null);
+    setPlayerRosterManufacturer(null);
+    setChosenPlayerRoster(null);
+    setShowPlayerRosterImport(false);
+    setPlayerImportText('');
+    setPlayerImportPreview(null);
     setMapChoice('current');
   }
 
@@ -107,6 +126,11 @@ function PlayPage() {
     setShowRosterImport(false);
     setImportText('');
     setImportPreview(null);
+    setPlayerRosterManufacturer(null);
+    setChosenPlayerRoster(null);
+    setShowPlayerRosterImport(false);
+    setPlayerImportText('');
+    setPlayerImportPreview(null);
   }
 
   function pickDifficulty(nextDifficulty) {
@@ -119,6 +143,9 @@ function PlayPage() {
     setRosterManufacturer(null);
     setChosenRoster(null);
     setShowRosterImport(false);
+    setPlayerRosterManufacturer(null);
+    setChosenPlayerRoster(null);
+    setShowPlayerRosterImport(false);
   }
 
   function pickRosterManufacturer(manufacturer) {
@@ -131,11 +158,32 @@ function PlayPage() {
     setBotRoster(botRoster);
     setChosenRoster(label);
     setShowRosterImport(false);
+    setPlayerRosterManufacturer(null);
+    setChosenPlayerRoster(null);
+    setShowPlayerRosterImport(false);
   }
 
   function previewImport() {
     setImportPreview(
       parseRosterExport(importText, { units, manufacturers, equipment }),
+    );
+  }
+
+  function pickPlayerRosterManufacturer(manufacturer) {
+    setPlayerRosterManufacturer(manufacturer);
+    setChosenPlayerRoster(null);
+    setShowPlayerRosterImport(false);
+  }
+
+  function choosePlayerRoster(roster, label) {
+    setPlayerRoster(roster);
+    setChosenPlayerRoster(label);
+    setShowPlayerRosterImport(false);
+  }
+
+  function previewPlayerImport() {
+    setPlayerImportPreview(
+      parseRosterExport(playerImportText, { units, manufacturers, equipment }),
     );
   }
 
@@ -150,7 +198,10 @@ function PlayPage() {
     window.location.hash = '#battle';
   }
 
-  const rosterReady = mode === 'cpu' && Boolean(difficulty) && Boolean(chosenRoster);
+  const botRosterReady = mode === 'cpu' && Boolean(difficulty) && Boolean(chosenRoster);
+  // The human also picks their own list before the map (#202), same as the
+  // bot's.
+  const rosterReady = botRosterReady && Boolean(chosenPlayerRoster);
   const mapStageReady = mode === 'sandbox' || rosterReady;
 
   return (
@@ -377,6 +428,134 @@ function PlayPage() {
                         ? `${importPreview.entries.length} unit${importPreview.entries.length === 1 ? '' : 's'} found.`
                         : 'No units found in this export.'}
                       {importPreview.warnings.map((warning) => (
+                        <span key={warning} style={{ display: 'block' }}>
+                          {warning}
+                        </span>
+                      ))}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {botRosterReady && (
+            <div className="cascade-stage">
+              <p className="stage-label">
+                Which manufacturer will you play? (#202)
+              </p>
+              <div className="tile-palette-list">
+                {manufacturers.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    className={`tile-swatch-btn ${playerRosterManufacturer === m ? 'selected' : ''}`}
+                    onClick={() => pickPlayerRosterManufacturer(m)}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {botRosterReady && playerRosterManufacturer && (
+            <div className="cascade-stage">
+              <p className="stage-label">Which list will you play?</p>
+              <div className="tile-palette-list">
+                <button
+                  type="button"
+                  className={`tile-swatch-btn ${chosenPlayerRoster === 'Random' ? 'selected' : ''}`}
+                  onClick={() =>
+                    choosePlayerRoster(
+                      { type: 'random', manufacturer: playerRosterManufacturer },
+                      'Random',
+                    )
+                  }
+                >
+                  Random
+                </button>
+                {DEFAULT_ROSTERS.filter(
+                  (roster) => roster.manufacturer === playerRosterManufacturer,
+                ).map((roster) => (
+                  <button
+                    key={roster.name}
+                    type="button"
+                    className={`tile-swatch-btn ${chosenPlayerRoster === roster.name ? 'selected' : ''}`}
+                    onClick={() =>
+                      choosePlayerRoster(
+                        { type: 'specific', name: roster.name },
+                        roster.name,
+                      )
+                    }
+                  >
+                    {roster.name}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className={`tile-swatch-btn ${showPlayerRosterImport ? 'selected' : ''}`}
+                  onClick={() => setShowPlayerRosterImport(true)}
+                >
+                  Import…
+                </button>
+              </div>
+              {DEFAULT_ROSTERS.every(
+                (roster) => roster.manufacturer !== playerRosterManufacturer,
+              ) && (
+                <p className="unit-meta" style={{ marginTop: 8 }}>
+                  No default lists for {playerRosterManufacturer} yet —
+                  Random will pull from another manufacturer, or import a
+                  list instead.
+                </p>
+              )}
+
+              {showPlayerRosterImport && (
+                <div className="field" style={{ marginTop: 10 }}>
+                  <label htmlFor="player-roster-import-text">
+                    Roster export
+                  </label>
+                  <textarea
+                    id="player-roster-import-text"
+                    rows={8}
+                    placeholder="Paste your exported list here"
+                    value={playerImportText}
+                    onChange={(e) => {
+                      setPlayerImportText(e.target.value);
+                      setPlayerImportPreview(null);
+                    }}
+                  />
+                  <div className="token-owner-row" style={{ marginTop: 8 }}>
+                    <button
+                      type="button"
+                      className="ghost"
+                      disabled={!playerImportText.trim()}
+                      onClick={previewPlayerImport}
+                    >
+                      Preview import
+                    </button>
+                    <button
+                      type="button"
+                      disabled={
+                        !playerImportPreview ||
+                        playerImportPreview.entries.length === 0
+                      }
+                      onClick={() =>
+                        choosePlayerRoster(
+                          { type: 'import', text: playerImportText },
+                          'Imported list',
+                        )
+                      }
+                    >
+                      Use this list
+                    </button>
+                  </div>
+                  {playerImportPreview && (
+                    <p className="unit-meta" style={{ marginTop: 8 }}>
+                      {playerImportPreview.entries.length > 0
+                        ? `${playerImportPreview.entries.length} unit${playerImportPreview.entries.length === 1 ? '' : 's'} found.`
+                        : 'No units found in this export.'}
+                      {playerImportPreview.warnings.map((warning) => (
                         <span key={warning} style={{ display: 'block' }}>
                           {warning}
                         </span>

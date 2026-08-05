@@ -82,16 +82,37 @@ describe('PlayPage', () => {
     // Picking a difficulty alone doesn't start the game yet — a
     // manufacturer (#198) and then a roster still need an answer.
     expect(window.location.hash).toBe('');
-    fireEvent.click(screen.getByRole('button', { name: 'Corp A' }));
+    const botManufacturerStage = screen
+      .getByText('Which manufacturer should the computer play? (#198)')
+      .closest('.cascade-stage');
+    fireEvent.click(
+      within(botManufacturerStage).getByRole('button', { name: 'Corp A' }),
+    );
 
     expect(
       screen.getByText('Which list should the computer play?'),
     ).toBeDefined();
     expect(window.location.hash).toBe('');
-
     fireEvent.click(screen.getByRole('button', { name: 'Random' }));
 
-    // Nor does picking a roster — the map stage comes next (#176).
+    // Nor does picking the bot's roster — the human picks their own list
+    // next (#202), then the map stage (#176).
+    expect(window.location.hash).toBe('');
+    const playerManufacturerStage = screen
+      .getByText('Which manufacturer will you play? (#202)')
+      .closest('.cascade-stage');
+    fireEvent.click(
+      within(playerManufacturerStage).getByRole('button', { name: 'Corp A' }),
+    );
+    expect(screen.getByText('Which list will you play?')).toBeDefined();
+    expect(window.location.hash).toBe('');
+    const playerRosterStage = screen
+      .getByText('Which list will you play?')
+      .closest('.cascade-stage');
+    fireEvent.click(
+      within(playerRosterStage).getByRole('button', { name: 'Random' }),
+    );
+
     expect(window.location.hash).toBe('');
     expect(screen.getByText('Which map do you want to play?')).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
@@ -108,6 +129,9 @@ describe('PlayPage', () => {
       JSON.stringify('p1'),
     );
     expect(window.localStorage.getItem('dropshipsimulator:botRoster')).toBe(
+      JSON.stringify({ type: 'random', manufacturer: 'Corp A' }),
+    );
+    expect(window.localStorage.getItem('dropshipsimulator:playerRoster')).toBe(
       JSON.stringify({ type: 'random', manufacturer: 'Corp A' }),
     );
   });
@@ -161,11 +185,30 @@ describe('PlayPage', () => {
     expect(
       screen.getByRole('button', { name: 'Flame Chicken Spam' }).className,
     ).toContain('selected');
+
+    const playerManufacturerStage = screen
+      .getByText('Which manufacturer will you play? (#202)')
+      .closest('.cascade-stage');
+    fireEvent.click(
+      within(playerManufacturerStage).getByRole('button', { name: 'Corp A' }),
+    );
+    const playerRosterStage = screen
+      .getByText('Which list will you play?')
+      .closest('.cascade-stage');
+    fireEvent.click(
+      within(playerRosterStage).getByRole('button', {
+        name: 'Default A Corp List',
+      }),
+    );
+
     fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(window.location.hash).toBe('#battle');
     expect(window.localStorage.getItem('dropshipsimulator:botRoster')).toBe(
       JSON.stringify({ type: 'specific', name: 'Flame Chicken Spam' }),
+    );
+    expect(window.localStorage.getItem('dropshipsimulator:playerRoster')).toBe(
+      JSON.stringify({ type: 'specific', name: 'Default A Corp List' }),
     );
   });
 
@@ -196,6 +239,20 @@ describe('PlayPage', () => {
     expect(screen.getByText('1 unit found.')).toBeDefined();
 
     fireEvent.click(screen.getByRole('button', { name: 'Use this list' }));
+
+    const playerManufacturerStage = screen
+      .getByText('Which manufacturer will you play? (#202)')
+      .closest('.cascade-stage');
+    fireEvent.click(
+      within(playerManufacturerStage).getByRole('button', { name: 'Corp A' }),
+    );
+    const playerRosterStage = screen
+      .getByText('Which list will you play?')
+      .closest('.cascade-stage');
+    fireEvent.click(
+      within(playerRosterStage).getByRole('button', { name: 'Random' }),
+    );
+
     fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(window.location.hash).toBe('#battle');
@@ -248,8 +305,25 @@ describe('PlayPage', () => {
     expect(screen.getByRole('button', { name: 'Expert' })).toBeDefined();
 
     fireEvent.click(screen.getByRole('button', { name: 'Tactical' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Corp A' }));
+    const botManufacturerStage = screen
+      .getByText('Which manufacturer should the computer play? (#198)')
+      .closest('.cascade-stage');
+    fireEvent.click(
+      within(botManufacturerStage).getByRole('button', { name: 'Corp A' }),
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Random' }));
+    const playerManufacturerStage = screen
+      .getByText('Which manufacturer will you play? (#202)')
+      .closest('.cascade-stage');
+    fireEvent.click(
+      within(playerManufacturerStage).getByRole('button', { name: 'Corp A' }),
+    );
+    const playerRosterStage = screen
+      .getByText('Which list will you play?')
+      .closest('.cascade-stage');
+    fireEvent.click(
+      within(playerRosterStage).getByRole('button', { name: 'Random' }),
+    );
 
     const mapStage = screen
       .getByText('Which map do you want to play?')

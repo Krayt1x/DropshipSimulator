@@ -161,6 +161,13 @@ function BattlePage() {
   const [botRoster] = useLocalStorageState('dropshipsimulator:botRoster', {
     type: 'random',
   });
+  // Same shape, but for the human's own side (#202) — null for any game that
+  // started before this existed, or a sandbox/multiplayer game where the
+  // human always builds their own reserve manually.
+  const [playerRoster] = useLocalStorageState(
+    'dropshipsimulator:playerRoster',
+    null,
+  );
   const botOwner =
     gameMode === 'vs-computer'
       ? (OWNERS.find((o) => o.id !== myPlayer)?.id ?? null)
@@ -2046,6 +2053,48 @@ function BattlePage() {
     if (gameMode !== 'vs-computer' || !botOwner || !deploymentPhase) return;
     runBotDeployment();
   }, [gameMode, botOwner, deploymentPhase]);
+  // --------------------------------------------------------------------
+
+  // Pre-fills the human's reserve from the list they picked on PlayPage
+  // (#202), the same way the bot's own list pre-fills its reserve above —
+  // only into reserve, never auto-deployed, since placing units is still a
+  // manual (human) step.
+  const playerRosterAppliedRef = useRef(false);
+  useEffect(() => {
+    if (
+      gameMode !== 'vs-computer' ||
+      !deploymentPhase ||
+      !myPlayer ||
+      !playerRoster ||
+      playerRosterAppliedRef.current
+    ) {
+      return;
+    }
+    if (tokens.some((t) => t.owner === myPlayer)) {
+      playerRosterAppliedRef.current = true;
+      return;
+    }
+    playerRosterAppliedRef.current = true;
+    const randomPool = playerRoster.manufacturer
+      ? DEFAULT_ROSTERS.filter(
+          (r) => r.manufacturer === playerRoster.manufacturer,
+        )
+      : [];
+    const pool = randomPool.length > 0 ? randomPool : DEFAULT_ROSTERS;
+    const rosterText =
+      playerRoster.type === 'import'
+        ? playerRoster.text
+        : playerRoster.type === 'specific'
+          ? (DEFAULT_ROSTERS.find((r) => r.name === playerRoster.name)?.text ??
+            DEFAULT_ROSTERS[0].text)
+          : pool[Math.floor(Math.random() * pool.length)].text;
+    const parsed = parseRosterExport(rosterText, {
+      units,
+      manufacturers,
+      equipment,
+    });
+    importRoster({ entries: parsed.entries, owner: myPlayer });
+  }, [gameMode, deploymentPhase, myPlayer, playerRoster, tokens]);
   // --------------------------------------------------------------------
 
   // Built once and reused in two spots (#146): shown inline above the

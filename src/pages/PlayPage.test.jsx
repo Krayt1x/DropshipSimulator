@@ -271,7 +271,7 @@ describe('PlayPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
     fireEvent.click(screen.getByRole('button', { name: /Sandbox/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Current map' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Select map' }));
     fireEvent.click(
       within(screen.getByText('Choose a map').closest('.map-picker-modal')).getByRole(
         'button',
@@ -291,13 +291,15 @@ describe('PlayPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
     fireEvent.click(screen.getByRole('button', { name: /Sandbox/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Current map' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Select map' }));
 
     const modal = screen.getByText('Choose a map').closest('.map-picker-modal');
     fireEvent.click(within(modal).getByRole('button', { name: /Map 1/ }));
-    // The picker closes and the opener button now shows the chosen map.
+    // The picker closes and a caption below the opener button now shows the
+    // chosen map (#228) — the button itself always just says "Select map".
     expect(screen.queryByText('Choose a map')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Map 1' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Select map' })).toBeDefined();
+    expect(screen.getByText('Map 1')).toBeDefined();
 
     fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
 
@@ -358,7 +360,7 @@ describe('PlayPage', () => {
       .getByText('Which map do you want to play?')
       .closest('.cascade-stage');
     fireEvent.click(
-      within(mapStage).getByRole('button', { name: 'Current map' }),
+      within(mapStage).getByRole('button', { name: 'Select map' }),
     );
     const mapPickerModal = screen
       .getByText('Choose a map')

@@ -842,8 +842,11 @@ function PlayPage() {
                 className="ghost"
                 onClick={() => setMapPickerOpen(true)}
               >
-                {mapChoice === 'current' ? 'Current map' : mapChoice}
+                Select map
               </button>
+              <p className="unit-meta" style={{ marginTop: 8 }}>
+                {mapChoice === 'current' ? 'Current map' : mapChoice}
+              </p>
 
               <div
                 style={{

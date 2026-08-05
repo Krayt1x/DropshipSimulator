@@ -1039,6 +1039,41 @@ describe('BattlePage', () => {
     ).toBeNull();
   });
 
+  it('hatches an in-range hex whose line of sight is blocked, leaving a clear hex plain (#195)', () => {
+    window.localStorage.setItem(
+      'dropshipsimulator:mapEditor:tiles',
+      JSON.stringify({ '5,3': 'buildings' }),
+    );
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    // No "Left:"/"Right:" label — falls back to the full ring (#126), which
+    // keeps this test's straight-line geometry simple.
+    importA10ToReserve(['  Weapon: Long Range Bolt']);
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Long Range Bolt' }));
+
+    // (5,3): the building itself — not a target, so no range fill at all.
+    // (5,1): beyond the building on the same line — in range, LOS-blocked.
+    // (5,4): adjacent, nothing in the way — in range, clear.
+    const blockedGroup = screen.getByTestId('hex-5,1').closest('g');
+    const clearGroup = screen.getByTestId('hex-5,4').closest('g');
+
+    expect(
+      blockedGroup.querySelector('polygon[fill="url(#weapon-range-blocked)"]'),
+    ).not.toBeNull();
+    expect(
+      blockedGroup.querySelector('polygon[fill="rgba(220,38,38,0.4)"]'),
+    ).toBeNull();
+    expect(
+      clearGroup.querySelector('polygon[fill="rgba(220,38,38,0.4)"]'),
+    ).not.toBeNull();
+  });
+
   it("heats up a token's movement gear by 1 when it moves, and undo reverts it (#102)", () => {
     vi.useFakeTimers();
     render(<BattlePage />);

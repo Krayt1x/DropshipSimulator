@@ -8,6 +8,7 @@ import {
   isInWeaponArc,
 } from '../lib/hex.js';
 import { healthBarColor, ownerColor } from '../lib/tokens.js';
+import { hasLineOfSight } from '../lib/terrain.js';
 
 function TokenMarker({
   token,
@@ -303,6 +304,29 @@ function BattleBoard({
       role="group"
       aria-label="Battle board"
     >
+      <defs>
+        {/* A hex in weapon range but blocked from line of sight (#195) gets
+            this hatch instead of the plain red fill, so "obstructed" reads
+            at a glance rather than just looking like a dimmer version of a
+            valid target. */}
+        <pattern
+          id="weapon-range-blocked"
+          width="7"
+          height="7"
+          patternTransform="rotate(45)"
+          patternUnits="userSpaceOnUse"
+        >
+          <rect width="7" height="7" fill="rgba(153,27,27,0.16)" />
+          <line
+            x1="0"
+            y1="0"
+            x2="0"
+            y2="7"
+            stroke="rgba(153,27,27,0.55)"
+            strokeWidth="2"
+          />
+        </pattern>
+      </defs>
       {hexes.map(({ col, row, key }) => {
         const { x, y } = hexToPixel(col, row, size);
         const type = tileTypeFor(key);
@@ -320,6 +344,12 @@ function BattleBoard({
         const inWeaponRange = hexInWeaponRange(weaponRange, col, row);
         const inPeerWeaponRange = hexInWeaponRange(peerWeaponRange, col, row);
         const inMoveRange = Boolean(moveRange?.hexes.has(key));
+        // A hex can be in range and arc but still not a valid target if
+        // something blocks the sightline to it (#195) — hatched instead of
+        // solid so that's visible before you even try to pick it.
+        const weaponRangeBlocked =
+          inWeaponRange &&
+          !hasLineOfSight(weaponRange.origin, { col, row }, tiles, tileTypes);
         return (
           <g key={key}>
             <polygon
@@ -360,7 +390,11 @@ function BattleBoard({
             {inWeaponRange && (
               <polygon
                 points={hexPointsAttr(x, y, size)}
-                fill="rgba(220,38,38,0.4)"
+                fill={
+                  weaponRangeBlocked
+                    ? 'url(#weapon-range-blocked)'
+                    : 'rgba(220,38,38,0.4)'
+                }
                 style={{ pointerEvents: 'none' }}
               />
             )}

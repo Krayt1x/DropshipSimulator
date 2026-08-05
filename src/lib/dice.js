@@ -1,6 +1,14 @@
 import actionDice from '../data/actionDice.json';
 
 export const DICE_COLORS = ['blue', 'red', 'green'];
+export const ACTION_DICE_SIDE_KEYS = [
+  'side1',
+  'side2',
+  'side3',
+  'side4',
+  'side5',
+  'side6',
+];
 
 // The colored action dice's face layouts come from DropshipBuilder's Action
 // Dice Creator (synced daily into actionDice.json) rather than being

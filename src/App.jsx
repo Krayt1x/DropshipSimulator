@@ -3,6 +3,7 @@ import ThemeToggle from './components/ThemeToggle.jsx';
 import HomePage from './pages/HomePage.jsx';
 import PlayPage from './pages/PlayPage.jsx';
 import BuilderPage from './pages/BuilderPage.jsx';
+import ManagePage from './pages/ManagePage.jsx';
 import MapEditorPage from './pages/MapEditorPage.jsx';
 import BattlePage from './pages/BattlePage.jsx';
 import ConnectPage from './pages/ConnectPage.jsx';
@@ -14,13 +15,12 @@ import { useLocalStorageState } from './lib/storage.js';
 import { OWNERS } from './lib/tokens.js';
 import { resetActiveGame } from './lib/gameState.js';
 
-const DROPSHIP_BUILDER_URL = 'https://Krayt1x.github.io/DropshipBuilder';
-
 function currentPage() {
   const path = window.location.hash.split('?')[0];
   if (path === '#map') return 'map';
   if (path === '#play') return 'play';
   if (path === '#builder') return 'builder';
+  if (path === '#manage') return 'manage';
   if (path === '#battle') return 'battle';
   if (path === '#connect') return 'connect';
   return 'home';
@@ -216,6 +216,12 @@ function AppShell() {
                 >
                   Builder
                 </a>
+                <a
+                  href="#manage"
+                  className={page === 'manage' ? 'active' : ''}
+                >
+                  Manage
+                </a>
                 <a href="#map" className={page === 'map' ? 'active' : ''}>
                   Map editor
                 </a>
@@ -251,9 +257,6 @@ function AppShell() {
               <PlayerIdentityPicker />
             )}
             {page === 'battle' && <EndGameButton />}
-            <a href={DROPSHIP_BUILDER_URL} target="_blank" rel="noreferrer">
-              Dropship Builder ↗
-            </a>
             <ThemeToggle />
           </div>
         </div>
@@ -266,6 +269,8 @@ function AppShell() {
         <MapEditorPage />
       ) : page === 'builder' ? (
         <BuilderPage />
+      ) : page === 'manage' ? (
+        <ManagePage />
       ) : page === 'play' ? (
         <PlayPage />
       ) : (

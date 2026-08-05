@@ -7,12 +7,10 @@ import {
   armorLabel,
 } from '../lib/builderConstants.js';
 import { computeRosterStats } from '../lib/rosterEntry.js';
+import { useCatalogue } from '../lib/catalogue.js';
 import RosterListItem from '../components/RosterListItem.jsx';
 import RosterConfigPanel from '../components/RosterConfigPanel.jsx';
 import DiceIcons from '../components/DiceIcons.jsx';
-import manufacturersData from '../data/manufacturers.json';
-import unitsData from '../data/units.json';
-import equipmentData from '../data/equipment.json';
 
 // Ported from DropshipBuilder's src/pages/ListBuilderPage.jsx (#188) so a
 // player can assemble a roster without leaving the site, instead of
@@ -113,11 +111,14 @@ function rosterToEntries(roster, units, equipment) {
     .filter(Boolean);
 }
 
-function BuilderPage({
-  manufacturers = manufacturersData,
-  units = unitsData,
-  equipment = equipmentData,
-}) {
+// manufacturers/units/equipment default to the editable local catalogue
+// (#199) rather than the bundled JSON directly — props are still accepted
+// (and win when given) so tests can supply their own fixed fixture data.
+function BuilderPage(props) {
+  const catalogue = useCatalogue();
+  const manufacturers = props.manufacturers ?? catalogue.manufacturers;
+  const units = props.units ?? catalogue.units;
+  const equipment = props.equipment ?? catalogue.equipment;
   const [settings, setSettings] = useLocalStorageState(
     'dropshipsimulator:builder:settings',
     {

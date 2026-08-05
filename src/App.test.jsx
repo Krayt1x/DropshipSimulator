@@ -93,6 +93,16 @@ describe('App', () => {
     expect(screen.getByText('Build your list')).toBeDefined();
   });
 
+  it('renders the catalogue Manage page at #manage, with its own top-nav menu item (#199)', () => {
+    window.location.hash = '#manage';
+    render(<App />);
+
+    expect(screen.getByText('Manage available models')).toBeDefined();
+    expect(screen.getByRole('link', { name: 'Manage' }).className).toContain(
+      'active',
+    );
+  });
+
   it('gives the Builder page its own top-nav menu item (#192)', () => {
     window.location.hash = '#play';
     render(<App />);

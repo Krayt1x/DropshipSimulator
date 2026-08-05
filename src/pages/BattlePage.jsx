@@ -73,9 +73,7 @@ import MobileTabBar from '../components/MobileTabBar.jsx';
 import TurnNotificationToast from '../components/TurnNotificationToast.jsx';
 import DiceRoller from '../components/DiceRoller.jsx';
 import GameLog from '../components/GameLog.jsx';
-import manufacturers from '../data/manufacturers.json';
-import units from '../data/units.json';
-import equipment from '../data/equipment.json';
+import { useCatalogue } from '../lib/catalogue.js';
 
 const DEFAULT_DIMENSIONS = { cols: 24, rows: 24 };
 // How many steps "Undo last move" can step back through (#186).
@@ -112,6 +110,11 @@ const ZOOM_STEP = 0.25;
 const PAN_DRAG_THRESHOLD = 5;
 
 function BattlePage() {
+  // Manufacturers/units/equipment now live in an editable local catalogue
+  // (#199) instead of the bundled JSON directly, so a player can add
+  // homebrew content in the Manage page and use it here — same seed data,
+  // just no longer read-only.
+  const { manufacturers, units, equipment } = useCatalogue();
   const [tileTypes, setTileTypes] = useLocalStorageState(
     'dropshipsimulator:mapEditor:tileTypes',
     DEFAULT_TERRAIN_TYPES,

@@ -2681,3 +2681,208 @@ button.danger:hover {
   font-weight: 600;
   color: var(--text-primary);
 }
+
+/* Manage page (#199), ported from DropshipBuilder's own index.css — full
+   CRUD catalogue editor for manufacturers/units/equipment, now that this
+   app is meant to replace DropshipBuilder rather than mirror it. */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+form.inline {
+  display: inline;
+}
+
+.flash {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  margin-bottom: 1rem;
+}
+
+.flash.error {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+
+.manufacturer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.manufacturer-rename {
+  display: flex;
+  gap: 6px;
+}
+
+.manufacturer-rename input[type='text'] {
+  width: 180px;
+}
+
+.manufacturer-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.manufacturer-tabs .tab {
+  background: transparent;
+  border: 1px solid var(--border-input);
+  color: var(--text-primary);
+}
+
+.manufacturer-tabs .tab:hover {
+  background: var(--bg-track);
+}
+
+.manufacturer-tabs .tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.effect-chip-remove {
+  background: var(--bg-card);
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.add-effect-btn {
+  background: transparent;
+  border: 1px dashed var(--border-input);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  width: 100%;
+  text-align: center;
+}
+
+.effect-editor {
+  border: 1px solid var(--border-input);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--bg-track);
+  margin-top: 8px;
+}
+
+.die-swatch-icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  margin-left: 6px;
+  cursor: pointer;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  vertical-align: middle;
+}
+
+.dice-net-popover {
+  position: fixed;
+  z-index: 50;
+  background: var(--bg-card);
+  border: 1px solid var(--border-input);
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.dice-net {
+  position: relative;
+  width: 168px;
+  height: 126px;
+}
+
+.dice-net-face {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+  text-align: center;
+  line-height: 1.1;
+}
+
+.dice-net-face-top {
+  left: 44px;
+  top: 0;
+}
+
+.dice-net-face-l1 {
+  left: 0;
+  top: 43px;
+}
+
+.dice-net-face-l2 {
+  left: 44px;
+  top: 43px;
+}
+
+.dice-net-face-l3 {
+  left: 88px;
+  top: 43px;
+}
+
+.dice-net-face-l4 {
+  left: 132px;
+  top: 43px;
+}
+
+.dice-net-face-bottom {
+  left: 44px;
+  top: 86px;
+}

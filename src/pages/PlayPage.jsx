@@ -4,9 +4,7 @@ import { resetActiveGame } from '../lib/gameState.js';
 import { parseRosterExport } from '../lib/rosterImport.js';
 import { DEFAULT_ROSTERS } from '../components/RosterImport.jsx';
 import { DEFAULT_MAPS } from '../lib/maps.js';
-import manufacturers from '../data/manufacturers.json';
-import units from '../data/units.json';
-import equipment from '../data/equipment.json';
+import { useCatalogue } from '../lib/catalogue.js';
 
 const DIFFICULTIES = [
   { id: 'simple', label: 'Simple' },
@@ -22,6 +20,7 @@ const MAP_CHOICES = [
 ];
 
 function PlayPage() {
+  const { manufacturers, units, equipment } = useCatalogue();
   const [tokens] = useLocalStorageState('dropshipsimulator:battle:tokens', []);
   const hasActiveGame = tokens.length > 0;
   const [, setMyPlayer] = useLocalStorageState(

@@ -24,7 +24,10 @@ jobs:
             curl -fsSL "$base_url/$file" -o "/tmp/$file"
             jq empty "/tmp/$file"
           done
-          cp /tmp/equipment.json src/data/equipment.json
+          # Equipment items that only exist in this repo (e.g. "Armor Plate",
+          # #203) aren't in DropshipBuilder's copy — merge them back in rather
+          # than letting a plain overwrite silently delete them (#193).
+          node .github/scripts/merge-local-equipment.mjs src/data/equipment.json /tmp/equipment.json src/data/equipment.json
           cp /tmp/manufacturers.json src/data/manufacturers.json
           cp /tmp/actionDice.json src/data/actionDice.json
           # DropshipBuilder tracks armor as 4 separate fields; this repo's UI

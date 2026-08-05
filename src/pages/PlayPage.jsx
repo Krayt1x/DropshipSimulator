@@ -245,7 +245,7 @@ function PlayPage() {
           </button>
         </div>
       )}
-      <div className="home-tile-grid">
+      <div className="home-tile-grid play-mode-grid">
         {hasActiveGame ? (
           <a className="home-tile" href="#battle">
             <span className="home-tile-icon">🧍</span>
@@ -286,7 +286,7 @@ function PlayPage() {
           </div>
 
           <p className="stage-label">How do you want to play?</p>
-          <div className="home-tile-grid">
+          <div className="home-tile-grid play-mode-grid">
             <button
               type="button"
               className={`home-tile ${mode === 'sandbox' ? 'selected' : ''}`}
@@ -314,7 +314,7 @@ function PlayPage() {
           {mode === 'cpu' && (
             <div className="cascade-stage">
               <p className="stage-label">Choose a difficulty</p>
-              <div className="home-tile-grid">
+              <div className="home-tile-grid play-difficulty-grid">
                 {DIFFICULTIES.map((d) => (
                   <button
                     key={d.id}
@@ -332,14 +332,14 @@ function PlayPage() {
           {!isMobile && mode === 'cpu' && difficulty && (
             <div className="cascade-stage">
               <p className="stage-label">
-                Which manufacturer should the computer play? (#198)
+                Which manufacturer should the computer play?
               </p>
-              <div className="tile-palette-list">
+              <div className="manufacturer-tile-list">
                 {manufacturers.map((m) => (
                   <button
                     key={m}
                     type="button"
-                    className={`tile-swatch-btn ${rosterManufacturer === m ? 'selected' : ''}`}
+                    className={`manufacturer-tile ${rosterManufacturer === m ? 'selected' : ''}`}
                     onClick={() => pickRosterManufacturer(m)}
                   >
                     {m}
@@ -458,14 +458,14 @@ function PlayPage() {
           {!isMobile && botRosterReady && (
             <div className="cascade-stage">
               <p className="stage-label">
-                Which manufacturer will you play? (#202)
+                Which manufacturer will you play?
               </p>
-              <div className="tile-palette-list">
+              <div className="manufacturer-tile-list">
                 {manufacturers.map((m) => (
                   <button
                     key={m}
                     type="button"
-                    className={`tile-swatch-btn ${playerRosterManufacturer === m ? 'selected' : ''}`}
+                    className={`manufacturer-tile ${playerRosterManufacturer === m ? 'selected' : ''}`}
                     onClick={() => pickPlayerRosterManufacturer(m)}
                   >
                     {m}
@@ -586,17 +586,17 @@ function PlayPage() {
           {isMobile && mode === 'cpu' && difficulty && (
             <div className="cascade-stage">
               <p className="stage-label">
-                Choose your list and the computer's (#224)
+                Choose your list and the computer's
               </p>
               <div className="roster-picker-columns">
                 <div>
-                  <p className="roster-picker-column-label">You (#202)</p>
-                  <div className="tile-palette-list">
+                  <p className="roster-picker-column-label">You</p>
+                  <div className="manufacturer-tile-list">
                     {manufacturers.map((m) => (
                       <button
                         key={m}
                         type="button"
-                        className={`tile-swatch-btn ${playerRosterManufacturer === m ? 'selected' : ''}`}
+                        className={`manufacturer-tile ${playerRosterManufacturer === m ? 'selected' : ''}`}
                         onClick={() => pickPlayerRosterManufacturer(m)}
                       >
                         {m}
@@ -711,13 +711,13 @@ function PlayPage() {
                   )}
                 </div>
                 <div>
-                  <p className="roster-picker-column-label">Computer (#198)</p>
-                  <div className="tile-palette-list">
+                  <p className="roster-picker-column-label">Computer</p>
+                  <div className="manufacturer-tile-list">
                     {manufacturers.map((m) => (
                       <button
                         key={m}
                         type="button"
-                        className={`tile-swatch-btn ${rosterManufacturer === m ? 'selected' : ''}`}
+                        className={`manufacturer-tile ${rosterManufacturer === m ? 'selected' : ''}`}
                         onClick={() => pickRosterManufacturer(m)}
                       >
                         {m}

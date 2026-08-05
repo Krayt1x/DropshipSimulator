@@ -1665,6 +1665,72 @@ button.danger:hover {
   color: var(--text-secondary);
 }
 
+/* Manufacturer picker (#231) — a wrapping row of small tiles instead of a
+   full-width vertical list, so several fit per line even on a narrow
+   screen. */
+.manufacturer-tile-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.manufacturer-tile {
+  background: transparent;
+  border: 1px solid var(--border-input);
+  color: var(--text-primary);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.manufacturer-tile:hover {
+  background: var(--bg-track);
+}
+
+.manufacturer-tile.selected {
+  border-color: var(--accent);
+  border-width: 2px;
+  background: var(--bg-track);
+}
+
+/* On mobile, the mode-choice and difficulty grids collapse to a single
+   column by .home-tile-grid's own breakpoint below — these two modifiers
+   override that specifically for the Play page (#231) so Single
+   Player/Multiplayer and Sandbox/Vs CPU stay 2 across, and difficulty stays
+   3 across in one row, instead of stacking. */
+@media (max-width: 700px) {
+  .home-tile-grid.play-mode-grid,
+  .home-tile-grid.play-difficulty-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .home-tile-grid.play-difficulty-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .play-mode-grid .home-tile,
+  .play-difficulty-grid .home-tile {
+    padding: 14px 6px;
+  }
+
+  .play-mode-grid .home-tile-icon {
+    font-size: 22px;
+  }
+
+  .play-mode-grid .home-tile-title,
+  .play-difficulty-grid .home-tile-title {
+    font-size: 13px;
+  }
+
+  .play-mode-grid .home-tile-description {
+    font-size: 11px;
+  }
+}
+
 .resume-game-row {
   display: flex;
   align-items: stretch;

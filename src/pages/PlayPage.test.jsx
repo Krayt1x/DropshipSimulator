@@ -84,7 +84,7 @@ describe('PlayPage', () => {
     // manufacturer (#198) and then a roster still need an answer.
     expect(window.location.hash).toBe('');
     const botManufacturerStage = screen
-      .getByText('Which manufacturer should the computer play? (#198)')
+      .getByText('Which manufacturer should the computer play?')
       .closest('.cascade-stage');
     fireEvent.click(
       within(botManufacturerStage).getByRole('button', { name: 'Corp A' }),
@@ -100,7 +100,7 @@ describe('PlayPage', () => {
     // next (#202), then the map stage (#176).
     expect(window.location.hash).toBe('');
     const playerManufacturerStage = screen
-      .getByText('Which manufacturer will you play? (#202)')
+      .getByText('Which manufacturer will you play?')
       .closest('.cascade-stage');
     fireEvent.click(
       within(playerManufacturerStage).getByRole('button', { name: 'Corp A' }),
@@ -145,7 +145,7 @@ describe('PlayPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /Simple/ }));
 
     expect(
-      screen.getByText('Which manufacturer should the computer play? (#198)'),
+      screen.getByText('Which manufacturer should the computer play?'),
     ).toBeDefined();
     expect(screen.getByRole('button', { name: 'Corp A' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Corp B' })).toBeDefined();
@@ -188,7 +188,7 @@ describe('PlayPage', () => {
     ).toContain('selected');
 
     const playerManufacturerStage = screen
-      .getByText('Which manufacturer will you play? (#202)')
+      .getByText('Which manufacturer will you play?')
       .closest('.cascade-stage');
     fireEvent.click(
       within(playerManufacturerStage).getByRole('button', { name: 'Corp A' }),
@@ -242,7 +242,7 @@ describe('PlayPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Use this list' }));
 
     const playerManufacturerStage = screen
-      .getByText('Which manufacturer will you play? (#202)')
+      .getByText('Which manufacturer will you play?')
       .closest('.cascade-stage');
     fireEvent.click(
       within(playerManufacturerStage).getByRole('button', { name: 'Corp A' }),
@@ -337,14 +337,14 @@ describe('PlayPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Tactical' }));
     const botManufacturerStage = screen
-      .getByText('Which manufacturer should the computer play? (#198)')
+      .getByText('Which manufacturer should the computer play?')
       .closest('.cascade-stage');
     fireEvent.click(
       within(botManufacturerStage).getByRole('button', { name: 'Corp A' }),
     );
     fireEvent.click(screen.getByRole('button', { name: 'Random' }));
     const playerManufacturerStage = screen
-      .getByText('Which manufacturer will you play? (#202)')
+      .getByText('Which manufacturer will you play?')
       .closest('.cascade-stage');
     fireEvent.click(
       within(playerManufacturerStage).getByRole('button', { name: 'Corp A' }),
@@ -405,14 +405,14 @@ describe('PlayPage mobile roster picker (#224)', () => {
     fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Tactical' }));
 
-    expect(screen.queryByText('Which manufacturer should the computer play? (#198)')).toBeNull();
-    expect(screen.queryByText('Which manufacturer will you play? (#202)')).toBeNull();
+    expect(screen.queryByText('Which manufacturer should the computer play?')).toBeNull();
+    expect(screen.queryByText('Which manufacturer will you play?')).toBeNull();
 
     const stage = screen
-      .getByText("Choose your list and the computer's (#224)")
+      .getByText("Choose your list and the computer's")
       .closest('.cascade-stage');
-    expect(within(stage).getByText('You (#202)')).toBeDefined();
-    expect(within(stage).getByText('Computer (#198)')).toBeDefined();
+    expect(within(stage).getByText('You')).toBeDefined();
+    expect(within(stage).getByText('Computer')).toBeDefined();
   });
 
   it('lets the player and CPU be picked independently, in either order', () => {
@@ -424,10 +424,10 @@ describe('PlayPage mobile roster picker (#224)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Tactical' }));
 
     const stage = screen
-      .getByText("Choose your list and the computer's (#224)")
+      .getByText("Choose your list and the computer's")
       .closest('.cascade-stage');
-    const playerColumn = within(stage).getByText('You (#202)').parentElement;
-    const cpuColumn = within(stage).getByText('Computer (#198)').parentElement;
+    const playerColumn = within(stage).getByText('You').parentElement;
+    const cpuColumn = within(stage).getByText('Computer').parentElement;
 
     // Pick the player's list first...
     fireEvent.click(within(playerColumn).getByRole('button', { name: 'Corp A' }));
@@ -457,9 +457,9 @@ describe('PlayPage mobile roster picker (#224)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Tactical' }));
 
     const stage = screen
-      .getByText("Choose your list and the computer's (#224)")
+      .getByText("Choose your list and the computer's")
       .closest('.cascade-stage');
-    const cpuColumn = within(stage).getByText('Computer (#198)').parentElement;
+    const cpuColumn = within(stage).getByText('Computer').parentElement;
 
     fireEvent.click(within(cpuColumn).getByRole('button', { name: 'Corp A' }));
     expect(within(cpuColumn).queryByText(/Weight:/)).toBeNull();
@@ -487,10 +487,10 @@ describe('PlayPage mobile roster picker (#224)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Tactical' }));
 
     const stage = screen
-      .getByText("Choose your list and the computer's (#224)")
+      .getByText("Choose your list and the computer's")
       .closest('.cascade-stage');
-    const playerColumn = within(stage).getByText('You (#202)').parentElement;
-    const cpuColumn = within(stage).getByText('Computer (#198)').parentElement;
+    const playerColumn = within(stage).getByText('You').parentElement;
+    const cpuColumn = within(stage).getByText('Computer').parentElement;
 
     fireEvent.click(within(playerColumn).getByRole('button', { name: 'Corp A' }));
     fireEvent.click(within(playerColumn).getByRole('button', { name: 'Random' }));
@@ -498,5 +498,54 @@ describe('PlayPage mobile roster picker (#224)', () => {
     fireEvent.click(within(cpuColumn).getByRole('button', { name: 'Random' }));
 
     expect(screen.getByText('Which map do you want to play?')).toBeDefined();
+  });
+});
+
+describe('PlayPage grid layout (#231)', () => {
+  it('marks the Single Player/Multiplayer and Sandbox/Vs CPU grids so they stay 2-up on mobile', () => {
+    render(<PlayPage />);
+
+    const topGrid = screen.getByRole('link', { name: /Multiplayer/ }).closest('.home-tile-grid');
+    expect(topGrid.className).toContain('play-mode-grid');
+
+    fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+    const modeGrid = screen.getByRole('button', { name: /Sandbox/ }).closest('.home-tile-grid');
+    expect(modeGrid.className).toContain('play-mode-grid');
+  });
+
+  it('marks the difficulty grid so it stays 3-up in one row on mobile', () => {
+    render(<PlayPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
+
+    const difficultyGrid = screen
+      .getByRole('button', { name: 'Simple' })
+      .closest('.home-tile-grid');
+    expect(difficultyGrid.className).toContain('play-difficulty-grid');
+  });
+
+  it('renders the manufacturer picker as small wrapping tiles instead of a full-width list', () => {
+    render(<PlayPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Tactical' }));
+
+    const corpABtn = screen.getByRole('button', { name: 'Corp A' });
+    expect(corpABtn.className).toContain('manufacturer-tile');
+    expect(corpABtn.closest('.manufacturer-tile-list')).not.toBeNull();
+  });
+
+  it('drops every issue-number reference from the visible page text', () => {
+    render(<PlayPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Tactical' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Corp A' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Random' }));
+
+    expect(document.body.textContent).not.toMatch(/\(#\d+\)/);
   });
 });

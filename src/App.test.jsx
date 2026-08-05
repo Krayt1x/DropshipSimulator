@@ -122,6 +122,19 @@ describe('App', () => {
     expect(screen.getByRole('link', { name: '← Map layouts' })).toBeDefined();
   });
 
+  it('renders a terminology reference page at #reference, linked from the settings menu (#219)', () => {
+    window.location.hash = '#reference';
+    render(<App />);
+
+    expect(screen.getByRole('heading', { name: 'Reference' })).toBeDefined();
+    // Spot-check a couple of the glossary entries rather than every one.
+    expect(screen.getByText('Splash')).toBeDefined();
+    expect(screen.getByText('Overheated')).toBeDefined();
+    expect(
+      screen.getByRole('link', { name: 'Reference' }).className,
+    ).toContain('active');
+  });
+
   it('renders the catalogue Manage page at #manage, with its own top-nav menu item (#199)', () => {
     window.location.hash = '#manage';
     render(<App />);

@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage.jsx';
 import PlayPage from './pages/PlayPage.jsx';
 import BuilderPage from './pages/BuilderPage.jsx';
 import ManagePage from './pages/ManagePage.jsx';
+import ReferencePage from './pages/ReferencePage.jsx';
 import MapViewPage from './pages/MapViewPage.jsx';
 import MapEditorPage from './pages/MapEditorPage.jsx';
 import BattlePage from './pages/BattlePage.jsx';
@@ -25,6 +26,7 @@ function currentPage() {
   if (path === '#play') return 'play';
   if (path === '#builder') return 'builder';
   if (path === '#manage') return 'manage';
+  if (path === '#reference') return 'reference';
   if (path === '#battle') return 'battle';
   if (path === '#connect') return 'connect';
   return 'home';
@@ -263,6 +265,12 @@ function AppShell() {
             <a href="#manage" className={page === 'manage' ? 'active' : ''}>
               Manage
             </a>
+            <a
+              href="#reference"
+              className={page === 'reference' ? 'active' : ''}
+            >
+              Reference
+            </a>
             <ThemeToggle />
           </div>
         </div>
@@ -279,6 +287,8 @@ function AppShell() {
         <BuilderPage />
       ) : page === 'manage' ? (
         <ManagePage />
+      ) : page === 'reference' ? (
+        <ReferencePage />
       ) : page === 'play' ? (
         <PlayPage />
       ) : (

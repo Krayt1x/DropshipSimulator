@@ -915,4 +915,136 @@ describe('chooseBotAction', () => {
     });
     expect(result.targetId).toBe('pod1');
   });
+
+  // #200: the bot never used Exchange (#134) at all — it just gave up on an
+  // otherwise-available attack or move whenever the pool had no die of that
+  // exact value (or a flexible Action die) and quietly ended its turn.
+  describe('exchanging a die (#200)', () => {
+    it('exchanges a spare die for Attack when a target is in range but no Attack/Action die is available', () => {
+      const bot = makeToken({
+        id: 'bot1',
+        unitId: 1,
+        owner: 'p2',
+        position: { col: 5, row: 5 },
+        equippedIds: [10],
+        weaponState: { 0: { heat: 0, broken: false } },
+      });
+      const enemy = makeToken({
+        id: 'enemy1',
+        unitId: 2,
+        owner: 'p1',
+        position: { col: 5, row: 6 },
+      });
+      // Green's own faces (actionDice.json) are Action/Move only — it can
+      // never become an Attack — so it must be skipped in favor of Blue,
+      // which can.
+      const result = chooseBotAction({
+        tokens: [bot, enemy],
+        units,
+        equipment,
+        botOwner: 'p2',
+        actionPool: [
+          { id: 'green1', label: 'Green', value: 'Move', used: false },
+          { id: 'blue1', label: 'Blue', value: 'Move', used: false },
+        ],
+        difficulty: 'simple',
+      });
+      expect(result).toEqual({
+        type: 'exchange',
+        spendId: 'green1',
+        targetId: 'blue1',
+        newValue: 'Attack',
+      });
+    });
+
+    it('exchanges a spare die for Move when a token wants to close distance but no Move/Action die is available', () => {
+      const bot = makeToken({
+        id: 'bot1',
+        unitId: 1,
+        owner: 'p2',
+        position: { col: 0, row: 0 },
+        equippedIds: [10, 11],
+        weaponState: { 0: { heat: 0, broken: false } },
+      });
+      const enemy = makeToken({
+        id: 'enemy1',
+        unitId: 2,
+        owner: 'p1',
+        position: { col: 0, row: 10 },
+      });
+      const result = chooseBotAction({
+        tokens: [bot, enemy],
+        units,
+        equipment,
+        botOwner: 'p2',
+        actionPool: [
+          { id: 'red1', label: 'Red', value: 'Attack', used: false },
+          { id: 'blue1', label: 'Blue', value: 'Attack', used: false },
+        ],
+        difficulty: 'simple',
+      });
+      expect(result).toEqual({
+        type: 'exchange',
+        spendId: 'blue1',
+        targetId: 'red1',
+        newValue: 'Move',
+      });
+    });
+
+    it('does not exchange when there is nothing useful to do even with the die it would gain', () => {
+      // No weapon, no movement gear, so neither an Attack nor a Move
+      // exchange would unlock anything — the bot should just end its turn.
+      const bot = makeToken({
+        id: 'bot1',
+        unitId: 1,
+        owner: 'p2',
+        position: { col: 0, row: 0 },
+        equippedIds: [],
+      });
+      const enemy = makeToken({
+        id: 'enemy1',
+        unitId: 2,
+        owner: 'p1',
+        position: { col: 0, row: 10 },
+      });
+      const result = chooseBotAction({
+        tokens: [bot, enemy],
+        units,
+        equipment,
+        botOwner: 'p2',
+        actionPool: [
+          { id: 'red1', label: 'Red', value: 'Attack', used: false },
+          { id: 'blue1', label: 'Blue', value: 'Attack', used: false },
+        ],
+        difficulty: 'simple',
+      });
+      expect(result).toBeNull();
+    });
+
+    it('does not exchange when only one spare die is available (nothing left to spend)', () => {
+      const bot = makeToken({
+        id: 'bot1',
+        unitId: 1,
+        owner: 'p2',
+        position: { col: 5, row: 5 },
+        equippedIds: [10],
+        weaponState: { 0: { heat: 0, broken: false } },
+      });
+      const enemy = makeToken({
+        id: 'enemy1',
+        unitId: 2,
+        owner: 'p1',
+        position: { col: 5, row: 6 },
+      });
+      const result = chooseBotAction({
+        tokens: [bot, enemy],
+        units,
+        equipment,
+        botOwner: 'p2',
+        actionPool: [{ id: 'blue1', label: 'Blue', value: 'Move', used: false }],
+        difficulty: 'simple',
+      });
+      expect(result).toBeNull();
+    });
+  });
 });

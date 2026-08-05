@@ -1894,6 +1894,9 @@ function BattlePage() {
         animateMove(token, action.destination.col, action.destination.row);
         useActionPoolDie(action.dieId);
         await sleep(steps * MOVE_STEP_MS + 400);
+      } else if (action.type === 'exchange') {
+        exchangeActionDie(action.spendId, action.targetId, action.newValue);
+        await sleep(400);
       }
     }
 

@@ -14,7 +14,7 @@ import {
 } from './tokens.js';
 import { hasLineOfSight, blocksMovement } from './terrain.js';
 import { parseArmor } from './combat.js';
-import { parseHitDice, DICE_COLORS } from './dice.js';
+import { parseHitDice, DICE_COLORS, DIE_TYPES } from './dice.js';
 
 export function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -111,6 +111,39 @@ function pickDie(actionPool, preferredValue) {
     unused.find((d) => d.value === 'Action') ??
     null
   );
+}
+
+// A die's own color caps what it can be exchanged into — a die that never
+// rolls "Attack" on any of its faces can't become one (#200's green die, for
+// instance, only ever shows Action/Move — see actionDice.json).
+function distinctFacesForLabel(label) {
+  const dieType = DIE_TYPES.find((dt) => dt.label === label);
+  return dieType?.faces ? [...new Set(dieType.faces)] : [];
+}
+
+// Mirrors the human Exchange feature (#134): spend one unused die to change
+// a different unused die's face to `neededValue`. Used when the pool has
+// nothing of that value (or a flexible Action die) but does have two spare
+// dice to trade — one consumed as the cost, the other's face rewritten —
+// rather than the bot just giving up on an attack or move it otherwise could
+// make (#200).
+function findExchangeAction(actionPool, neededValue) {
+  const unused = actionPool.filter((d) => !d.used);
+  if (unused.length < 2) return null;
+  const target = unused.find(
+    (d) =>
+      d.value !== neededValue &&
+      distinctFacesForLabel(d.label).includes(neededValue),
+  );
+  if (!target) return null;
+  const spend = unused.find((d) => d.id !== target.id);
+  if (!spend) return null;
+  return {
+    type: 'exchange',
+    spendId: spend.id,
+    targetId: target.id,
+    newValue: neededValue,
+  };
 }
 
 function findAttackOptions({
@@ -356,19 +389,18 @@ export function stepToward(from, to, maxSteps, stopDistance, isBlocked) {
   return current;
 }
 
-function findMoveAction({
+// The actual "is there a useful move" decision, kept separate from the
+// Move-die check (#200) so an exchange can be attempted when the answer is
+// yes but the pool has no Move (or Action) die to spend on it yet.
+function computeMoveCandidate({
   tokens,
   equipment,
   botOwner,
-  actionPool,
   difficulty,
   dimensions,
   tiles,
   terrainTypes,
 }) {
-  const moveDie = pickDie(actionPool, 'Move');
-  if (!moveDie) return null;
-
   const myTokens = tokens.filter(
     (t) => t.owner === botOwner && t.position && !t.destroyed,
   );
@@ -424,9 +456,17 @@ function findMoveAction({
     ) {
       continue;
     }
-    return { type: 'move', dieId: moveDie.id, tokenId: token.id, destination };
+    return { tokenId: token.id, destination };
   }
   return null;
+}
+
+function findMoveAction(args) {
+  const moveDie = pickDie(args.actionPool, 'Move');
+  if (!moveDie) return null;
+  const candidate = computeMoveCandidate(args);
+  if (!candidate) return null;
+  return { type: 'move', dieId: moveDie.id, ...candidate };
 }
 
 // The single entry point BattlePage.jsx's runBotTurn calls in a loop: given
@@ -464,16 +504,23 @@ export function chooseBotAction({
   if (enemyTokens.length === 0) return null;
 
   const attackDie = pickDie(actionPool, 'Attack');
+  // Computed either way (#200): even without an Attack die yet, knowing
+  // whether there's actually something worth shooting decides whether an
+  // Exchange is worth spending a second die on below.
+  const options = findAttackOptions({
+    tokens,
+    units,
+    equipment,
+    botOwner,
+    difficulty,
+    tiles,
+    terrainTypes,
+  });
+  if (!attackDie && options.length > 0) {
+    const exchange = findExchangeAction(actionPool, 'Attack');
+    if (exchange) return exchange;
+  }
   if (attackDie) {
-    const options = findAttackOptions({
-      tokens,
-      units,
-      equipment,
-      botOwner,
-      difficulty,
-      tiles,
-      terrainTypes,
-    });
     // Expert avoids breaking a weapon on a shot that isn't worth the risk —
     // it only considers an overheating option when nothing safer is on the
     // table, or when that shot is itself the one that finishes the target.
@@ -527,7 +574,7 @@ export function chooseBotAction({
   });
   if (dropPodAction) return dropPodAction;
 
-  return findMoveAction({
+  const moveArgs = {
     tokens,
     equipment,
     botOwner,
@@ -536,7 +583,15 @@ export function chooseBotAction({
     dimensions,
     tiles,
     terrainTypes,
-  });
+  };
+  const moveAction = findMoveAction(moveArgs);
+  if (moveAction) return moveAction;
+  // No Move (or Action) die to spend, but exchanging into one would let a
+  // token that actually wants to move do so this turn (#200).
+  if (!pickDie(actionPool, 'Move') && computeMoveCandidate(moveArgs)) {
+    return findExchangeAction(actionPool, 'Move');
+  }
+  return null;
 }
 
 // Spreads `count` reserve tokens across empty hexes inside the bot's

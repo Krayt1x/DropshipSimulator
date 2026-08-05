@@ -894,6 +894,8 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
+    // First press arms the button (#206); the second opens the die picker.
+    fireEvent.click(screen.getByRole('button', { name: 'Model Destroyed' }));
     fireEvent.click(screen.getByRole('button', { name: 'Model Destroyed' }));
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Destroy' }));
 
@@ -912,6 +914,7 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
     fireEvent.click(screen.getByRole('button', { name: 'Model Destroyed' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Model Destroyed' }));
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Destroy' }));
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
 
@@ -919,6 +922,45 @@ describe('BattlePage', () => {
 
     expect(screen.queryByText('Destroyed Models (1)')).toBeNull();
     expect(screen.getByText('Reserve (1)')).toBeDefined();
+  });
+
+  it('arms the destroy button on its first press, but starts pre-armed at 0 HP (#206)', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+    importA10ToReserve();
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-0,0'));
+
+    // At full HP, the button starts neutral and the first press only arms
+    // it (turns it red) rather than acting immediately.
+    const destroyBtn = screen.getByRole('button', { name: 'Model Destroyed' });
+    expect(destroyBtn.className).not.toContain('danger');
+    fireEvent.click(destroyBtn);
+    expect(
+      screen.getByRole('button', { name: 'Model Destroyed' }).className,
+    ).toContain('danger');
+    expect(screen.queryByText(/Keep which die/)).toBeNull();
+
+    // The second press (now armed) opens the die picker.
+    fireEvent.click(screen.getByRole('button', { name: 'Model Destroyed' }));
+    expect(screen.getByText(/Keep which die/)).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    // Once the model is wrecked (0 HP), the button starts already armed —
+    // a single press opens the die picker right away.
+    const a10Hp = units.find((u) => u.name === 'A10').hp;
+    for (let i = 0; i < a10Hp; i++) {
+      fireEvent.click(screen.getAllByRole('button', { name: '−' })[0]);
+    }
+    expect(screen.getByText(`0 / ${a10Hp}`)).toBeDefined();
+    const wreckedDestroyBtn = screen.getByRole('button', {
+      name: 'Model Destroyed',
+    });
+    expect(wreckedDestroyBtn.className).toContain('danger');
+    fireEvent.click(wreckedDestroyBtn);
+    expect(screen.getByText(/Keep which die/)).toBeDefined();
   });
 
   it('returns a deployed token directly to reserve', () => {

@@ -38,6 +38,10 @@ function TokenCard({
 }) {
   const [confirmingDestroy, setConfirmingDestroy] = useState(false);
   const [pickedDieColor, setPickedDieColor] = useState(null);
+  // Arms the destroy button on its first press (turning it red) rather than
+  // destroying on one click (#206) — a chassis already at 0 HP is already a
+  // wreck, so it skips straight to armed instead of needing that first press.
+  const [armed, setArmed] = useState(false);
 
   if (!unit) return null;
 
@@ -64,6 +68,7 @@ function TokenCard({
   // A model at 0 chassis HP is a wreck — it can't move or attack until
   // someone clicks "Model Destroyed" (#160).
   const wrecked = token.currentHp <= 0;
+  const destroyArmed = armed || wrecked;
   const availableDiceColors = DICE_COLORS.filter(
     (color) => Number(unit[`dice_${color}`]) > 0,
   );
@@ -77,15 +82,25 @@ function TokenCard({
     setConfirmingDestroy(true);
   }
 
+  function pressDestroy() {
+    if (!destroyArmed) {
+      setArmed(true);
+      return;
+    }
+    startDestroy();
+  }
+
   function confirmDestroy() {
     onDestroy(pickedDieColor);
     setConfirmingDestroy(false);
     setPickedDieColor(null);
+    setArmed(false);
   }
 
   function cancelDestroy() {
     setConfirmingDestroy(false);
     setPickedDieColor(null);
+    setArmed(false);
   }
 
   function renderGearRow(item, { showRange, showMoveButton }) {
@@ -338,6 +353,53 @@ function TokenCard({
           maxHp={Number(unit.hp) || 0}
           onSetHp={(target) => onAdjustHp(target - token.currentHp)}
         />
+        {!token.destroyed &&
+          (confirmingDestroy ? (
+            <div className="destroy-dice-picker">
+              <p className="unit-meta" style={{ marginBottom: 8 }}>
+                Keep which die in this player's pool?
+              </p>
+              <div className="token-owner-row" style={{ marginBottom: 10 }}>
+                {availableDiceColors.map((color) => (
+                  <button
+                    type="button"
+                    key={color}
+                    className={`die-pick-btn ${pickedDieColor === color ? 'selected' : ''}`}
+                    onClick={() => setPickedDieColor(color)}
+                  >
+                    <span className={`die-icon ${color}`} />
+                    {color.charAt(0).toUpperCase() + color.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <div className="token-stat-row">
+                <button
+                  type="button"
+                  className="danger"
+                  onClick={confirmDestroy}
+                >
+                  Confirm Destroy
+                </button>
+                <button type="button" className="ghost" onClick={cancelDestroy}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className={destroyArmed ? 'danger' : 'ghost'}
+              disabled={!canControl}
+              title={
+                destroyArmed
+                  ? 'Press again to destroy this model'
+                  : 'Press to arm — press again to destroy'
+              }
+              onClick={pressDestroy}
+            >
+              Model Destroyed
+            </button>
+          ))}
       </div>
 
       <div className="token-card-section">
@@ -471,62 +533,14 @@ function TokenCard({
         )
       )}
 
-      {token.destroyed ? (
-        <button
-          type="button"
-          className="ghost"
-          disabled={!canControl}
-          onClick={onReturnToReserve}
-        >
-          Return to reserve
-        </button>
-      ) : confirmingDestroy ? (
-        <div className="token-card-section destroy-dice-picker">
-          <p className="unit-meta" style={{ marginBottom: 8 }}>
-            Keep which die in this player's pool?
-          </p>
-          <div className="token-owner-row" style={{ marginBottom: 10 }}>
-            {availableDiceColors.map((color) => (
-              <button
-                type="button"
-                key={color}
-                className={`die-pick-btn ${pickedDieColor === color ? 'selected' : ''}`}
-                onClick={() => setPickedDieColor(color)}
-              >
-                <span className={`die-icon ${color}`} />
-                {color.charAt(0).toUpperCase() + color.slice(1)}
-              </button>
-            ))}
-          </div>
-          <div className="token-stat-row">
-            <button type="button" className="danger" onClick={confirmDestroy}>
-              Confirm Destroy
-            </button>
-            <button type="button" className="ghost" onClick={cancelDestroy}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="token-stat-row">
-          <button
-            type="button"
-            className="danger"
-            disabled={!canControl}
-            onClick={startDestroy}
-          >
-            Model Destroyed
-          </button>
-          <button
-            type="button"
-            className="ghost"
-            disabled={!canControl}
-            onClick={onReturnToReserve}
-          >
-            Return to reserve
-          </button>
-        </div>
-      )}
+      <button
+        type="button"
+        className="ghost"
+        disabled={!canControl}
+        onClick={onReturnToReserve}
+      >
+        Return to reserve
+      </button>
     </div>
   );
 }

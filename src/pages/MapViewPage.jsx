@@ -33,6 +33,7 @@ function MapViewPage() {
       >
         Pick a pre-made layout, or build your own from scratch.
       </p>
+      <h2 style={{ fontSize: 15 }}>Pre-made maps</h2>
       <div className="home-tile-grid">
         {DEFAULT_MAPS.map((map) => (
           <a
@@ -48,6 +49,10 @@ function MapViewPage() {
             </span>
           </a>
         ))}
+      </div>
+
+      <h2 style={{ fontSize: 15, marginTop: 24 }}>Map creator</h2>
+      <div className="home-tile-grid">
         <a className="home-tile" href="#map/edit">
           <span className="home-tile-icon">✏️</span>
           <span className="home-tile-title">Create your own</span>

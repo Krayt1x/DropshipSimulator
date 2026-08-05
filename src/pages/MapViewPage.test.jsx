@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, beforeEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import MapViewPage from './MapViewPage.jsx';
 import { DEFAULT_MAPS } from '../lib/maps.js';
 
@@ -46,5 +46,25 @@ describe('MapViewPage (#218)', () => {
     expect(
       JSON.parse(window.localStorage.getItem('dropshipsimulator:mapEditor:tiles')),
     ).toEqual({ '0,0': 'plain' });
+  });
+
+  it('splits pre-made layouts and the creator tile into two labeled sections (#221)', () => {
+    render(<MapViewPage />);
+
+    const preMadeGrid = screen.getByRole('heading', { name: 'Pre-made maps' })
+      .nextElementSibling;
+    const creatorGrid = screen.getByRole('heading', { name: 'Map creator' })
+      .nextElementSibling;
+
+    expect(
+      within(preMadeGrid).getByRole('link', { name: /Blank/ }),
+    ).toBeDefined();
+    expect(
+      within(preMadeGrid).queryByRole('link', { name: /Create your own/ }),
+    ).toBeNull();
+    expect(
+      within(creatorGrid).getByRole('link', { name: /Create your own/ }),
+    ).toBeDefined();
+    expect(within(creatorGrid).queryByRole('link', { name: /Blank/ })).toBeNull();
   });
 });

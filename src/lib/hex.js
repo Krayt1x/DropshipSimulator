@@ -121,6 +121,46 @@ export function reachableHexes(origin, maxSteps, isBlocked) {
   return visited;
 }
 
+// The actual shortest route BFS finds from origin to target, respecting the
+// same isBlocked predicate reachableHexes does — used to animate a move
+// along the path it's actually taking instead of hexLine's straight
+// interpolation, which could visually cut through a blocked hex (a building,
+// water) even when the move itself correctly routes around it (#225).
+// Returns null if target isn't reachable within maxSteps.
+export function hexPath(origin, target, maxSteps, isBlocked) {
+  const originKey = tileKey(origin.col, origin.row);
+  const targetKey = tileKey(target.col, target.row);
+  if (originKey === targetKey) return [origin];
+  const cameFrom = new Map();
+  const visited = new Set([originKey]);
+  let frontier = [origin];
+  for (let step = 0; step < maxSteps && frontier.length > 0; step++) {
+    const next = [];
+    for (const hex of frontier) {
+      for (let dir = 0; dir < 6; dir++) {
+        const candidate = neighborHex(hex.col, hex.row, dir);
+        const key = tileKey(candidate.col, candidate.row);
+        if (visited.has(key) || isBlocked?.(candidate)) continue;
+        visited.add(key);
+        cameFrom.set(key, hex);
+        if (key === targetKey) {
+          const path = [candidate];
+          let cursor = key;
+          while (cameFrom.has(cursor)) {
+            const prev = cameFrom.get(cursor);
+            path.unshift(prev);
+            cursor = tileKey(prev.col, prev.row);
+          }
+          return path;
+        }
+        next.push(candidate);
+      }
+    }
+    frontier = next;
+  }
+  return null;
+}
+
 export function hexDistance(a, b) {
   const A = offsetToAxial(a.col, a.row);
   const B = offsetToAxial(b.col, b.row);

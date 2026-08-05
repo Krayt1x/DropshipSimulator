@@ -15,6 +15,7 @@ import {
 } from '../lib/dice.js';
 import {
   hexLine,
+  hexPath,
   hexDistance,
   isInWeaponArc,
   visibleSides,
@@ -1418,7 +1419,17 @@ function BattlePage() {
       moveTokenTo(token, col, row, dieId);
       return;
     }
-    const path = hexLine(token.position, { col, row });
+    // Follows the actual route around terrain/models a legal move to this
+    // hex requires, rather than hexLine's straight interpolation, which
+    // could visually cut through a blocked hex (a building, water) even
+    // when the move itself correctly went around it (#225). Falls back to
+    // the straight line only if pathing somehow fails — every caller
+    // already checks the destination is reachable before animating there,
+    // so this should always succeed in practice.
+    const maxSteps = dimensions.cols + dimensions.rows;
+    const path =
+      hexPath(token.position, { col, row }, maxSteps, isBlockedHexFor(token)) ??
+      hexLine(token.position, { col, row });
     if (path.length <= 2) {
       setAnimatingToken(null);
       moveTokenTo(token, col, row, dieId);

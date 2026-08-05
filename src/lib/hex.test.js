@@ -11,6 +11,7 @@ import {
   nearestSide,
   visibleSides,
   reachableHexes,
+  hexPath,
   directionFacing,
 } from './hex.js';
 
@@ -257,6 +258,40 @@ describe('hex', () => {
       const reachable = reachableHexes({ col: 0, row: 0 }, 3, isBlocked);
       expect(reachable.has('0,2')).toBe(false);
       expect(reachable.has('1,2')).toBe(true);
+    });
+  });
+
+  describe('hexPath (#225)', () => {
+    it('returns a straight line when nothing blocks the way', () => {
+      const path = hexPath({ col: 0, row: 0 }, { col: 0, row: 3 }, 10, () => false);
+      expect(path[0]).toEqual({ col: 0, row: 0 });
+      expect(path[path.length - 1]).toEqual({ col: 0, row: 3 });
+      expect(path).toEqual(hexLine({ col: 0, row: 0 }, { col: 0, row: 3 }));
+    });
+
+    it('routes around a blocked hex instead of stepping through it', () => {
+      const isBlocked = (hex) => hex.col === 0 && hex.row === 2;
+      const path = hexPath({ col: 0, row: 0 }, { col: 0, row: 4 }, 10, isBlocked);
+      expect(path).not.toBeNull();
+      expect(path.some((hex) => hex.col === 0 && hex.row === 2)).toBe(false);
+      expect(path[0]).toEqual({ col: 0, row: 0 });
+      expect(path[path.length - 1]).toEqual({ col: 0, row: 4 });
+      // Every consecutive pair in the path is an actual neighbor step, not a
+      // jump — confirms it's a real connected route, not just endpoints.
+      for (let i = 1; i < path.length; i++) {
+        expect(hexDistance(path[i - 1], path[i])).toBe(1);
+      }
+    });
+
+    it('returns null when the target is unreachable within maxSteps', () => {
+      expect(
+        hexPath({ col: 0, row: 0 }, { col: 0, row: 5 }, 2, () => false),
+      ).toBeNull();
+    });
+
+    it('returns just the origin when origin and target are the same hex', () => {
+      const path = hexPath({ col: 3, row: 3 }, { col: 3, row: 3 }, 5, () => false);
+      expect(path).toEqual([{ col: 3, row: 3 }]);
     });
   });
 

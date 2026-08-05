@@ -1,26 +1,39 @@
 import { describe, it, expect, afterEach, beforeEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import MapViewPage from './MapViewPage.jsx';
 import { DEFAULT_MAPS } from '../lib/maps.js';
 
 beforeEach(() => window.localStorage.clear());
 afterEach(cleanup);
 
-describe('MapViewPage (#218)', () => {
-  it('lists every pre-made layout plus a "Create your own" tile, all linking to the Creator', () => {
+describe('MapViewPage (#218, #223)', () => {
+  it('shows just two tiles: Pre-made maps and Map creator', () => {
     render(<MapViewPage />);
 
-    const blankTile = screen.getByRole('link', { name: /Blank/ });
-    expect(blankTile).toHaveProperty('href', expect.stringContaining('#map/edit'));
-
-    const createTile = screen.getByRole('link', { name: /Create your own/ });
-    expect(createTile).toHaveProperty('href', expect.stringContaining('#map/edit'));
+    expect(
+      screen.getByRole('button', { name: /Pre-made maps/ }),
+    ).toBeDefined();
+    const creatorTile = screen.getByRole('link', { name: /Map creator/ });
+    expect(creatorTile).toHaveProperty('href', expect.stringContaining('#map/edit'));
   });
 
-  it('loads the chosen layout into the Map Editor localStorage keys when picked', () => {
+  it('opens a modal listing every pre-made layout when Pre-made maps is pressed', () => {
     render(<MapViewPage />);
 
-    fireEvent.click(screen.getByRole('link', { name: /Blank/ }));
+    expect(screen.queryByText('Choose a map')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Pre-made maps/ }));
+
+    expect(screen.getByText('Choose a map')).toBeDefined();
+    for (const map of DEFAULT_MAPS) {
+      expect(screen.getByRole('button', { name: new RegExp(map.name) })).toBeDefined();
+    }
+  });
+
+  it('loads the chosen layout into the Map Editor localStorage keys, closes the modal, and stays on the page', () => {
+    render(<MapViewPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Pre-made maps/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Blank/ }));
 
     const blank = DEFAULT_MAPS.find((m) => m.name === 'Blank');
     expect(
@@ -32,39 +45,32 @@ describe('MapViewPage (#218)', () => {
     expect(
       JSON.parse(window.localStorage.getItem('dropshipsimulator:mapEditor:tiles')),
     ).toEqual(blank.tiles);
+    expect(screen.queryByText('Choose a map')).toBeNull();
+    expect(screen.getByRole('link', { name: /Map creator/ })).toBeDefined();
   });
 
-  it('leaves the current editor state alone when "Create your own" is picked', () => {
+  it('shows which map was last loaded on the Map creator tile', () => {
+    render(<MapViewPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Pre-made maps/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Map 1/ }));
+
+    expect(screen.getByText(/Currently: Map 1/)).toBeDefined();
+  });
+
+  it('cancels out of the picker without loading anything', () => {
     window.localStorage.setItem(
       'dropshipsimulator:mapEditor:tiles',
       JSON.stringify({ '0,0': 'plain' }),
     );
 
     render(<MapViewPage />);
-    fireEvent.click(screen.getByRole('link', { name: /Create your own/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Pre-made maps/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
+    expect(screen.queryByText('Choose a map')).toBeNull();
     expect(
       JSON.parse(window.localStorage.getItem('dropshipsimulator:mapEditor:tiles')),
     ).toEqual({ '0,0': 'plain' });
-  });
-
-  it('splits pre-made layouts and the creator tile into two labeled sections (#221)', () => {
-    render(<MapViewPage />);
-
-    const preMadeGrid = screen.getByRole('heading', { name: 'Pre-made maps' })
-      .nextElementSibling;
-    const creatorGrid = screen.getByRole('heading', { name: 'Map creator' })
-      .nextElementSibling;
-
-    expect(
-      within(preMadeGrid).getByRole('link', { name: /Blank/ }),
-    ).toBeDefined();
-    expect(
-      within(preMadeGrid).queryByRole('link', { name: /Create your own/ }),
-    ).toBeNull();
-    expect(
-      within(creatorGrid).getByRole('link', { name: /Create your own/ }),
-    ).toBeDefined();
-    expect(within(creatorGrid).queryByRole('link', { name: /Blank/ })).toBeNull();
   });
 });

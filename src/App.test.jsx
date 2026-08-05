@@ -103,14 +103,18 @@ describe('App', () => {
     window.location.hash = '#map';
     render(<App />);
 
-    // #map is the View landing page — layout tiles, not the paint tools yet.
-    expect(screen.getByRole('link', { name: /Blank/ })).toBeDefined();
+    // #map is the View landing page — a Pre-made maps tile that opens a
+    // picker modal (#223), not the paint tools yet.
+    expect(
+      screen.getByRole('button', { name: /Pre-made maps/ }),
+    ).toBeDefined();
     expect(screen.queryByLabelText('Columns')).toBeNull();
     expect(
       screen.getByRole('link', { name: 'Map editor' }).className,
     ).toContain('active');
 
-    fireEvent.click(screen.getByRole('link', { name: /Blank/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Pre-made maps/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Blank/ }));
     window.location.hash = '#map/edit';
     fireEvent(window, new Event('hashchange'));
 

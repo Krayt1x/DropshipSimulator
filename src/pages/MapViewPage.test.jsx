@@ -73,4 +73,12 @@ describe('MapViewPage (#218, #223)', () => {
       JSON.parse(window.localStorage.getItem('dropshipsimulator:mapEditor:tiles')),
     ).toEqual({ '0,0': 'plain' });
   });
+
+  it('marks the map picker grid so it stays a grid on mobile instead of stacking (#234)', () => {
+    render(<MapViewPage />);
+    fireEvent.click(screen.getByRole('button', { name: /Pre-made maps/ }));
+
+    const grid = screen.getByText('Choose a map').nextElementSibling;
+    expect(grid.className).toContain('two-col-mobile-grid');
+  });
 });

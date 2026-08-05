@@ -594,3 +594,17 @@ describe('PlayPage scenario picker (#232)', () => {
     ).toBe(JSON.stringify('annihilation'));
   });
 });
+
+describe('PlayPage map picker grid on mobile (#234)', () => {
+  it('marks the map picker grid so it stays a grid on mobile instead of stacking', () => {
+    render(<PlayPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Sandbox/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Select map' }));
+
+    const modal = screen.getByText('Choose a map').closest('.map-picker-modal');
+    const grid = within(modal).getByRole('button', { name: /Current map/ }).closest('.home-tile-grid');
+    expect(grid.className).toContain('two-col-mobile-grid');
+  });
+});

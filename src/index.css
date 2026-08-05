@@ -1562,8 +1562,7 @@ button.danger:hover {
 }
 
 @media (max-width: 700px) {
-  .home-tile-grid,
-  .map-picker-modal .home-tile-grid {
+  .home-tile-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -1706,8 +1705,10 @@ button.danger:hover {
 
 /* On mobile, a two-tile-wide grid otherwise collapses to a single column by
    .home-tile-grid's own breakpoint below — this modifier keeps it 2 across
-   instead of stacking (#231, reused on the home page for #235). The
-   difficulty grid gets its own 3-across modifier alongside it. */
+   instead of stacking (#231, reused on the home page for #235 and the map
+   picker modals for #234, which are 3-across on desktop but too narrow for
+   that on a phone). The difficulty grid gets its own 3-across modifier
+   alongside it. */
 @media (max-width: 700px) {
   .home-tile-grid.two-col-mobile-grid,
   .home-tile-grid.play-difficulty-grid {
@@ -1735,6 +1736,14 @@ button.danger:hover {
 
   .two-col-mobile-grid .home-tile-description {
     font-size: 11px;
+  }
+
+  /* MapThumbnail renders at a fixed pixel width (#226) that's too wide for
+     a two-across mobile tile — shrink it to fit using its own aspect ratio
+     (#234) instead of overflowing the tile. */
+  .two-col-mobile-grid .map-thumbnail {
+    width: 100%;
+    height: auto;
   }
 }
 

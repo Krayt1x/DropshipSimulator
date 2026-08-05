@@ -75,7 +75,7 @@ function MapViewPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <p className="unit-name">Choose a map</p>
-            <div className="home-tile-grid">
+            <div className="home-tile-grid two-col-mobile-grid">
               {DEFAULT_MAPS.map((map) => (
                 <button
                   key={map.name}

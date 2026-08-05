@@ -917,7 +917,7 @@ function PlayPage() {
         >
           <div className="card map-picker-modal" onClick={(e) => e.stopPropagation()}>
             <p className="unit-name">Choose a map</p>
-            <div className="home-tile-grid">
+            <div className="home-tile-grid two-col-mobile-grid">
               <button
                 type="button"
                 className={`home-tile ${mapChoice === 'current' ? 'selected' : ''}`}

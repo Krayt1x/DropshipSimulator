@@ -56,6 +56,7 @@ import {
   DEFAULT_TURN,
   DEFAULT_BANKED_DICE,
   DEFAULT_VICTORY_POINTS,
+  DEFAULT_MATCH_STATS,
   resetActiveGame,
   restartBattle,
 } from '../lib/gameState.js';
@@ -389,6 +390,14 @@ function BattlePage() {
     'dropshipsimulator:battle:victoryPoints',
     DEFAULT_VICTORY_POINTS,
   );
+  // Per-token damage/kills tally for the winner screen's highlights (#193),
+  // keyed by tokenId: { damageDealt, kills }. Recorded in applyDamageToToken
+  // rather than at each call site so it's computed off the same numbers that
+  // actually land, however the attack got there (single-target, splash, bot).
+  const [matchStats, setMatchStats] = useLocalStorageState(
+    'dropshipsimulator:battle:matchStats',
+    DEFAULT_MATCH_STATS,
+  );
   const [logEntries, setLogEntries] = useLocalStorageState(
     'dropshipsimulator:battle:log',
     [],
@@ -644,6 +653,25 @@ function BattlePage() {
         ? 'p1'
         : null;
   const loser = winner === 'p1' ? 'p2' : winner === 'p2' ? 'p1' : null;
+
+  // Highlights for the winner screen (#193): every mech that dealt damage
+  // and/or scored a kill this match, ranked by damage dealt. Built off
+  // matchStats rather than the live `tokens` list's currentHp so a mech that
+  // was later destroyed itself still shows what it did before going down.
+  const damageChart = Object.entries(matchStats)
+    .map(([tokenId, stats]) => {
+      const token = tokens.find((t) => t.id === tokenId);
+      if (!token) return null;
+      return {
+        tokenId,
+        owner: token.owner,
+        name: unitName(token),
+        damageDealt: stats.damageDealt ?? 0,
+        kills: stats.kills ?? 0,
+      };
+    })
+    .filter((row) => row && (row.damageDealt > 0 || row.kills > 0))
+    .sort((a, b) => b.damageDealt - a.damageDealt);
 
   function playAgain() {
     restartBattle();
@@ -943,7 +971,24 @@ function BattlePage() {
   // (#123) — everything about landing `damage` on one `token`'s `side` is
   // identical either way, only how the side and damage were determined
   // differs between the two callers.
-  function applyDamageToToken(token, side, damage, weaponItem) {
+  function applyDamageToToken(token, side, damage, weaponItem, attackerId) {
+    // Tallies every attacking token's total damage output for the winner
+    // screen's highlights (#193) — recorded here rather than at each call
+    // site so it covers every branch below (heat, equipment, chassis) off
+    // the one number that actually lands, from any attack path (human
+    // single-target/splash, bot). Left unset by incidental damage (a drop
+    // pod bouncing off something on its way down) that isn't really "an
+    // attack" any mech chose to make.
+    if (attackerId && damage > 0) {
+      setMatchStats((current) => ({
+        ...current,
+        [attackerId]: {
+          damageDealt: (current[attackerId]?.damageDealt ?? 0) + damage,
+          kills: current[attackerId]?.kills ?? 0,
+        },
+      }));
+    }
+
     function damageChassis(amount, note = '') {
       setTokens((current) =>
         current.map((t) =>
@@ -952,6 +997,19 @@ function BattlePage() {
             : t,
         ),
       );
+      // Credits the kill to whichever hit actually dropped the chassis to 0,
+      // using `token.currentHp` — the pre-damage snapshot passed in, not the
+      // state this call is about to update — so multiple hits landing this
+      // turn only ever credit the one that crossed zero.
+      if (attackerId && token.currentHp > 0 && token.currentHp - amount <= 0) {
+        setMatchStats((current) => ({
+          ...current,
+          [attackerId]: {
+            damageDealt: current[attackerId]?.damageDealt ?? 0,
+            kills: (current[attackerId]?.kills ?? 0) + 1,
+          },
+        }));
+      }
       appendLog(
         `${unitName(token)} took ${amount} damage to the chassis${note}`,
       );
@@ -1051,6 +1109,7 @@ function BattlePage() {
       attackTarget.side,
       attackResult.damage,
       attackWeapon?.item,
+      attackWeapon?.tokenId,
     );
     if (attackResult.damage > 0) triggerShake([attackTargetToken.id]);
     cancelAttack();
@@ -1116,7 +1175,15 @@ function BattlePage() {
     if (!attackResult?.perTarget) return;
     attackResult.perTarget.forEach(({ tokenId, side, damage }) => {
       const token = tokens.find((t) => t.id === tokenId);
-      if (token) applyDamageToToken(token, side, damage, attackWeapon?.item);
+      if (token) {
+        applyDamageToToken(
+          token,
+          side,
+          damage,
+          attackWeapon?.item,
+          attackWeapon?.tokenId,
+        );
+      }
     });
     triggerShake(
       attackResult.perTarget
@@ -1805,7 +1872,7 @@ function BattlePage() {
         const sideArmor = effectiveSideArmor(token, unit, side, equipment);
         const hits = countHits(rolled.rolls, sizeNumber(unit?.size) ?? 0);
         const damage = calculateDamage(rolled.sides, sideArmor, hits);
-        applyDamageToToken(token, side, damage, action.item);
+        applyDamageToToken(token, side, damage, action.item, action.attackerId);
       });
       appendLog(
         `${unitName(attacker)}'s ${action.item.name} hit the blast template at (${action.origin.col}, ${action.origin.row}), rolling ${rolled.rolls.join(', ')} against ${hitTokens.length} target${hitTokens.length === 1 ? '' : 's'}`,
@@ -1830,7 +1897,7 @@ function BattlePage() {
     appendLog(
       `${unitName(attacker)}'s ${action.item.name} rolled ${rolled.rolls.join(', ')} vs ${unitName(target)}'s ${action.side} (TN ${targetNumber}) → ${hits} hit${hits === 1 ? '' : 's'}`,
     );
-    applyDamageToToken(target, action.side, damage, action.item);
+    applyDamageToToken(target, action.side, damage, action.item, action.attackerId);
   }
 
   // Mirrors destroySelected(), but off `action.tokenId` (a stateRef-fresh
@@ -2192,6 +2259,37 @@ function BattlePage() {
                 </span>
               </div>
             </div>
+            {damageChart.length > 0 && (
+              <div className="card winner-summary winner-damage-chart">
+                <p className="unit-name">Damage chart</p>
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Mech</th>
+                        <th>Damage dealt</th>
+                        <th>Kills</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {damageChart.map((row) => (
+                        <tr key={row.tokenId}>
+                          <td>
+                            <span
+                              className="tile-swatch"
+                              style={{ background: ownerColor(row.owner) }}
+                            />
+                            {row.name}
+                          </td>
+                          <td>{row.damageDealt}</td>
+                          <td>{row.kills}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
             <div className="winner-actions">
               <button type="button" onClick={playAgain}>
                 Play Again

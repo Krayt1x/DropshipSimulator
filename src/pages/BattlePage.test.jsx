@@ -1376,6 +1376,73 @@ describe('BattlePage', () => {
     }
   });
 
+  it("shows each mech's damage dealt and kills on the winner screen (#193)", () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const a20 = units.find((u) => u.name === 'A20');
+    const weapon = equipment.find((e) => e.name === 'Long Range Bolt');
+    const dieSides = Number(weapon.hit_dice.match(/d(\d+)/)[1]);
+    const frontArmor = parseArmor(a20.armor).front;
+    const hits = 2; // both dice mocked to roll a 1.
+    const damage = calculateDamage(dieSides, frontArmor, hits);
+
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve(['  Right: Long Range Bolt']);
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: ['Test List (Corp A)', 'Weight: 20t / 100t', '', 'A20 - 20t'].join(
+          '\n',
+        ),
+      },
+    });
+    const importPanel = screen
+      .getByRole('button', { name: 'Preview import' })
+      .closest('.token-form');
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(
+      within(importPanel).getByRole('button', { name: 'Player 2' }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+    expandDiceRoller();
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'A20' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-4,6'));
+
+    // Wound A20 down close to death first (manual HP adjustment, not a real
+    // attack — shouldn't show up in the damage chart on its own).
+    const a20HpMinusButton = () => screen.getAllByRole('button', { name: '−' })[0];
+    for (let i = 0; i < Number(a20.hp) - 1; i++) {
+      fireEvent.click(a20HpMinusButton());
+    }
+
+    // Now land the finishing blow with a real attack, targeting the bare
+    // front (no equipment there to complicate the damage-to-HP mapping).
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    fireEvent.click(screen.getByTestId('hex-4,6'));
+    fireEvent.click(screen.getByRole('button', { name: 'Front' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll to Hit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Apply damage' }));
+
+    expect(screen.getByText('Player 1 Wins!')).toBeDefined();
+    const chart = screen.getByText('Damage chart').closest('.winner-summary');
+    const a10Row = within(chart).getByText('A10').closest('tr');
+    expect(within(a10Row).getByText(String(damage))).toBeDefined();
+    expect(within(a10Row).getByText('1')).toBeDefined();
+    // A20 never landed a hit of its own, so it doesn't get a row at all.
+    expect(within(chart).queryByText('A20')).toBeNull();
+  });
+
   it('reduces damage to a side with an unbroken Armor Plate equipped there (#203)', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     const a20 = units.find((u) => u.name === 'A20');

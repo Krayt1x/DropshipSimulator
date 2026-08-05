@@ -2148,6 +2148,20 @@ button.danger:hover {
   font-weight: 600;
 }
 
+.winner-damage-chart table {
+  min-width: 0;
+}
+
+.winner-damage-chart td,
+.winner-damage-chart th {
+  padding: 6px 4px;
+}
+
+.winner-damage-chart td:not(:first-child),
+.winner-damage-chart th:not(:first-child) {
+  text-align: right;
+}
+
 .winner-actions {
   display: flex;
   gap: 10px;

@@ -31,4 +31,15 @@ describe('DEFAULT_MAPS', () => {
     expect(blank).toBeDefined();
     expect(blank.tiles).toEqual({});
   });
+
+  it('includes "Map 1" with its lake, forests, and two objectives (#220)', () => {
+    const map1 = DEFAULT_MAPS.find((m) => m.name === 'Map 1');
+    expect(map1).toBeDefined();
+    expect(map1.dimensions).toEqual({ cols: 24, rows: 24 });
+    expect(map1.tiles['7,12']).toBe('objective');
+    expect(map1.tiles['16,12']).toBe('objective');
+    expect(map1.tiles['0,13']).toBe('water');
+    expect(map1.tiles['10,13']).toBe('buildings');
+    expect(Object.keys(map1.tiles)).toHaveLength(59);
+  });
 });

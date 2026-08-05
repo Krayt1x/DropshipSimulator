@@ -11,6 +11,7 @@ import {
   isDropPodUnit,
   itemHasTag,
   tokenHasMovementTag,
+  equippedItemsForSide,
 } from './tokens.js';
 import { hasLineOfSight, blocksMovement } from './terrain.js';
 import { parseArmor } from './combat.js';
@@ -60,19 +61,38 @@ export function findUsableWeapons(token, equipment) {
     .filter(Boolean);
 }
 
+// A "Fire"-tagged weapon (e.g. Flame Thrower) only deals real chassis damage
+// when it hits a bare side — landing on a side with equipment mounted there
+// converts the damage to heat instead (#125), which merely risks breaking
+// that one item rather than costing any HP. Ranking it as if it were normal
+// damage overvalued it in exactly that case (#209), so it's discounted hard
+// rather than counted at face value.
+const FIRE_DAMAGE_ON_EQUIPPED_SIDE_FACTOR = 0.25;
+
 // Expected damage of one shot against a given armor side — no RNG, used only
 // to rank targets. count * min(targetNumber, sides)/sides is the expected
 // number of hits (roll-under-die, capped at 1 per die since a die can't score
 // more than a 100% hit chance), fed into the same calculateDamage formula
-// combat.js uses for a real roll.
-export function expectedDamage(weapon, targetUnit, side) {
+// combat.js uses for a real roll. `targetToken`/`equipment` are optional —
+// pass both to also apply the Fire-tag discount above; omit them (as target
+// ranking not tied to a specific token, e.g. tests) to skip that check.
+export function expectedDamage(weapon, targetUnit, side, targetToken, equipment) {
   const parsed = parseHitDice(weapon.hit_dice);
   if (!parsed || !targetUnit) return 0;
   const sides = Number(parsed.dieId.slice(1));
   const targetNumber = sizeNumber(targetUnit.size) ?? 0;
   const sideArmor = parseArmor(targetUnit.armor)?.[side] ?? 0;
   const expectedHits = parsed.count * (Math.min(targetNumber, sides) / sides);
-  return Math.max(0, sides - sideArmor) * expectedHits;
+  const rawDamage = Math.max(0, sides - sideArmor) * expectedHits;
+  if (
+    itemHasTag(weapon, 'fire') &&
+    targetToken &&
+    equipment &&
+    equippedItemsForSide(targetToken, side, equipment).length > 0
+  ) {
+    return rawDamage * FIRE_DAMAGE_ON_EQUIPPED_SIDE_FACTOR;
+  }
+  return rawDamage;
 }
 
 function inRangeAndArc(attacker, item, side, targetPosition, tiles, terrainTypes) {
@@ -208,6 +228,8 @@ function findAttackOptions({
                   item,
                   unitFor(t, units),
                   visibleSides(t.position, t.facing, enemy.position)[0],
+                  t,
+                  equipment,
                 ),
               0,
             );
@@ -262,7 +284,13 @@ function findAttackOptions({
             item,
             targetId: enemy.id,
             side: chosenSide,
-            ev: expectedDamage(item, unitFor(enemy, units), chosenSide),
+            ev: expectedDamage(
+              item,
+              unitFor(enemy, units),
+              chosenSide,
+              enemy,
+              equipment,
+            ),
             targetHp: enemy.currentHp,
             overheats: wouldOverheat(attacker.weaponState[instanceIndex], item),
             // Drop pods are a low-value chassis (#180) — worth attacking

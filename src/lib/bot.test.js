@@ -179,6 +179,54 @@ describe('expectedDamage', () => {
   it('returns 0 for unparseable hit dice', () => {
     expect(expectedDamage({ hit_dice: 'lots' }, units[0], 'front')).toBe(0);
   });
+
+  describe('Fire-tagged weapons (#209)', () => {
+    const fireWeapon = {
+      hit_dice: '2d8',
+      effect_stats: [{ stat: 'tags', amount: 'fire' }],
+    };
+    const equipment = [
+      { id: 9, name: 'Some Weapon', type: 'Weapon', hp: 5 },
+    ];
+    const baseline = expectedDamage(fireWeapon, units[0], 'left');
+
+    it('discounts heavily when the hit side has equipment mounted (it becomes heat, not HP loss)', () => {
+      const targetToken = {
+        equippedIds: [9],
+        weaponState: { 0: { heat: 0, broken: false, side: 'left' } },
+      };
+      const discounted = expectedDamage(
+        fireWeapon,
+        units[0],
+        'left',
+        targetToken,
+        equipment,
+      );
+      expect(discounted).toBeGreaterThan(0);
+      expect(discounted).toBeLessThan(baseline);
+    });
+
+    it('deals full value against a bare side (front/rear, or an empty slot)', () => {
+      const targetToken = { equippedIds: [], weaponState: {} };
+      expect(
+        expectedDamage(fireWeapon, units[0], 'left', targetToken, equipment),
+      ).toBeCloseTo(baseline);
+      expect(
+        expectedDamage(fireWeapon, units[0], 'front', targetToken, equipment),
+      ).toBeCloseTo(expectedDamage(fireWeapon, units[0], 'front'));
+    });
+
+    it('is unaffected for a non-Fire weapon even on an equipped side', () => {
+      const normalWeapon = { hit_dice: '2d8' };
+      const targetToken = {
+        equippedIds: [9],
+        weaponState: { 0: { heat: 0, broken: false, side: 'left' } },
+      };
+      expect(
+        expectedDamage(normalWeapon, units[0], 'left', targetToken, equipment),
+      ).toBeCloseTo(expectedDamage(normalWeapon, units[0], 'left'));
+    });
+  });
 });
 
 describe('stepToward', () => {

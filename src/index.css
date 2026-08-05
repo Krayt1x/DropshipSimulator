@@ -1092,11 +1092,18 @@ button.danger:hover {
 }
 
 .map-picker-modal {
-  width: 560px;
+  width: 720px;
   max-width: calc(100vw - 32px);
   max-height: 70vh;
   overflow-y: auto;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Three columns wide (#234) rather than however many 220px tiles happen to
+   fit — the modal's own width above is sized to fit exactly three
+   comfortably. */
+.map-picker-modal .home-tile-grid {
+  grid-template-columns: repeat(3, 1fr);
 }
 
 /* Plays once when a roll lands damage; a miss leaves the modal still (#161). */
@@ -1555,7 +1562,8 @@ button.danger:hover {
 }
 
 @media (max-width: 700px) {
-  .home-tile-grid {
+  .home-tile-grid,
+  .map-picker-modal .home-tile-grid {
     grid-template-columns: 1fr;
   }
 }

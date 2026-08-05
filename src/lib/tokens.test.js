@@ -4,6 +4,7 @@ import {
   groupEquipmentByType,
   parseHeatRating,
   itemHasTag,
+  deployedDiceByOwner,
 } from './tokens.js';
 
 describe('tokens', () => {
@@ -112,6 +113,31 @@ describe('tokens', () => {
       expect(itemHasTag({ effect_stats: [] }, 'fire')).toBe(false);
       expect(itemHasTag({}, 'fire')).toBe(false);
       expect(itemHasTag(null, 'fire')).toBe(false);
+    });
+  });
+
+  describe('deployedDiceByOwner', () => {
+    const unit = { id: 1, dice_red: 1, dice_blue: 2, dice_green: 0 };
+
+    it("excludes a wrecked (0 HP) model's dice, same as reserve/destroyed (#205)", () => {
+      const tokens = [
+        {
+          owner: 'p1',
+          unitId: 1,
+          position: { col: 0, row: 0 },
+          destroyed: false,
+          currentHp: 0,
+        },
+        {
+          owner: 'p1',
+          unitId: 1,
+          position: { col: 1, row: 0 },
+          destroyed: false,
+          currentHp: 5,
+        },
+      ];
+      const totals = deployedDiceByOwner(tokens, [unit]);
+      expect(totals.p1).toEqual({ red: 1, blue: 2, green: 0 });
     });
   });
 });

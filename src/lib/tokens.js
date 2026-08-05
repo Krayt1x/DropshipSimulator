@@ -144,11 +144,16 @@ export function healthBarColor(fraction) {
 }
 
 // Only models currently deployed on the board contribute to a player's dice
-// count — reserve and destroyed models don't count.
+// count — reserve, destroyed, and wrecked (0 HP) models don't count (#205);
+// a wrecked model can sit un-destroyed for a turn or two before someone
+// clicks "Model Destroyed", and it shouldn't keep feeding the action pool
+// in the meantime.
 export function deployedDiceByOwner(tokens, units) {
   const totals = emptyDiceTotals();
   tokens.forEach((token) => {
-    if (!token.position || token.destroyed) return;
+    if (!token.position || token.destroyed || (token.currentHp ?? 0) <= 0) {
+      return;
+    }
     const bucket = totals[token.owner];
     if (!bucket) return;
     const unit = units.find((u) => Number(u.id) === Number(token.unitId));

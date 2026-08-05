@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, beforeEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import MapEditorPage from './MapEditorPage.jsx';
 
 beforeEach(() => window.localStorage.clear());
@@ -74,6 +74,43 @@ describe('MapEditorPage', () => {
     expect(rubble.blocksLineOfSight).toBe(true);
     expect(rubble.blocksMovement).toBe(true);
     expect(rubble.isObjective).toBe(false);
+  });
+
+  it('shows a pill for each status effect a terrain type has set (#215)', () => {
+    render(<MapEditorPage />);
+
+    // Buildings blocks both movement and line of sight; Plain blocks
+    // neither and gets no pills at all.
+    const buildingsRow = screen
+      .getByRole('button', { name: 'Buildings' })
+      .closest('.tile-swatch-row');
+    expect(
+      within(buildingsRow).getByText('Blocks movement'),
+    ).toBeDefined();
+    expect(within(buildingsRow).getByText('Blocks LOS')).toBeDefined();
+    expect(within(buildingsRow).queryByText('Objective')).toBeNull();
+
+    const plainRow = screen
+      .getByRole('button', { name: 'Plain' })
+      .closest('.tile-swatch-row');
+    expect(within(plainRow).queryByText('Blocks movement')).toBeNull();
+    expect(within(plainRow).queryByText('Blocks LOS')).toBeNull();
+
+    // Objective blocks both, per #194's fix to its default flags.
+    const objectiveRow = screen
+      .getByRole('button', { name: 'Objective' })
+      .closest('.tile-swatch-row');
+    expect(
+      within(objectiveRow).getByText('Objective', {
+        selector: '.terrain-flag-pill-objective',
+      }),
+    ).toBeDefined();
+    expect(
+      within(objectiveRow).getByText('Blocks movement'),
+    ).toBeDefined();
+
+    // The pills don't leak into the button's accessible name.
+    expect(screen.getByRole('button', { name: 'Buildings' })).toBeDefined();
   });
 
   it('resizes the board and drops out-of-range tiles', () => {

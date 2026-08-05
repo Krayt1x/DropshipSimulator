@@ -56,6 +56,27 @@ function TilePalette({
                 style={{ background: type.color }}
               />
               {type.name}
+              {(type.blocksMovement ||
+                type.blocksLineOfSight ||
+                type.isObjective) && (
+                // Hidden from the accessible name (#215) so
+                // getByRole('button', { name: 'Forest' })-style queries
+                // (and screen readers, which already hear the type name)
+                // aren't affected by which pills happen to be showing.
+                <span className="terrain-flag-pills" aria-hidden="true">
+                  {type.blocksMovement && (
+                    <span className="terrain-flag-pill">Blocks movement</span>
+                  )}
+                  {type.blocksLineOfSight && (
+                    <span className="terrain-flag-pill">Blocks LOS</span>
+                  )}
+                  {type.isObjective && (
+                    <span className="terrain-flag-pill terrain-flag-pill-objective">
+                      Objective
+                    </span>
+                  )}
+                </span>
+              )}
             </button>
             <button
               type="button"

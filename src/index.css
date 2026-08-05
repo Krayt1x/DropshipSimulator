@@ -798,6 +798,34 @@ button.danger:hover {
   font-size: 11px;
 }
 
+/* Status-effect pills next to each terrain type (#215) — which of a type's
+   blocksMovement/blocksLineOfSight/isObjective flags are actually set,
+   rather than only visible via the Add-form checkboxes. */
+.terrain-flag-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.terrain-flag-pill {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 99px;
+  background: var(--bg-track);
+  border: 1px solid var(--border-input);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.terrain-flag-pill-objective {
+  background: rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.35);
+  color: #2563eb;
+}
+
 .tile-palette-form {
   display: flex;
   flex-direction: column;

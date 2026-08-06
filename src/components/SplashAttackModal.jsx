@@ -94,11 +94,13 @@ function SplashAttackModal({
             ) : (
               result.perTarget.map((r) => (
                 <p key={r.tokenId}>
-                  {r.name} (TN {r.targetNumber}) →{' '}
+                  {r.name} ({r.side} armor {r.sideArmor}, TN {r.targetNumber})
+                  →{' '}
                   <b>
                     {r.hits} hit{r.hits === 1 ? '' : 's'}
                   </b>{' '}
-                  → <b>{r.damage} damage</b> to{' '}
+                  → ({result.sides} − {r.sideArmor}) × {r.hits} ={' '}
+                  <b>{r.damage} damage</b> to{' '}
                   {r.side === 'left' || r.side === 'right'
                     ? `the ${r.side} slot`
                     : 'the chassis'}

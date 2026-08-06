@@ -1185,6 +1185,7 @@ function BattlePage() {
         name: unitName(token),
         side,
         targetNumber,
+        sideArmor,
         hits,
         damage,
       };

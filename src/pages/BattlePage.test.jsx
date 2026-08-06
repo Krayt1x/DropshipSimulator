@@ -2397,6 +2397,71 @@ describe('BattlePage', () => {
     ).toBeDefined();
   });
 
+  it('shows the armor mitigation arithmetic for a splash hit on a rear side (#252)', () => {
+    const a20 = units.find((u) => u.name === 'A20');
+    const artillery = equipment.find((e) => e.name === 'Artillery');
+    const dieSides = Number(artillery.hit_dice.match(/d(\d+)/)[1]);
+    const rearArmor = parseArmor(a20.armor).rear;
+    const hits = 3; // all 3 dice mocked to roll a 1, always <= any target number
+
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve(['  Right: Artillery']);
+
+    fireEvent.change(screen.getByLabelText('Roster export'), {
+      target: {
+        value: ['Test List (Corp A)', 'Weight: 20t / 100t', '', 'A20 - 20t'].join(
+          '\n',
+        ),
+      },
+    });
+    const importPanel = screen
+      .getByRole('button', { name: 'Preview import' })
+      .closest('.token-form');
+    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    fireEvent.click(
+      within(importPanel).getByRole('button', { name: 'Player 2' }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+    const dieRollSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+    expandDiceRoller();
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
+    dieRollSpy.mockRestore();
+
+    fireEvent.click(screen.getByRole('button', { name: 'A20' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,9'));
+
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    fireEvent.click(screen.getByTestId('hex-5,9'));
+
+    const modal = screen.getByText(/blast at/).closest('.attack-modal');
+    fireEvent.click(within(modal).getByRole('button', { name: 'Rear' }));
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+    fireEvent.click(within(modal).getByRole('button', { name: 'Roll to Hit' }));
+
+    const rearDamage = calculateDamage(dieSides, rearArmor, hits);
+    const resultRow = modal.querySelector('.attack-result p:nth-of-type(2)');
+    // The armor value and the (sides − armor) × hits arithmetic must both be
+    // visible — without them a correctly-mitigated hit reads as unmitigated,
+    // which was the actual bug behind #252 (the math was always right).
+    expect(resultRow.textContent).toMatch(new RegExp(`rear armor ${rearArmor}`));
+    expect(resultRow.textContent).toMatch(
+      new RegExp(`\\(${dieSides} . ${rearArmor}\\) . ${hits} =`),
+    );
+    expect(resultRow.textContent).toMatch(new RegExp(`${rearDamage} damage`));
+    randomSpy.mockRestore();
+  });
+
   it('only lets the active player use the dice roller once an identity is chosen (#130)', () => {
     window.localStorage.setItem(
       'dropshipsimulator:myPlayer',

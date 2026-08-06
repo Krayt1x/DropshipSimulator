@@ -2448,6 +2448,7 @@ function BattlePage() {
                     <thead>
                       <tr>
                         <th>Mech</th>
+                        <th>Player</th>
                         <th>Damage dealt</th>
                         <th>Kills</th>
                       </tr>
@@ -2462,6 +2463,7 @@ function BattlePage() {
                             />
                             {row.name}
                           </td>
+                          <td>{ownerLabel(row.owner)}</td>
                           <td>{row.damageDealt}</td>
                           <td>{row.kills}</td>
                         </tr>

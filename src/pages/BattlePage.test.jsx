@@ -1577,6 +1577,8 @@ describe('BattlePage', () => {
     const a10Row = within(chart).getByText('A10').closest('tr');
     expect(within(a10Row).getByText(String(damage))).toBeDefined();
     expect(within(a10Row).getByText('1')).toBeDefined();
+    // Names which player's mech this was (#253) — not just the color swatch.
+    expect(within(a10Row).getByText('Player 1')).toBeDefined();
     // A20 never landed a hit of its own, so it doesn't get a row at all.
     expect(within(chart).queryByText('A20')).toBeNull();
   });

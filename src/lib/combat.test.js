@@ -6,6 +6,7 @@ import {
   calculateDamage,
   armorPlateBonus,
   effectiveSideArmor,
+  applyHeatSinkTransfers,
 } from './combat.js';
 
 const ARMOR_PLATE = {
@@ -134,5 +135,98 @@ describe('effectiveSideArmor (#203)', () => {
     });
     expect(effectiveSideArmor(token, unit, 'left', equipment)).toBe(3);
     expect(effectiveSideArmor(token, unit, 'right', equipment)).toBe(2);
+  });
+});
+
+describe('applyHeatSinkTransfers (#245)', () => {
+  const ARTILLERY = { id: 50, name: 'Artillery', type: 'Weapon' };
+  const HEAT_SINK = {
+    id: 51,
+    name: 'Corp A Heat Management Module',
+    type: 'Weapon',
+    heat_rating: '0/4',
+    effect_stats: [{ stat: 'tags', amount: 'heat_sink' }],
+  };
+  const heatSinkEquipment = [ARTILLERY, HEAT_SINK];
+
+  it("matches the issue's worked example: artillery 8/4 cools to 7/4, then the sink pulls 1 to sit at 1/4, leaving the weapon at 6/4", () => {
+    const token = makeToken({
+      equippedIds: [50, 51],
+      weaponState: {
+        0: { heat: 7, broken: false, slot: 'left' }, // already cooled -1 by the caller
+        1: { heat: 0, broken: false, slot: 'left' },
+      },
+    });
+
+    const result = applyHeatSinkTransfers(token, heatSinkEquipment);
+
+    expect(result[0].heat).toBe(6);
+    expect(result[1].heat).toBe(1);
+  });
+
+  it('does nothing when the sink is already at its own max', () => {
+    const token = makeToken({
+      equippedIds: [50, 51],
+      weaponState: {
+        0: { heat: 3, broken: false, slot: 'left' },
+        1: { heat: 4, broken: false, slot: 'left' },
+      },
+    });
+
+    const result = applyHeatSinkTransfers(token, heatSinkEquipment);
+
+    expect(result[0].heat).toBe(3);
+    expect(result[1].heat).toBe(4);
+  });
+
+  it('never pulls heat from another Heat Sink', () => {
+    const token = makeToken({
+      equippedIds: [51, 51],
+      weaponState: {
+        0: { heat: 2, broken: false, slot: 'left' },
+        1: { heat: 0, broken: false, slot: 'left' },
+      },
+    });
+
+    const result = applyHeatSinkTransfers(token, heatSinkEquipment);
+
+    expect(result[0].heat).toBe(2);
+    expect(result[1].heat).toBe(0);
+  });
+
+  it('only transfers within the same slot', () => {
+    const token = makeToken({
+      equippedIds: [50, 51],
+      weaponState: {
+        0: { heat: 5, broken: false, slot: 'left' },
+        1: { heat: 0, broken: false, slot: 'right' },
+      },
+    });
+
+    const result = applyHeatSinkTransfers(token, heatSinkEquipment);
+
+    expect(result[0].heat).toBe(5);
+    expect(result[1].heat).toBe(0);
+  });
+
+  it('processes multiple sinks in the same slot top-down, each pulling from a still-hot item', () => {
+    const secondSink = { ...HEAT_SINK, id: 52 };
+    const equipmentWithTwoSinks = [ARTILLERY, HEAT_SINK, secondSink];
+    const token = makeToken({
+      equippedIds: [50, 51, 52],
+      weaponState: {
+        0: { heat: 2, broken: false, slot: 'left' },
+        1: { heat: 0, broken: false, slot: 'left' },
+        2: { heat: 0, broken: false, slot: 'left' },
+      },
+    });
+
+    const result = applyHeatSinkTransfers(token, equipmentWithTwoSinks);
+
+    // Each sink independently pulls 1 point from the artillery — the only
+    // hot non-sink item in the slot — leaving it at 0 and both sinks at 1.
+    expect(result[0].heat).toBe(0);
+    expect(result[1].heat).toBe(1);
+    expect(result[2].heat).toBe(1);
   });
 });

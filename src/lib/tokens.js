@@ -30,11 +30,15 @@ const DEFAULT_FACING_BY_OWNER = { p1: 3, p2: 0 };
 // equippedIds, 'left'/'right'/undefined) comes from a roster import's
 // "Left:"/"Right:" labels and drives the weapon arc restriction (#92) —
 // weapons imported without that label simply have no side and show their
-// full range.
+// full range. `equippedSlots` (also parallel, 'left'/'right'/'head'/
+// 'movement') is the same labels raw and untouched by the arc-restriction
+// rule above — Heat Sinks (#245) read it to find equipment sharing their
+// physical slot without disturbing weaponState.side's narrower meaning.
 export function createToken({
   unit,
   equippedIds,
   equippedSides,
+  equippedSlots,
   owner,
   position,
   label,
@@ -45,6 +49,7 @@ export function createToken({
       heat: 0,
       broken: false,
       side: equippedSides?.[index],
+      slot: equippedSlots?.[index],
     };
   });
   return {

@@ -25,6 +25,10 @@ const SECTIONS = [
         term: 'Armor Plate',
         body: "Adds +1 armor to the side it's mounted on: Left/Right if equipped in a weapon slot, or Front and Rear if equipped in the Head slot.",
       },
+      {
+        term: 'Heat Sink',
+        body: "After the end-of-turn heat cooldown, each Heat Sink pulls 1 point of heat from another piece of overheating equipment in the same slot, up to its own heat rating's max. Heat Sinks never transfer heat to each other; with more than one in a slot, they each get a turn in top-down order.",
+      },
     ],
   },
   {
@@ -69,7 +73,7 @@ const SECTIONS = [
       },
       {
         term: 'Move / Attack / Action faces',
-        body: "A colored die lands on one of these three faces, and each only pays for its own kind: a Move die only for movement, an Attack die only for attacking, and an Action die only for actions like Drop Pods (Repairing is planned but not yet implemented). Use Exchange to turn a spare die into the face you actually need.",
+        body: "A colored die lands on one of these three faces, and each only pays for its own kind: a Move die only for movement, an Attack die only for attacking, and an Action die only for actions like Drop Pods and Repairing. Use Exchange to turn a spare die into the face you actually need.",
       },
       {
         term: 'Exchange',

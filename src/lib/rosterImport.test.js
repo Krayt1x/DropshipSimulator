@@ -81,6 +81,36 @@ describe('parseRosterExport', () => {
     expect(result.entries[0].equippedSides).toEqual(['left', 'right']);
   });
 
+  it('also captures the raw slot label (including Head) separately for Heat Sink grouping (#245)', () => {
+    const text = [
+      'Test List (Corp A)',
+      'Weight: 6t / 100t',
+      '',
+      'A10 - 6t',
+      '  Head: Long Range Bolt',
+      '  Left: Long Range Bolt',
+      '  Right: Long Range Bolt',
+      '  Movement: Chicken Legs',
+    ].join('\n');
+
+    const result = parseRosterExport(text, { units, manufacturers, equipment });
+
+    // equippedSlots always tracks the raw label, unlike equippedSides, which
+    // only ever holds 'left'/'right' for arc-restriction purposes (#92).
+    expect(result.entries[0].equippedSlots).toEqual([
+      'head',
+      'left',
+      'right',
+      'movement',
+    ]);
+    expect(result.entries[0].equippedSides).toEqual([
+      undefined,
+      'left',
+      'right',
+      undefined,
+    ]);
+  });
+
   it('warns on an unrecognized manufacturer and unknown names, without crashing', () => {
     const text = [
       'Test List (Corp Z)',

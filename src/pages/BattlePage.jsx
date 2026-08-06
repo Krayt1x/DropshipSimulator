@@ -53,6 +53,7 @@ import {
   countHits,
   calculateDamage,
   effectiveSideArmor,
+  applyHeatSinkTransfers,
 } from '../lib/combat.js';
 import {
   DEFAULT_TURN,
@@ -491,21 +492,25 @@ function BattlePage() {
     // there are only two possible values to alternate between.
     setTurnNotice({ id: makeKey('turn'), active: next.active });
     // Weapons (and Movement gear) cool by 1 heat for the player whose turn
-    // just ended (#121).
+    // just ended (#121), then any Heat Sinks pull heat off whatever's left
+    // (#245).
     setTokens((current) =>
-      current.map((t) =>
-        t.owner === endingPlayer
-          ? {
-              ...t,
-              weaponState: Object.fromEntries(
-                Object.entries(t.weaponState).map(([index, state]) => [
-                  index,
-                  { ...state, heat: Math.max(0, (state.heat ?? 0) - 1) },
-                ]),
-              ),
-            }
-          : t,
-      ),
+      current.map((t) => {
+        if (t.owner !== endingPlayer) return t;
+        const cooled = {
+          ...t,
+          weaponState: Object.fromEntries(
+            Object.entries(t.weaponState).map(([index, state]) => [
+              index,
+              { ...state, heat: Math.max(0, (state.heat ?? 0) - 1) },
+            ]),
+          ),
+        };
+        return {
+          ...cooled,
+          weaponState: applyHeatSinkTransfers(cooled, equipment),
+        };
+      }),
     );
     setDicePool([]);
     setActionHistory([]);
@@ -532,7 +537,7 @@ function BattlePage() {
   // Picks an unused die matching `preferredValue` ('Move'/'Attack') exactly —
   // each color is single-purpose (#237): a Move die only pays for movement,
   // an Attack die only pays for attacks, and an Action die only pays for
-  // actions like Drop Pods (Repairing is planned but not yet implemented).
+  // actions like Drop Pods and Repairing.
   // The only way to turn a spare die of one kind into another is Exchange
   // (see exchangeActionDie), which spends a whole die as the cost rather
   // than letting Action quietly cover Move/Attack for free.
@@ -1945,11 +1950,12 @@ function BattlePage() {
 
   function importRoster({ entries, owner }) {
     const imported = entries.map(
-      ({ unit, equippedIds, equippedSides, label }) =>
+      ({ unit, equippedIds, equippedSides, equippedSlots, label }) =>
         createToken({
           unit,
           equippedIds,
           equippedSides,
+          equippedSlots,
           owner,
           position: null,
           label,

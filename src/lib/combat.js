@@ -1,5 +1,5 @@
 import { parseHitDice } from './dice.js';
-import { itemHasTag } from './tokens.js';
+import { itemHasTag, parseHeatRating } from './tokens.js';
 
 // "2/2/2/1" -> { front: 2, left: 2, right: 2, rear: 1 } (#212 in DropshipBuilder
 // establishes this front/left/right/rear slash order).
@@ -35,6 +35,49 @@ export function armorPlateBonus(token, side, equipment) {
 export function effectiveSideArmor(token, unit, side, equipment) {
   const base = parseArmor(unit?.armor)?.[side] ?? 0;
   return base + armorPlateBonus(token, side, equipment);
+}
+
+// Heat Sink (#245) — after the end-of-turn -1 heat cooldown, each Heat Sink
+// (in equip order, top-down) pulls exactly 1 point of heat off the first
+// still-hot non-Heat-Sink item that shares its physical slot ('left'/'right'/
+// 'head'/'movement' — see createToken's equippedSlots), capped at the sink's
+// own heat rating's max. Heat Sinks never donate to one another.
+export function applyHeatSinkTransfers(token, equipment) {
+  if (!token?.equippedIds) return token?.weaponState ?? {};
+  const weaponState = { ...token.weaponState };
+  const itemAt = (index) =>
+    equipment.find((e) => Number(e.id) === Number(token.equippedIds[index]));
+
+  const bySlot = new Map();
+  token.equippedIds.forEach((_, index) => {
+    const slot = weaponState[index]?.slot;
+    if (!bySlot.has(slot)) bySlot.set(slot, []);
+    bySlot.get(slot).push(index);
+  });
+
+  bySlot.forEach((indices) => {
+    indices
+      .filter((index) => itemHasTag(itemAt(index), 'heat_sink'))
+      .forEach((sinkIndex) => {
+        const sinkState = weaponState[sinkIndex];
+        const { max: sinkMax } = parseHeatRating(itemAt(sinkIndex)?.heat_rating);
+        if (!sinkState || sinkState.heat >= sinkMax) return;
+        const donorIndex = indices.find(
+          (index) =>
+            index !== sinkIndex &&
+            !itemHasTag(itemAt(index), 'heat_sink') &&
+            (weaponState[index]?.heat ?? 0) > 0,
+        );
+        if (donorIndex === undefined) return;
+        weaponState[donorIndex] = {
+          ...weaponState[donorIndex],
+          heat: weaponState[donorIndex].heat - 1,
+        };
+        weaponState[sinkIndex] = { ...sinkState, heat: sinkState.heat + 1 };
+      });
+  });
+
+  return weaponState;
 }
 
 export function rollAttackDice(hitDice) {

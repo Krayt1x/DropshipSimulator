@@ -1844,6 +1844,48 @@ describe('BattlePage', () => {
     expect(screen.getByText(/Heat 1/)).toBeDefined();
   });
 
+  it('pulls 1 point of heat into a Heat Sink from another item in the same slot, after the normal cooldown (#245)', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve([
+      '  Right: Long Range Bolt',
+      '  Right: Corp A Heat Management Module',
+    ]);
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    const boltRow = screen.getByText('Long Range Bolt').closest('.token-weapon-row');
+    const sinkRow = screen
+      .getByText('Corp A Heat Management Module')
+      .closest('.token-weapon-row');
+    // The weapon row has both a Heat "+" and an HP "+" — heat's is first.
+    const boltPlus = () =>
+      within(boltRow).getAllByRole('button', { name: '+' })[0];
+
+    // Matches the issue's worked example: fire the weapon twice (heat 8/6
+    // here, since Long Range Bolt's real max is 6 rather than the issue's
+    // hypothetical artillery, but the same mechanic applies) then end turn.
+    fireEvent.click(boltPlus());
+    fireEvent.click(boltPlus());
+    fireEvent.click(boltPlus());
+    fireEvent.click(boltPlus());
+    fireEvent.click(boltPlus());
+    fireEvent.click(boltPlus());
+    fireEvent.click(boltPlus());
+    fireEvent.click(boltPlus());
+    expect(within(boltRow).getByText(/Heat 8 \/ 6/)).toBeDefined();
+    expect(within(sinkRow).getByText(/Heat 0 \/ 4/)).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+
+    // -1 from the normal cooldown (#121), then -1 more pulled by the sink.
+    expect(within(boltRow).getByText(/Heat 6 \/ 6/)).toBeDefined();
+    expect(within(sinkRow).getByText(/Heat 1 \/ 4/)).toBeDefined();
+  });
+
   it('shows an action-pool summary and consumes a matching die when used (#120)', () => {
     render(<BattlePage />);
     expandDiceRoller();

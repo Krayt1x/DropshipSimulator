@@ -82,31 +82,37 @@ function rosterToEntries(roster, units, equipment) {
       );
       const equippedIds = [];
       const equippedSides = [];
+      const equippedSlots = [];
       if (stats.isDropPod) {
         if (stats.dropPodSelected) {
           equippedIds.push(stats.dropPodSelected.id);
           equippedSides.push(undefined);
+          equippedSlots.push('movement');
         }
       } else {
         stats.resolveEquippedItems('Head').forEach((item) => {
           equippedIds.push(item.id);
           equippedSides.push(undefined);
+          equippedSlots.push('head');
         });
         stats.resolveEquippedItems('Left').forEach((item) => {
           equippedIds.push(item.id);
           equippedSides.push('left');
+          equippedSlots.push('left');
         });
         stats.resolveEquippedItems('Right').forEach((item) => {
           equippedIds.push(item.id);
           equippedSides.push('right');
+          equippedSlots.push('right');
         });
         const movementItem = stats.resolveEquippedItems('Movement')[0];
         if (movementItem) {
           equippedIds.push(movementItem.id);
           equippedSides.push(undefined);
+          equippedSlots.push('movement');
         }
       }
-      return { unit, equippedIds, equippedSides, label };
+      return { unit, equippedIds, equippedSides, equippedSlots, label };
     })
     .filter(Boolean);
 }

@@ -56,6 +56,22 @@ describe('tokens', () => {
     expect(token.weaponState[1].side).toBe('right');
   });
 
+  it('carries each item\'s raw equip slot into weaponState (#245)', () => {
+    const unit = { id: 1, hp: 20 };
+    const token = createToken({
+      unit,
+      equippedIds: [5, 6, 7],
+      equippedSides: ['left', 'right', undefined],
+      equippedSlots: ['left', 'right', 'head'],
+      owner: 'p1',
+      position: null,
+    });
+
+    expect(token.weaponState[0].slot).toBe('left');
+    expect(token.weaponState[1].slot).toBe('right');
+    expect(token.weaponState[2].slot).toBe('head');
+  });
+
   it('defaults facing toward the opposing side for each owner', () => {
     const unit = { id: 1, hp: 20 };
     const p1Token = createToken({

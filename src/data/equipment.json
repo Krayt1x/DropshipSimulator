@@ -203,5 +203,20 @@
     "hit_dice": "",
     "hp": 5,
     "no_drop_pod": true
+  },
+  {
+    "id": 17,
+    "name": "Corp A Heat Management Module",
+    "manufacturer": "Corp A",
+    "type": "Weapon",
+    "size": "Small",
+    "effects": "After the end-of-turn heat cooldown, pulls 1 point of heat from another piece of equipment in the same slot that still has heat on it, up to its own 4-point capacity. Cannot pull heat from another Heat Sink.",
+    "effect_stats": [{ "stat": "tags", "amount": "heat_sink" }],
+    "weight": 1,
+    "range": "0",
+    "heat_rating": "0/4",
+    "hit_dice": "1/0",
+    "hp": 5,
+    "no_drop_pod": true
   }
 ]

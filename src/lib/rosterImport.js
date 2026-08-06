@@ -69,6 +69,11 @@ export function parseRosterExport(text, { units, manufacturers, equipment }) {
         current.equippedSides.push(
           slotLabel === 'left' || slotLabel === 'right' ? slotLabel : undefined,
         );
+        // The raw slot label (#245), kept separate from equippedSides above
+        // since that one only ever carries 'left'/'right' for arc-restriction
+        // purposes — this instead tells Heat Sinks which slot ('head' included)
+        // an item shares with others, without touching arc behavior at all.
+        current.equippedSlots.push(slotLabel);
       } else {
         warnings.push(
           `Unknown equipment "${itemName}" on ${current.unit.name} — skipped.`,
@@ -89,7 +94,13 @@ export function parseRosterExport(text, { units, manufacturers, equipment }) {
       warnings.push(`Unknown unit "${name}" — skipped.`);
       continue;
     }
-    current = { unit, equippedIds: [], equippedSides: [], label };
+    current = {
+      unit,
+      equippedIds: [],
+      equippedSides: [],
+      equippedSlots: [],
+      label,
+    };
   }
   flush();
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import BuilderPage from './BuilderPage.jsx';
 
 const manufacturers = ['Corp A'];
@@ -119,5 +119,45 @@ describe('BuilderPage', () => {
     expect(screen.getAllByText('A10')).toHaveLength(1);
     expect(screen.getByText('A10 (1)')).toBeDefined();
     expect(screen.getByText('A10 (2)')).toBeDefined();
+  });
+
+  it('updates the unit card armor as soon as an Armor Plate is equipped (#244)', () => {
+    const armoredUnit = { ...units[0], armor: '2/2/2/1' };
+    const armorPlate = {
+      id: 3,
+      name: 'Armor Plate',
+      manufacturer: 'Corp A',
+      type: 'Weapon',
+      size: 'Small',
+      weight: 1,
+      range: '',
+      heat_rating: '',
+      hit_dice: '',
+      hp: 5,
+      effect_stats: [{ stat: 'tags', amount: 'armor_plate' }],
+    };
+    render(
+      <BuilderPage
+        manufacturers={manufacturers}
+        units={[armoredUnit]}
+        equipment={[armorPlate]}
+      />,
+    );
+    goToBuilder();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Remove' }).closest('.roster-list-item'),
+    );
+
+    const panel = document.querySelector('.roster-config-panel');
+    expect(within(panel).getByText(/Armor 2\/2\/2\/1/)).toBeDefined();
+
+    fireEvent.click(within(panel).getByRole('button', { name: /^Left/ }));
+    fireEvent.click(screen.getByText('Armor Plate'));
+
+    // A Left-slot Armor Plate protects only the left side (combat.js's
+    // armorPlateBonus), so front/right/rear stay at their base value.
+    expect(within(panel).getByText(/Armor 2\/3\/2\/1/)).toBeDefined();
   });
 });

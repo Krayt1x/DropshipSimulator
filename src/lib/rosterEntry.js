@@ -7,6 +7,7 @@ import {
   armorLabel,
 } from './builderConstants.js';
 import { itemHasTag } from './tokens.js';
+import { parseArmor } from './combat.js';
 
 export const WEIGHT_SEGMENT_COLORS = [
   '#1d4ed8',
@@ -127,8 +128,32 @@ export function computeRosterStats(entry, units, equipment, totalWeight) {
     maxDropWeight > 0 ? Math.max(0, totalWeight - maxDropWeight) : 0;
   const effectiveMovement = Math.max(0, movementGearStat - excessDropWeight);
 
+  // Armor Plate (#203) bumps whichever side it's mounted on — Left/Right
+  // slot plates protect that side only, a Head-slot one protects front and
+  // rear, same rule combat.js's armorPlateBonus applies once deployed (#244:
+  // the builder's unit card previously always showed the unit's bare base
+  // armor here, never reflecting an equipped plate).
+  function armorPlateCount(slot) {
+    if (isDropPod) return 0;
+    return resolveEquippedItems(slot).filter((item) =>
+      itemHasTag(item, 'armor_plate'),
+    ).length;
+  }
+  const leftPlates = armorPlateCount('Left');
+  const rightPlates = armorPlateCount('Right');
+  const headPlates = armorPlateCount('Head');
+  const baseArmor = parseArmor(unit.armor);
+  const effectiveArmorLabel = baseArmor
+    ? [
+        baseArmor.front + headPlates,
+        baseArmor.left + leftPlates,
+        baseArmor.right + rightPlates,
+        baseArmor.rear + headPlates,
+      ].join('/')
+    : armorLabel(unit);
+
   const statsLine = [
-    `Armor ${armorLabel(unit)}`,
+    `Armor ${effectiveArmorLabel}`,
     `HP ${effectiveHp}`,
     `Move ${effectiveMovement}`,
   ].join(' · ');

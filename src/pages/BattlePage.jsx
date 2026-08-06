@@ -522,26 +522,23 @@ function BattlePage() {
     if (die) appendLog(`Used a ${die.label.toLowerCase()} die: ${die.value}`);
   }
 
-  // Picks an unused die matching `preferredValue` ('Move'/'Attack'), falling
-  // back to a flexible 'Action' die — same Move/Action/Attack economy the
-  // bot already follows (bot.js's pickDie). Moving or attacking spends one
-  // of these and is blocked without one (#162).
+  // Picks an unused die matching `preferredValue` ('Move'/'Attack') exactly —
+  // each color is single-purpose (#237): a Move die only pays for movement,
+  // an Attack die only pays for attacks, and an Action die only pays for
+  // actions like Drop Pods (Repairing is planned but not yet implemented).
+  // The only way to turn a spare die of one kind into another is Exchange
+  // (see exchangeActionDie), which spends a whole die as the cost rather
+  // than letting Action quietly cover Move/Attack for free.
   function pickActionDie(preferredValue) {
     const unused = dicePool.filter((d) => !d.used);
-    return (
-      unused.find((d) => d.value === preferredValue) ??
-      unused.find((d) => d.value === 'Action') ??
-      null
-    );
+    return unused.find((d) => d.value === preferredValue) ?? null;
   }
 
   const hasMoveDie = Boolean(pickActionDie('Move'));
   const hasAttackDie = Boolean(pickActionDie('Attack'));
   // Counts shown on the mobile Move/Attack FABs (#162) — each die only
   // belongs to one bucket, matching DiceRoller's own Dice Pool summary
-  // (actionCounts). A flexible Action die can still cover either action
-  // (see pickActionDie), but counting it in both totals at once summed to
-  // more dice than the pool actually has (#167).
+  // (actionCounts).
   const moveDieCount = dicePool.filter(
     (d) => !d.used && d.value === 'Move',
   ).length;

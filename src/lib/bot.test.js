@@ -573,7 +573,7 @@ describe('chooseBotAction', () => {
     });
   });
 
-  it('moves an already-deployed model that needs to close in before spending a spare Action die on a reserve drop pod (#230)', () => {
+  it('moves an already-deployed model with its own Move die before spending a spare Action die on a reserve drop pod (#230, #237)', () => {
     const bot = makeToken({
       id: 'bot1',
       unitId: 1,
@@ -598,10 +598,49 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
+      // A dedicated Move die alongside a spare Action die (#237: Action can
+      // no longer cover Move directly) — the bot should still prefer moving
+      // its own model over spending the Action die on the reserve pod.
+      dicePool: [
+        { id: 'd1', label: 'Blue', value: 'Move', used: false },
+        { id: 'd2', label: 'Green', value: 'Action', used: false },
+      ],
+      difficulty: 'simple',
+    });
+    expect(result).toMatchObject({ type: 'move', tokenId: 'bot1', dieId: 'd1' });
+  });
+
+  it('drops a reserve pod instead of moving when the only spare die is an Action die (#237)', () => {
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 0, row: 0 },
+      equippedIds: [11], // Chicken Legs, movement only — nothing to attack with
+    });
+    const pod = makeToken({
+      id: 'pod1',
+      unitId: 4, // Delivery Capsule / Drop Pod
+      owner: 'p2',
+      position: null,
+    });
+    const enemy = makeToken({
+      id: 'enemy1',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 10, row: 0 },
+    });
+    const result = chooseBotAction({
+      tokens: [bot, pod, enemy],
+      units,
+      equipment,
+      botOwner: 'p2',
+      // No Move die and only one die total, so there's nothing to spend on
+      // an Exchange either — the Action die can only pay for the pod.
       dicePool: [{ id: 'd1', label: 'Green', value: 'Action', used: false }],
       difficulty: 'simple',
     });
-    expect(result).toMatchObject({ type: 'move', tokenId: 'bot1' });
+    expect(result).toMatchObject({ type: 'dropPod', tokenId: 'pod1' });
   });
 
   it('moves toward an uncovered objective instead of the enemy under the "First to 11" scenario (#233)', () => {

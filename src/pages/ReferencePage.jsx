@@ -65,11 +65,11 @@ const SECTIONS = [
     terms: [
       {
         term: 'Dice Pool',
-        body: 'The dice rolled at the start of your turn, spent on moving and attacking. Rolled automatically from your dice color counts (see each unit\'s Blue/Red/Green/Yellow/Purple/Orange dice).',
+        body: 'The dice rolled at the start of your turn, spent on moving, attacking, and other actions. Rolled automatically from your dice color counts (see each unit\'s Blue/Red/Green/Yellow/Purple/Orange dice).',
       },
       {
         term: 'Move / Attack / Action faces',
-        body: 'A colored die lands on one of these three faces. Move and Attack dice can only pay for that kind of action; an Action die is flexible and covers either.',
+        body: "A colored die lands on one of these three faces, and each only pays for its own kind: a Move die only for movement, an Attack die only for attacking, and an Action die only for actions like Drop Pods (Repairing is planned but not yet implemented). Use Exchange to turn a spare die into the face you actually need.",
       },
       {
         term: 'Exchange',

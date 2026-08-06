@@ -125,16 +125,14 @@ function unitFor(token, units) {
   return units.find((u) => Number(u.id) === Number(token.unitId));
 }
 
-// Picks a die from the pool matching `preferredValue` ('Move'/'Attack'), or
-// an 'Action' die as a flexible fallback — mirrors the Move/Action/Attack
-// die-face economy (WORD_ORDER in dice.js) without hard-coding it here.
+// Picks a die from the pool matching `preferredValue` ('Move'/'Attack')
+// exactly (#237) — each color is single-purpose: Move only pays for
+// movement, Attack only pays for attacks, Action only pays for actions
+// like Drop Pods. Turning a spare die of one kind into another goes through
+// findExchangeAction below instead of Action quietly covering either.
 function pickDie(dicePool, preferredValue) {
   const unused = dicePool.filter((d) => !d.used);
-  return (
-    unused.find((d) => d.value === preferredValue) ??
-    unused.find((d) => d.value === 'Action') ??
-    null
-  );
+  return unused.find((d) => d.value === preferredValue) ?? null;
 }
 
 // A die's own color caps what it can be exchanged into — a die that never

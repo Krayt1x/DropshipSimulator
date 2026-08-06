@@ -2135,9 +2135,10 @@ describe('BattlePage', () => {
     endDeploymentPhase();
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
-    // Attacking/moving spends a matching (or Action) die (#162); mock so
-    // red's "Action" face wins, covering both.
-    vi.spyOn(Math, 'random').mockReturnValue(0.9);
+    // Attacking spends its own Attack die and moving spends its own Move
+    // die (#162, #237 — Action dice no longer cover either) — A10 rolls 2
+    // red dice, so mock one to each face to enable both buttons.
+    vi.spyOn(Math, 'random').mockReturnValueOnce(0).mockReturnValueOnce(0.6);
     expandDiceRoller();
     fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 

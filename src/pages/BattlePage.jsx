@@ -2544,10 +2544,6 @@ function BattlePage() {
               canRoll={!myPlayer || myPlayer === turn.active}
               turn={turn}
             />
-          </div>
-          <div
-            className={`mobile-tab-panel ${mobileTab === 'log' ? 'mobile-tab-panel-active' : ''}`}
-          >
             <TurnOrder />
             <div className="card">
               <button

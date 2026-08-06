@@ -2511,7 +2511,8 @@ describe('BattlePage', () => {
     expect(screen.getByRole('button', { name: 'Board' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Units' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Dice' })).toBeDefined();
-    expect(screen.getByRole('button', { name: 'Log' })).toBeDefined();
+    // Dice and Log are combined into one tab now (#248) — no separate Log tab.
+    expect(screen.queryByRole('button', { name: 'Log' })).toBeNull();
 
     // Mobile starts on the Units tab (its Import sub-tab) rather than Board
     // (#165), so Units is active and Board isn't until a tab switch.
@@ -2527,6 +2528,19 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Board' }));
     expect(boardPanel.classList.contains('mobile-tab-panel-active')).toBe(true);
+  });
+
+  it('combines the dice roller and the game log into one Dice tab (#248)', () => {
+    render(<BattlePage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dice' }));
+
+    const dicePanel = screen.getByText('Game log').closest('.mobile-tab-panel');
+    expect(dicePanel.classList.contains('mobile-tab-panel-active')).toBe(true);
+    expect(within(dicePanel).getByText('Game log')).toBeDefined();
+    expect(
+      within(dicePanel).getByRole('button', { name: /Undo/ }),
+    ).toBeDefined();
   });
 
   it('hides the TokenCard while deployment phase is active, shows it once ended (#101)', () => {

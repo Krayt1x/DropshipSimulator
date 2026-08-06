@@ -37,6 +37,7 @@ import {
   isDropPodUnit,
   itemHasTag,
   tokenHasMovementTag,
+  tokenHasUsableTag,
   equippedItemsForSide,
   slotForType,
 } from '../lib/tokens.js';
@@ -1689,6 +1690,114 @@ function BattlePage() {
     setSelectedTokenId(token.id);
   }
 
+  // Every damaged chassis/weapon a Repair Module (#238) can target: the
+  // model itself, plus any adjacent model on the same side — only listing
+  // targets that are actually below full HP or broken, so the picker never
+  // offers to spend a die for zero effect.
+  function repairTargetsFor(token) {
+    if (!token?.position) return [];
+    function targetsOn(candidate) {
+      const targets = [];
+      const candidateUnit = units.find(
+        (u) => Number(u.id) === Number(candidate.unitId),
+      );
+      const maxHp = Number(candidateUnit?.hp) || 0;
+      if ((candidate.currentHp ?? 0) > 0 && (candidate.currentHp ?? 0) < maxHp) {
+        targets.push({
+          tokenId: candidate.id,
+          slot: 'chassis',
+          label: `${unitName(candidate)} — Chassis`,
+        });
+      }
+      candidate.equippedIds.forEach((id, index) => {
+        const item = equipment.find((e) => Number(e.id) === Number(id));
+        const itemMaxHp = Number(item?.hp) || 0;
+        if (!item || itemMaxHp <= 0) return;
+        const hp = candidate.weaponState[index]?.hp ?? itemMaxHp;
+        const broken = Boolean(candidate.weaponState[index]?.broken);
+        if (hp < itemMaxHp || broken) {
+          targets.push({
+            tokenId: candidate.id,
+            slot: index,
+            label: `${unitName(candidate)} — ${item.name}`,
+          });
+        }
+      });
+      return targets;
+    }
+
+    const adjacentAllies = tokens.filter(
+      (t) =>
+        t.id !== token.id &&
+        t.owner === token.owner &&
+        t.position &&
+        !t.destroyed &&
+        (t.currentHp ?? 0) > 0 &&
+        hexDistance(token.position, t.position) === 1,
+    );
+    return [
+      ...targetsOn(token),
+      ...adjacentAllies.flatMap((ally) => targetsOn(ally)),
+    ];
+  }
+
+  // Resolves a Repair Module use (#238): rolls 2d4, applies the heal to the
+  // chosen chassis or weapon (clamped to its max), un-breaks a weapon whose
+  // HP comes back above 0, and spends the model's own unused Action die.
+  function performRepair(sourceToken, targetTokenId, slot) {
+    const actionDie = dicePool.find((d) => !d.used && d.value === 'Action');
+    if (!actionDie) return;
+    const targetToken = tokens.find((t) => t.id === targetTokenId);
+    if (!targetToken) return;
+
+    const d4 = DIE_TYPES.find((d) => d.id === 'd4');
+    const heal = Number(rollDie(d4)) + Number(rollDie(d4));
+
+    if (slot === 'chassis') {
+      const targetUnit = units.find(
+        (u) => Number(u.id) === Number(targetToken.unitId),
+      );
+      const maxHp = Number(targetUnit?.hp) || 0;
+      setTokens((current) =>
+        current.map((t) =>
+          t.id === targetTokenId
+            ? { ...t, currentHp: Math.min(maxHp, (t.currentHp ?? 0) + heal) }
+            : t,
+        ),
+      );
+      appendLog(
+        `${unitName(sourceToken)} repairs ${heal} HP to ${unitName(targetToken)}'s chassis`,
+      );
+    } else {
+      const item = equipment.find(
+        (e) => Number(e.id) === Number(targetToken.equippedIds[slot]),
+      );
+      const maxHp = Number(item?.hp) || 0;
+      setTokens((current) =>
+        current.map((t) => {
+          if (t.id !== targetTokenId) return t;
+          const hp = t.weaponState[slot]?.hp ?? maxHp;
+          const nextHp = Math.min(maxHp, hp + heal);
+          return {
+            ...t,
+            weaponState: {
+              ...t.weaponState,
+              [slot]: {
+                ...t.weaponState[slot],
+                hp: nextHp,
+                broken: nextHp > 0 ? false : t.weaponState[slot]?.broken,
+              },
+            },
+          };
+        }),
+      );
+      appendLog(
+        `${unitName(sourceToken)} repairs ${heal} HP to ${unitName(targetToken)}'s ${item?.name ?? 'equipment'}`,
+      );
+    }
+    useDicePoolDie(actionDie.id);
+  }
+
   // Reserve list's own Deploy button (#142) — on mobile, reserve tokens are
   // selected on the Units tab but placed by clicking a hex on the Board tab,
   // which previously required manually switching tabs in between with no
@@ -2789,6 +2898,11 @@ function BattlePage() {
               onArmDropPod={() => armDropPod(selectedToken.id)}
               hasMoveDie={hasMoveDie}
               hasAttackDie={hasAttackDie}
+              hasRepairTag={tokenHasUsableTag(selectedToken, equipment, 'repair')}
+              repairTargets={repairTargetsFor(selectedToken)}
+              onRepair={(targetTokenId, slot) =>
+                performRepair(selectedToken, targetTokenId, slot)
+              }
             />
           )}
           <ReserveRosterPanel

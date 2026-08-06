@@ -2126,6 +2126,17 @@ describe('BattlePage', () => {
   });
 
   it('disables Attack and Move once a model reaches 0 chassis HP (#160)', () => {
+    // Seed the pool directly with one Attack die and one Move die rather
+    // than rolling for real (#162, #237 — Action dice no longer cover
+    // either, and mocking Math.random here also gets consumed by
+    // makeKey()'s own random id suffixes, not just the die faces).
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:dicePool',
+      JSON.stringify([
+        { id: 'd-attack', label: 'Red', value: 'Attack', used: false },
+        { id: 'd-move', label: 'Red', value: 'Move', used: false },
+      ]),
+    );
     render(<BattlePage />);
     startDeploymentPhase();
 
@@ -2135,12 +2146,6 @@ describe('BattlePage', () => {
     endDeploymentPhase();
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
-    // Attacking spends its own Attack die and moving spends its own Move
-    // die (#162, #237 — Action dice no longer cover either) — A10 rolls 2
-    // red dice, so mock one to each face to enable both buttons.
-    vi.spyOn(Math, 'random').mockReturnValueOnce(0).mockReturnValueOnce(0.6);
-    expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     expect(screen.getByRole('button', { name: 'Attack' }).disabled).toBe(false);
     expect(screen.getByRole('button', { name: 'Move' }).disabled).toBe(false);
@@ -3260,5 +3265,177 @@ describe('BattlePage', () => {
     );
     expect(currentTokens.filter((t) => t.owner === 'p2')).toHaveLength(0);
     expect(screen.queryByText(/Player 2 ended their turn/)).toBeNull();
+  });
+
+  describe('Repair Module (#238)', () => {
+    // The heal roll is 2d4 with no makeKey() calls in between, so two
+    // mocked values map straight onto the two dice: 0 -> 1, 0.5 -> 3.
+    function mockHealRoll() {
+      vi.spyOn(Math, 'random').mockReturnValueOnce(0).mockReturnValueOnce(0.5);
+    }
+
+    it('does not show a Repair button for a model without a Repair Module', () => {
+      window.localStorage.setItem(
+        'dropshipsimulator:battle:dicePool',
+        JSON.stringify([{ id: 'd1', label: 'Red', value: 'Action', used: false }]),
+      );
+      render(<BattlePage />);
+      startDeploymentPhase();
+      importA10ToReserve(['  Right: Long Range Bolt']);
+      fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+      endDeploymentPhase();
+      fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+      fireEvent.click(screen.getByTestId('hex-5,5'));
+
+      expect(screen.queryByRole('button', { name: 'Repair' })).toBeNull();
+    });
+
+    it('disables Repair without an unused Action die', () => {
+      window.localStorage.setItem(
+        'dropshipsimulator:battle:dicePool',
+        JSON.stringify([{ id: 'd1', label: 'Blue', value: 'Move', used: false }]),
+      );
+      render(<BattlePage />);
+      startDeploymentPhase();
+      importA10ToReserve(['  Head: Repair Module']);
+      fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+      endDeploymentPhase();
+      fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+      fireEvent.click(screen.getByTestId('hex-5,5'));
+
+      const repairBtn = screen.getByRole('button', { name: 'Repair' });
+      expect(repairBtn.disabled).toBe(true);
+      expect(repairBtn.title).toBe('Needs an unused Action die');
+    });
+
+    it("repairs its own chassis HP, capped at the unit's max", () => {
+      window.localStorage.setItem(
+        'dropshipsimulator:battle:dicePool',
+        JSON.stringify([{ id: 'd1', label: 'Red', value: 'Action', used: false }]),
+      );
+      render(<BattlePage />);
+      startDeploymentPhase();
+      importA10ToReserve(['  Head: Repair Module']);
+      fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+      endDeploymentPhase();
+      fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+      fireEvent.click(screen.getByTestId('hex-5,5'));
+
+      const chassisHpMinusButton = () =>
+        screen.getAllByRole('button', { name: '−' })[0];
+      for (let i = 0; i < 6; i++) fireEvent.click(chassisHpMinusButton());
+      expect(screen.getByText('HP')).toBeDefined();
+
+      mockHealRoll();
+      fireEvent.click(screen.getByRole('button', { name: 'Repair' }));
+      fireEvent.click(screen.getByRole('button', { name: 'A10 — Chassis' }));
+
+      expect(
+        screen.getByText("A10 repairs 4 HP to A10's chassis"),
+      ).toBeDefined();
+      // No unused Action die left, so a second Repair offers nothing.
+      fireEvent.click(screen.getByRole('button', { name: 'Repair' }));
+      expect(screen.getByRole('button', { name: 'Repair' }).disabled).toBe(
+        true,
+      );
+    });
+
+    it('repairs a broken weapon back above 0 HP and clears Broken', () => {
+      window.localStorage.setItem(
+        'dropshipsimulator:battle:dicePool',
+        JSON.stringify([{ id: 'd1', label: 'Red', value: 'Action', used: false }]),
+      );
+      render(<BattlePage />);
+      startDeploymentPhase();
+      importA10ToReserve([
+        '  Right: Long Range Bolt',
+        '  Head: Repair Module',
+      ]);
+      fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+      endDeploymentPhase();
+      fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+      fireEvent.click(screen.getByTestId('hex-5,5'));
+
+      // Order in the card: chassis HP −, weapon heat −, weapon HP −.
+      // Long Range Bolt has 5 HP.
+      const weaponHpMinusButton = () =>
+        screen.getAllByRole('button', { name: '−' })[2];
+      for (let i = 0; i < 5; i++) fireEvent.click(weaponHpMinusButton());
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Broken' }));
+      expect(screen.getByRole('checkbox', { name: 'Broken' }).checked).toBe(
+        true,
+      );
+
+      mockHealRoll();
+      fireEvent.click(screen.getByRole('button', { name: 'Repair' }));
+      fireEvent.click(
+        screen.getByRole('button', { name: 'A10 — Long Range Bolt' }),
+      );
+
+      expect(
+        screen.getByText("A10 repairs 4 HP to A10's Long Range Bolt"),
+      ).toBeDefined();
+      expect(screen.getByText('HP 4 / 5')).toBeDefined();
+      expect(screen.getByRole('checkbox', { name: 'Broken' }).checked).toBe(
+        false,
+      );
+    });
+
+    it("lists a damaged adjacent friendly model's chassis as a repair target", () => {
+      window.localStorage.setItem(
+        'dropshipsimulator:battle:dicePool',
+        JSON.stringify([{ id: 'd1', label: 'Red', value: 'Action', used: false }]),
+      );
+      render(<BattlePage />);
+      startDeploymentPhase();
+
+      fireEvent.change(screen.getByLabelText('Roster export'), {
+        target: {
+          value: [
+            'Test List (Corp A)',
+            'Weight: 12t / 100t',
+            '',
+            'A10 (1) - 6t',
+            '  Head: Repair Module',
+            '',
+            'A10 (2) - 6t',
+          ].join('\n'),
+        },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Import 2 units to reserve' }),
+      );
+      endDeploymentPhase();
+
+      fireEvent.click(screen.getByRole('button', { name: 'A10 (1)' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+      fireEvent.click(screen.getByTestId('hex-5,5'));
+
+      fireEvent.click(screen.getByRole('button', { name: 'A10 (2)' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+      // Adjacent to (5,5) on this odd-q grid.
+      fireEvent.click(screen.getByTestId('hex-6,5'));
+
+      const chassisHpMinusButton = () =>
+        screen.getAllByRole('button', { name: '−' })[0];
+      for (let i = 0; i < 6; i++) fireEvent.click(chassisHpMinusButton());
+
+      // A10 (2) is still selected from placing it, and Reserve is now
+      // empty (both are deployed) — switch to Roster to reselect the
+      // repairer, A10 (1).
+      fireEvent.click(screen.getByRole('button', { name: 'Roster' }));
+      fireEvent.click(screen.getByRole('button', { name: /^A10 \(1\)/ }));
+
+      mockHealRoll();
+      fireEvent.click(screen.getByRole('button', { name: 'Repair' }));
+      fireEvent.click(
+        screen.getByRole('button', { name: 'A10 (2) — Chassis' }),
+      );
+
+      expect(
+        screen.getByText("A10 (1) repairs 4 HP to A10 (2)'s chassis"),
+      ).toBeDefined();
+    });
   });
 });

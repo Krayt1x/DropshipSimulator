@@ -33,6 +33,7 @@ export const EQUIPMENT_TAGS = [
   { key: 'splash', label: 'Splash' },
   { key: 'indirect_fire', label: 'Indirect Fire' },
   { key: 'armor_plate', label: 'Armor Plate' },
+  { key: 'repair', label: 'Repair' },
 ];
 const WEAPON_SIZE_SLOTS = { Small: 1, Medium: 2, Large: 3 };
 

@@ -167,9 +167,10 @@
     "name": "Repair Module",
     "manufacturer": "Corp A",
     "type": "Augment",
-    "effects": "Actions can be used to repair 1d4 damage.",
+    "effects": "Spend an Action die to repair 2d4 HP to this model's chassis or a weapon, or to an adjacent friendly model's chassis or weapon.",
     "weight": 1,
-    "no_drop_pod": true
+    "no_drop_pod": true,
+    "effect_stats": [{ "stat": "tags", "amount": "repair" }]
   },
   {
     "id": 14,

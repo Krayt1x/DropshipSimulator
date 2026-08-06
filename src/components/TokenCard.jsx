@@ -35,9 +35,13 @@ function TokenCard({
   onArmDropPod,
   hasMoveDie,
   hasAttackDie,
+  hasRepairTag,
+  repairTargets = [],
+  onRepair,
 }) {
   const [confirmingDestroy, setConfirmingDestroy] = useState(false);
   const [pickedDieColor, setPickedDieColor] = useState(null);
+  const [repairOpen, setRepairOpen] = useState(false);
   // Arms the destroy button on its first press (turning it red) rather than
   // destroying on one click (#206) — a chassis already at 0 HP is already a
   // wreck, so it skips straight to armed instead of needing that first press.
@@ -458,6 +462,50 @@ function TokenCard({
               )}
             </>
           )}
+        </div>
+      )}
+
+      {hasRepairTag && canControl && !token.destroyed && token.position && (
+        <div className="token-card-section">
+          <label>Repair</label>
+          <button
+            type="button"
+            className={repairOpen ? '' : 'ghost'}
+            disabled={!hasActionDie}
+            title={
+              hasActionDie
+                ? "Roll 2d4 and repair a damaged chassis or weapon — its own or an adjacent ally's"
+                : 'Needs an unused Action die'
+            }
+            onClick={() => setRepairOpen((current) => !current)}
+          >
+            Repair
+          </button>
+          {repairOpen &&
+            (repairTargets.length === 0 ? (
+              <p className="unit-meta" style={{ marginTop: 6 }}>
+                Nothing in range needs repairing.
+              </p>
+            ) : (
+              <div
+                className="token-stat-row"
+                style={{ flexWrap: 'wrap', marginTop: 6 }}
+              >
+                {repairTargets.map((target) => (
+                  <button
+                    key={`${target.tokenId}-${target.slot}`}
+                    type="button"
+                    className="ghost"
+                    onClick={() => {
+                      onRepair(target.tokenId, target.slot);
+                      setRepairOpen(false);
+                    }}
+                  >
+                    {target.label}
+                  </button>
+                ))}
+              </div>
+            ))}
         </div>
       )}
 

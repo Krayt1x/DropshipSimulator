@@ -137,6 +137,21 @@ export function tokenHasMovementTag(token, equipment, tag) {
   });
 }
 
+// A token can use a tagged ability (e.g. Repair, #238) if it has any
+// equipped, unbroken item carrying that tag — unlike tokenHasMovementTag
+// this isn't limited to one equipment type, since Repair Module is an
+// Augment.
+export function tokenHasUsableTag(token, equipment, tag) {
+  return token.equippedIds.some((id, index) => {
+    const item = equipment.find((e) => Number(e.id) === Number(id));
+    return (
+      Boolean(item) &&
+      itemHasTag(item, tag) &&
+      !token.weaponState[index]?.broken
+    );
+  });
+}
+
 export function healthBarColor(fraction) {
   if (fraction <= 0.25) return '#dc2626';
   if (fraction <= 0.5) return '#f59e0b';

@@ -5,6 +5,7 @@ import {
   cleanup,
   fireEvent,
   within,
+  act,
 } from '@testing-library/react';
 import PlayPage from './PlayPage.jsx';
 
@@ -116,6 +117,12 @@ describe('PlayPage', () => {
 
     expect(window.location.hash).toBe('');
     expect(screen.getByText('Which map do you want to play?')).toBeDefined();
+    // Start Game stays disabled in a vs-CPU game until who goes first is
+    // picked (#239).
+    expect(screen.getByRole('button', { name: 'Start Game' }).disabled).toBe(
+      true,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Player' }));
     fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(window.location.hash).toBe('#battle');
@@ -135,6 +142,116 @@ describe('PlayPage', () => {
     expect(window.localStorage.getItem('dropshipsimulator:playerRoster')).toBe(
       JSON.stringify({ type: 'random', manufacturer: 'Corp A' }),
     );
+  });
+
+  function reachFirstPlayerStage() {
+    fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Simple/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Corp A' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Random' }));
+    const playerManufacturerStage = screen
+      .getByText('Which manufacturer will you play?')
+      .closest('.cascade-stage');
+    fireEvent.click(
+      within(playerManufacturerStage).getByRole('button', { name: 'Corp A' }),
+    );
+    const playerRosterStage = screen
+      .getByText('Which list will you play?')
+      .closest('.cascade-stage');
+    fireEvent.click(
+      within(playerRosterStage).getByRole('button', { name: 'Random' }),
+    );
+  }
+
+  describe('who plays first (#239)', () => {
+    it('lets the human pick either side directly, writing Turn 1\'s active owner', () => {
+      render(<PlayPage />);
+      reachFirstPlayerStage();
+
+      expect(screen.getByText('Who plays first?')).toBeDefined();
+      expect(screen.getByRole('button', { name: 'Start Game' }).disabled).toBe(
+        true,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'CPU' }));
+      // Once selected the tile's own "Going first" caption joins its
+      // accessible name, so re-querying needs the looser match.
+      expect(
+        screen.getByRole('button', { name: /^CPU/ }).className,
+      ).toContain('selected');
+      expect(screen.getByRole('button', { name: 'Start Game' }).disabled).toBe(
+        false,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+      expect(window.location.hash).toBe('#battle');
+      expect(
+        JSON.parse(window.localStorage.getItem('dropshipsimulator:battle:turn')),
+      ).toEqual({ number: 1, active: 'p2' });
+    });
+
+    it('writes Player (p1) as Turn 1\'s active owner when Player is picked', () => {
+      render(<PlayPage />);
+      reachFirstPlayerStage();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Player' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+
+      expect(
+        JSON.parse(window.localStorage.getItem('dropshipsimulator:battle:turn')),
+      ).toEqual({ number: 1, active: 'p1' });
+    });
+
+    it('rolls the die, flickering between both sides before settling and enabling Start Game', () => {
+      vi.useFakeTimers();
+      render(<PlayPage />);
+      reachFirstPlayerStage();
+
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Randomize who goes first' }),
+      );
+
+      // Mid-roll: still flickering, both the die and the two tiles are
+      // disabled, and Start Game isn't enabled yet.
+      expect(
+        screen.getByRole('button', { name: 'Randomize who goes first' })
+          .disabled,
+      ).toBe(true);
+      expect(screen.getByRole('button', { name: 'Start Game' }).disabled).toBe(
+        true,
+      );
+
+      act(() => {
+        vi.advanceTimersByTime(3000);
+      });
+
+      expect(
+        screen.getByRole('button', { name: 'Randomize who goes first' })
+          .disabled,
+      ).toBe(false);
+      expect(screen.getByRole('button', { name: 'Start Game' }).disabled).toBe(
+        false,
+      );
+      const turnActive = JSON.parse(
+        window.localStorage.getItem('dropshipsimulator:battle:turn') ?? 'null',
+      );
+      // Not written until Start Game is actually pressed.
+      expect(turnActive).toBeNull();
+
+      vi.useRealTimers();
+    });
+
+    it('does not gate Start Game on a first-player pick in Sandbox mode', () => {
+      render(<PlayPage />);
+      fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+      fireEvent.click(screen.getByRole('button', { name: /Sandbox/ }));
+
+      expect(screen.queryByText('Who plays first?')).toBeNull();
+      expect(screen.getByRole('button', { name: 'Start Game' }).disabled).toBe(
+        false,
+      );
+    });
   });
 
   it('lists each catalogue manufacturer, then only that manufacturer\'s default rosters (#198)', () => {
@@ -202,6 +319,7 @@ describe('PlayPage', () => {
       }),
     );
 
+    fireEvent.click(screen.getByRole('button', { name: 'Player' }));
     fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(window.location.hash).toBe('#battle');
@@ -254,6 +372,7 @@ describe('PlayPage', () => {
       within(playerRosterStage).getByRole('button', { name: 'Random' }),
     );
 
+    fireEvent.click(screen.getByRole('button', { name: 'Player' }));
     fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(window.location.hash).toBe('#battle');

@@ -2875,7 +2875,9 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
 
-    expect(screen.getByText('Player 1 Wins!')).toBeDefined();
+    // "Player 1"/"Player 2" only makes sense with two humans — in vs-CPU
+    // mode it reads as "Player"/"CPU" instead (#239).
+    expect(screen.getByText('Player Wins!')).toBeDefined();
     expect(screen.getByText('vs Computer · Tactical')).toBeDefined();
   });
 
@@ -3150,10 +3152,11 @@ describe('BattlePage', () => {
     // The bot rolls its Dice Pool, takes whatever actions it can (which
     // depend on real dice rolls, so not asserted specifically here), and
     // hands the turn back — verified via the same log line a human's own
-    // End Turn produces.
+    // End Turn produces. Reads "CPU" rather than "Player 2" in vs-computer
+    // mode (#239).
     await vi.waitFor(
       () => {
-        expect(screen.getByText(/Player 2 ended their turn/)).toBeDefined();
+        expect(screen.getByText(/CPU ended their turn/)).toBeDefined();
       },
       { timeout: 15000, interval: 100 },
     );

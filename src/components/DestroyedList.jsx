@@ -8,6 +8,7 @@ function DestroyedGroup({
   canControl,
   onSelect,
   onReturnToReserve,
+  ownerLabel,
 }) {
   if (tokens.length === 0) return null;
 
@@ -18,7 +19,7 @@ function DestroyedGroup({
           className="tile-swatch"
           style={{ background: ownerColor(owner.id) }}
         />
-        {owner.label} ({tokens.length})
+        {ownerLabel?.(owner.id) ?? owner.label} ({tokens.length})
       </p>
       <div className="tile-palette-list">
         {tokens.map((token) => {
@@ -59,6 +60,7 @@ function DestroyedList({
   canControl,
   onSelect,
   onReturnToReserve,
+  ownerLabel,
 }) {
   if (tokens.length === 0) return null;
 
@@ -75,6 +77,7 @@ function DestroyedList({
           canControl={canControl}
           onSelect={onSelect}
           onReturnToReserve={onReturnToReserve}
+          ownerLabel={ownerLabel}
         />
       ))}
     </div>

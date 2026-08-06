@@ -23,6 +23,7 @@ function ReserveGroup({
   deploymentPhase,
   hasActionDie,
   onDropPod,
+  ownerLabel,
 }) {
   if (tokens.length === 0) return null;
 
@@ -33,7 +34,7 @@ function ReserveGroup({
           className="tile-swatch"
           style={{ background: ownerColor(owner.id) }}
         />
-        {owner.label} ({tokens.length})
+        {ownerLabel?.(owner.id) ?? owner.label} ({tokens.length})
       </p>
       <div className="tile-palette-list">
         {tokens.map((token) => {
@@ -125,6 +126,7 @@ function ReserveRosterPanel({
   deploymentPhase,
   hasActionDie,
   onDropPod,
+  ownerLabel,
 }) {
   // Defaults to the Import tab when it's offered (#146, mobile only — see
   // BattlePage) and nothing's been imported yet, so it's still the first
@@ -218,6 +220,7 @@ function ReserveRosterPanel({
                   deploymentPhase={deploymentPhase}
                   hasActionDie={hasActionDie}
                   onDropPod={onDropPod}
+                  ownerLabel={ownerLabel}
                 />
               ))}
             </>
@@ -235,7 +238,7 @@ function ReserveRosterPanel({
                 className={`workspace-tab ${activeOwner === owner.id ? 'active' : ''}`}
                 onClick={() => setActiveOwner(owner.id)}
               >
-                {owner.label}
+                {ownerLabel?.(owner.id) ?? owner.label}
               </button>
             ))}
           </div>

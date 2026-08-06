@@ -445,7 +445,13 @@ function BattlePage() {
     return withTokenLabel(name, token);
   }
 
+  // "Player 1"/"Player 2" only makes sense with two humans — in a vs-CPU
+  // game it reads as "Player"/"CPU" instead (#239), everywhere this is used
+  // (turn tracker, game log, winner modal, reserve/roster tabs).
   function ownerLabel(ownerId) {
+    if (gameMode === 'vs-computer' && botOwner) {
+      return ownerId === botOwner ? 'CPU' : 'Player';
+    }
     return OWNERS.find((o) => o.id === ownerId)?.label ?? ownerId;
   }
 
@@ -2460,6 +2466,7 @@ function BattlePage() {
             onEndTurn={endTurn}
             playerDice={playerDice}
             victoryPoints={victoryPoints}
+            ownerLabel={ownerLabel}
           />,
           turnSlot,
         )}
@@ -2470,6 +2477,7 @@ function BattlePage() {
             onEndTurn={endTurn}
             playerDice={playerDice}
             victoryPoints={victoryPoints}
+            ownerLabel={ownerLabel}
           />
         </div>
       )}
@@ -2918,6 +2926,7 @@ function BattlePage() {
             deploymentPhase={deploymentPhase}
             hasActionDie={hasUnusedActionDie()}
             onDropPod={armDropPod}
+            ownerLabel={ownerLabel}
           />
           <DestroyedList
             tokens={destroyedTokens}
@@ -2926,6 +2935,7 @@ function BattlePage() {
             canControl={canControl}
             onSelect={setSelectedTokenId}
             onReturnToReserve={returnDestroyedToReserve}
+            ownerLabel={ownerLabel}
           />
         </div>
       </div>

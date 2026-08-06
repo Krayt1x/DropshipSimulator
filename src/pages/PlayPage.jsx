@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocalStorageState } from '../lib/storage.js';
 import { resetActiveGame, DEFAULT_SCENARIO } from '../lib/gameState.js';
 import { parseRosterExport } from '../lib/rosterImport.js';
@@ -127,6 +127,12 @@ function PlayPage() {
     'dropshipsimulator:gameScenario',
     DEFAULT_SCENARIO,
   );
+  // Who takes Turn 1 in a vs-CPU game (#239) — null until the player picks a
+  // side directly or rolls the die. Meaningless for Sandbox (nothing to
+  // randomize against), so it's never gated on there.
+  const [firstPlayer, setFirstPlayer] = useState(null); // null | 'player' | 'cpu'
+  const [firstPlayerRolling, setFirstPlayerRolling] = useState(false);
+  const firstPlayerTimeoutRef = useRef(null);
 
   function resetPicker() {
     setExpanded(false);
@@ -145,6 +151,57 @@ function PlayPage() {
     setMapChoice('current');
     setMapPickerOpen(false);
     setScenario(DEFAULT_SCENARIO);
+    clearTimeout(firstPlayerTimeoutRef.current);
+    setFirstPlayer(null);
+    setFirstPlayerRolling(false);
+  }
+
+  useEffect(() => () => clearTimeout(firstPlayerTimeoutRef.current), []);
+
+  function pickFirstPlayer(side) {
+    if (firstPlayerRolling) return;
+    setFirstPlayer(side);
+  }
+
+  // Flickers between Player/CPU with intervals that grow from a quick
+  // back-and-forth into a deliberate final beat (~2s total) before landing
+  // on the actual (pre-picked) result, so the roll reads as a real coin
+  // wobbling to a stop rather than an instant random assignment.
+  const FIRST_PLAYER_FLICKER_STEPS = [
+    70, 75, 85, 95, 110, 130, 155, 185, 220, 260, 305, 355,
+  ];
+
+  const [firstPlayerSettled, setFirstPlayerSettled] = useState(null);
+
+  function rerollFirstPlayer() {
+    if (firstPlayerRolling) return;
+    setFirstPlayerRolling(true);
+    const finalSide = Math.random() < 0.5 ? 'player' : 'cpu';
+    let current = firstPlayer;
+    let i = 0;
+    function step() {
+      current = current === 'player' ? 'cpu' : 'player';
+      const isLast = i === FIRST_PLAYER_FLICKER_STEPS.length - 1;
+      setFirstPlayer(isLast ? finalSide : current);
+      if (isLast) {
+        setFirstPlayerRolling(false);
+        setFirstPlayerSettled(finalSide);
+        firstPlayerTimeoutRef.current = setTimeout(
+          () => setFirstPlayerSettled(null),
+          260,
+        );
+        return;
+      }
+      i += 1;
+      firstPlayerTimeoutRef.current = setTimeout(
+        step,
+        FIRST_PLAYER_FLICKER_STEPS[i],
+      );
+    }
+    firstPlayerTimeoutRef.current = setTimeout(
+      step,
+      FIRST_PLAYER_FLICKER_STEPS[0],
+    );
   }
 
   function handleEndGame() {
@@ -172,6 +229,9 @@ function PlayPage() {
     setShowPlayerRosterImport(false);
     setPlayerImportText('');
     setPlayerImportPreview(null);
+    clearTimeout(firstPlayerTimeoutRef.current);
+    setFirstPlayer(null);
+    setFirstPlayerRolling(false);
   }
 
   function pickDifficulty(nextDifficulty) {
@@ -236,6 +296,15 @@ function PlayPage() {
     }
     // 'current' leaves whatever's already saved in the Map Editor alone.
     setGameScenario(scenario);
+    if (mode === 'cpu') {
+      // The human is always seated as p1 (see pickDifficulty) and the bot
+      // p2 — "who plays first" (#239) only decides which of those two seats
+      // Turn 1's active owner starts on, not who occupies which seat.
+      window.localStorage.setItem(
+        'dropshipsimulator:battle:turn',
+        JSON.stringify({ number: 1, active: firstPlayer === 'cpu' ? 'p2' : 'p1' }),
+      );
+    }
     window.location.hash = '#battle';
   }
 
@@ -244,6 +313,8 @@ function PlayPage() {
   // bot's.
   const rosterReady = botRosterReady && Boolean(chosenPlayerRoster);
   const mapStageReady = mode === 'sandbox' || rosterReady;
+  const readyToStart =
+    mode === 'sandbox' || (Boolean(firstPlayer) && !firstPlayerRolling);
 
   return (
     <div className="container home-container">
@@ -893,18 +964,76 @@ function PlayPage() {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
 
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  marginTop: 16,
-                }}
-              >
-                <button type="button" onClick={confirmStartGame}>
-                  Start Game
+          {mapStageReady && mode === 'cpu' && (
+            <div className="cascade-stage">
+              <p className="stage-label">Who plays first?</p>
+              <div className="first-player-row">
+                <button
+                  type="button"
+                  className={`home-tile ${firstPlayer === 'player' ? 'selected' : ''} ${firstPlayerSettled === 'player' ? 'settled' : ''}`}
+                  disabled={firstPlayerRolling}
+                  onClick={() => pickFirstPlayer('player')}
+                >
+                  <span className="home-tile-title">Player</span>
+                  <span className="home-tile-description">
+                    {firstPlayer === 'player' ? 'Going first' : ''}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="first-player-reroll"
+                  disabled={firstPlayerRolling}
+                  onClick={rerollFirstPlayer}
+                  aria-label="Randomize who goes first"
+                  title="Randomize who goes first"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                    <path d="M21 3v5h-5" />
+                    <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+                    <path d="M8 21H3v-5" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  className={`home-tile ${firstPlayer === 'cpu' ? 'selected' : ''} ${firstPlayerSettled === 'cpu' ? 'settled' : ''}`}
+                  disabled={firstPlayerRolling}
+                  onClick={() => pickFirstPlayer('cpu')}
+                >
+                  <span className="home-tile-title">CPU</span>
+                  <span className="home-tile-description">
+                    {firstPlayer === 'cpu' ? 'Going first' : ''}
+                  </span>
                 </button>
               </div>
+            </div>
+          )}
+
+          {mapStageReady && (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                marginTop: 4,
+              }}
+            >
+              <button
+                type="button"
+                disabled={!readyToStart}
+                onClick={confirmStartGame}
+              >
+                Start Game
+              </button>
             </div>
           )}
         </div>

@@ -386,6 +386,96 @@ describe('chooseBotAction', () => {
     expect(result.destination).not.toEqual(bot.position);
   });
 
+  it('spreads Move dice across the roster instead of one token hogging every die (#254)', () => {
+    const bot1 = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 0, row: 0 },
+      equippedIds: [10, 11],
+      weaponState: { 0: { heat: 0, broken: false } },
+    });
+    const bot2 = makeToken({
+      id: 'bot2',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 3, row: 0 },
+      equippedIds: [10, 11],
+      weaponState: { 0: { heat: 0, broken: false } },
+    });
+    const enemy = makeToken({
+      id: 'enemy1',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 0, row: 20 },
+    });
+    const dicePool = [
+      { id: 'd1', label: 'Blue', value: 'Move', used: false },
+      { id: 'd2', label: 'Blue', value: 'Move', used: false },
+      { id: 'd3', label: 'Blue', value: 'Move', used: false },
+    ];
+    const baseArgs = {
+      tokens: [bot1, bot2, enemy],
+      units,
+      equipment,
+      botOwner: 'p2',
+      dicePool,
+      difficulty: 'simple',
+    };
+
+    const movedTokenIds = new Set();
+    const first = chooseBotAction({ ...baseArgs, movedTokenIds });
+    expect(first.tokenId).toBe('bot1');
+    movedTokenIds.add(first.tokenId);
+
+    const second = chooseBotAction({ ...baseArgs, movedTokenIds });
+    expect(second.tokenId).toBe('bot2');
+    movedTokenIds.add(second.tokenId);
+
+    // Both tokens have now had a turn at the dice; since neither has closed
+    // to weapon range yet, a repeat mover becomes eligible again rather than
+    // the bot declaring it has nothing left to do.
+    const third = chooseBotAction({ ...baseArgs, movedTokenIds });
+    expect(third.tokenId).toBe('bot1');
+  });
+
+  it('lets a lone token keep using Move dice when it is the only one with anywhere to go', () => {
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 0, row: 0 },
+      equippedIds: [10, 11],
+      weaponState: { 0: { heat: 0, broken: false } },
+    });
+    const enemy = makeToken({
+      id: 'enemy1',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 0, row: 20 },
+    });
+    const dicePool = [
+      { id: 'd1', label: 'Blue', value: 'Move', used: false },
+      { id: 'd2', label: 'Blue', value: 'Move', used: false },
+    ];
+    const baseArgs = {
+      tokens: [bot, enemy],
+      units,
+      equipment,
+      botOwner: 'p2',
+      dicePool,
+      difficulty: 'simple',
+    };
+
+    const movedTokenIds = new Set();
+    const first = chooseBotAction({ ...baseArgs, movedTokenIds });
+    expect(first.tokenId).toBe('bot1');
+    movedTokenIds.add(first.tokenId);
+
+    const second = chooseBotAction({ ...baseArgs, movedTokenIds });
+    expect(second.tokenId).toBe('bot1');
+  });
+
   it('returns null once every die is used', () => {
     const bot = makeToken({
       id: 'bot1',

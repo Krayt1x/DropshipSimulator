@@ -450,8 +450,9 @@ function computeMoveCandidate({
   tiles,
   terrainTypes,
   scenario,
+  movedTokenIds,
 }) {
-  const myTokens = tokens.filter(
+  const allMyTokens = tokens.filter(
     (t) => t.owner === botOwner && t.position && !t.destroyed,
   );
   const enemyTokens = tokens.filter(
@@ -464,6 +465,16 @@ function computeMoveCandidate({
       .filter((t) => t.position && !t.destroyed)
       .map((t) => `${t.position.col},${t.position.row}`),
   );
+
+  // A model that needs several Move dice to close a long distance would
+  // otherwise keep winning the "first token with somewhere to go" scan below
+  // every time, soaking up every Move die this turn while the rest of the
+  // roster never gets a look-in (#254). Trying tokens that haven't moved yet
+  // first spreads a turn's dice across the roster instead; only once every
+  // untouched token is either out of moves or already in range does a
+  // repeat mover become eligible again.
+  const untried = allMyTokens.filter((t) => !movedTokenIds?.has(t.id));
+  const myTokens = untried.length > 0 ? untried : allMyTokens;
 
   // The "First to 11" scenario (#232) is won by holding objectives, not by
   // wiping out the enemy — without this the bot just kept fighting toward
@@ -559,6 +570,7 @@ export function chooseBotAction({
   tiles,
   terrainTypes,
   scenario,
+  movedTokenIds,
 }) {
   // Clean up a wrecked model before doing anything else with it (#154) —
   // doesn't need an enemy on the board or spend a dice-pool die, matching
@@ -655,6 +667,7 @@ export function chooseBotAction({
     tiles,
     terrainTypes,
     scenario,
+    movedTokenIds,
   };
   const moveAction = findMoveAction(moveArgs);
   if (moveAction) return moveAction;

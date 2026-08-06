@@ -2144,6 +2144,7 @@ function BattlePage() {
 
     // Capped as a safety net — a real turn only ever has a handful of dice —
     // so a logic bug can't wedge this into looping forever.
+    const movedTokenIds = new Set();
     for (let i = 0; i < 50; i++) {
       const { tokens: freshTokens, dicePool: freshPool } = stateRef.current;
       const action = chooseBotAction({
@@ -2157,6 +2158,7 @@ function BattlePage() {
         tiles,
         terrainTypes: tileTypes,
         scenario,
+        movedTokenIds,
       });
       if (!action) break;
 
@@ -2177,6 +2179,7 @@ function BattlePage() {
         const steps = hexDistance(token.position, action.destination);
         animateMove(token, action.destination.col, action.destination.row);
         useDicePoolDie(action.dieId);
+        movedTokenIds.add(action.tokenId);
         await sleep(steps * MOVE_STEP_MS + 400);
       } else if (action.type === 'exchange') {
         exchangeActionDie(action.spendId, action.targetId, action.newValue);

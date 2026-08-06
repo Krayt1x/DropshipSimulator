@@ -396,7 +396,7 @@ function BattlePage() {
     DEFAULT_TURN,
   );
   // Victory points (#179), currently earned only by contesting objective
-  // terrain (#178) at the end of a turn.
+  // terrain (#178) at the start of the owning player's turn (#246).
   const [victoryPoints, setVictoryPoints] = useLocalStorageState(
     'dropshipsimulator:battle:victoryPoints',
     DEFAULT_VICTORY_POINTS,
@@ -471,22 +471,6 @@ function BattlePage() {
         : { number: turn.number + 1, active: 'p1' };
     setTurn(next);
     appendLog(`${ownerLabel(endingPlayer)} ended their turn`);
-    // 1 VP per own model adjacent to an uncontested objective (#178, #179).
-    const gainedVp = computeObjectiveVp({
-      tokens,
-      tiles,
-      terrainTypes: tileTypes,
-      owner: endingPlayer,
-    });
-    if (gainedVp > 0) {
-      setVictoryPoints((current) => ({
-        ...current,
-        [endingPlayer]: (current[endingPlayer] ?? 0) + gainedVp,
-      }));
-      appendLog(
-        `${ownerLabel(endingPlayer)} scored ${gainedVp} victory point${gainedVp === 1 ? '' : 's'} from objectives`,
-      );
-    }
     // A ding + toast tells whoever's screen it now is that it's their turn
     // (#131); `id` (not just `active`) so the toast re-triggers even though
     // there are only two possible values to alternate between.
@@ -2244,6 +2228,39 @@ function BattlePage() {
       handleDiceRoll(rolled);
     }
   }, [turn, deploymentPhase, myPlayer]);
+
+  // 1 VP per own model adjacent to an uncontested objective (#178, #179),
+  // scored the moment the owning player's turn starts rather than when it
+  // ends (#246) — a model has to already be holding the objective as your
+  // turn begins (i.e. through the opponent's whole turn in between), not
+  // just pass through it during your own turn. Unlike the dice-roll effect
+  // above, this runs unconditionally on `turn` changing (no myPlayer guard)
+  // since both multiplayer browsers computing the same deterministic total
+  // from the same synced tokens/tiles just converges to the same value —
+  // and in vs-computer mode it's what credits the bot's own turns, since
+  // runBotTurn() doesn't score this itself the way it re-rolls its own dice.
+  const vpTurnKeyRef = useRef(null);
+  useEffect(() => {
+    if (deploymentPhase) return;
+    const key = `${turn.active}:${turn.number}`;
+    if (vpTurnKeyRef.current === key) return;
+    vpTurnKeyRef.current = key;
+    const gainedVp = computeObjectiveVp({
+      tokens,
+      tiles,
+      terrainTypes: tileTypes,
+      owner: turn.active,
+    });
+    if (gainedVp > 0) {
+      setVictoryPoints((current) => ({
+        ...current,
+        [turn.active]: (current[turn.active] ?? 0) + gainedVp,
+      }));
+      appendLog(
+        `${ownerLabel(turn.active)} scored ${gainedVp} victory point${gainedVp === 1 ? '' : 's'} from objectives`,
+      );
+    }
+  }, [turn, deploymentPhase]);
 
   const botDeployStartedRef = useRef(false);
   async function runBotDeployment() {

@@ -715,7 +715,7 @@ describe('BattlePage', () => {
     expect(screen.getByText('▲ Player 1')).toBeDefined();
   });
 
-  it('awards a victory point for a model adjacent to an uncontested objective on End Turn (#178, #179)', () => {
+  it("awards a victory point for a model adjacent to an uncontested objective at the start of the owning player's turn, not the end (#178, #179, #246)", () => {
     const a10 = units.find((u) => u.name === 'A10');
     const token = {
       id: 'token-1',
@@ -740,14 +740,27 @@ describe('BattlePage', () => {
       'dropshipsimulator:mapEditor:tiles',
       JSON.stringify({ '1,0': 'objective' }),
     );
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:deploymentPhase',
+      JSON.stringify(false),
+    );
 
     render(<BattlePage />);
-    expect(screen.getAllByText('🏆 0')).toHaveLength(2);
 
-    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
-
+    // Scored immediately — Player 1's turn 1 is already starting the moment
+    // the battle begins, and their model is already holding the objective.
     expect(screen.getByText('🏆 1')).toBeDefined();
     expect(screen.getByText(/scored 1 victory point/)).toBeDefined();
+
+    // Ending Player 1's own turn doesn't score again — Player 2 has no
+    // model on the board to hold anything (#246: no longer scored on end).
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+    expect(screen.getByText('🏆 1')).toBeDefined();
+
+    // Once Player 1's *next* turn starts (after Player 2's turn ends), they
+    // score again for still holding the objective.
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+    expect(screen.getByText('🏆 2')).toBeDefined();
   });
 
   it('declares a winner once a side reaches 11 victory points in the "First to 11" scenario (#232)', () => {
@@ -766,7 +779,7 @@ describe('BattlePage', () => {
     );
     window.localStorage.setItem(
       'dropshipsimulator:battle:victoryPoints',
-      JSON.stringify({ p1: 10, p2: 0 }),
+      JSON.stringify({ p1: 9, p2: 0 }),
     );
     window.localStorage.setItem(
       'dropshipsimulator:battle:tokens',
@@ -805,9 +818,12 @@ describe('BattlePage', () => {
     );
 
     render(<BattlePage />);
+    // Scored immediately at the start of Player 1's turn 1 (#246): 9 -> 10.
+    expect(screen.getByText('🏆 10')).toBeDefined();
     expect(screen.queryByText(/Wins!/)).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' })); // p1 -> p2
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' })); // p2 -> p1 turn 2, scores again
 
     expect(screen.getByText('🏆 11')).toBeDefined();
     expect(screen.getByText('Player 1 Wins!')).toBeDefined();

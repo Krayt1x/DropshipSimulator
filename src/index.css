@@ -1692,6 +1692,132 @@ button.danger:hover {
   border-left: 2px solid var(--border);
 }
 
+/* Desktop-only tabbed wizard (#247) — one stage at a time behind a compact
+   left rail, instead of the mobile cascade's ever-growing stacked column.
+   Only ever rendered on wide screens (gated in JS), but the min-width query
+   keeps the rule set out of any narrow-viewport cascade it might momentarily
+   share a stylesheet with. */
+@media (min-width: 701px) {
+  .wizard-layout {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .wizard-rail {
+    width: 180px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 14px 8px 14px 0;
+    border-right: 1px solid var(--border);
+  }
+
+  .wizard-rail-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    color: var(--text-primary);
+  }
+
+  .wizard-rail-step:disabled {
+    cursor: default;
+    opacity: 0.4;
+  }
+
+  .wizard-rail-step.current {
+    background: var(--bg-track);
+  }
+
+  .wizard-rail-dot {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--bg-track);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-input);
+  }
+
+  .wizard-rail-step.done .wizard-rail-dot {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .wizard-rail-step.current .wizard-rail-dot {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .wizard-rail-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .wizard-rail-label {
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+
+  .wizard-rail-summary {
+    font-size: 10.5px;
+    color: var(--text-secondary);
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .wizard-body {
+    flex: 1;
+    min-width: 0;
+    padding: 14px 0 14px 20px;
+  }
+
+  .wizard-body .cascade-stage {
+    padding-left: 0;
+    border-left: none;
+  }
+
+  .wizard-review-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+
+  .wizard-review-line:last-child {
+    border-bottom: none;
+  }
+
+  .wizard-review-line span:first-child {
+    color: var(--text-secondary);
+  }
+
+  .wizard-review-line span:last-child {
+    font-weight: 600;
+  }
+}
+
 /* Side-by-side player/CPU manufacturer + list picker (#224, #241) — player
    on the left, CPU on the right, so both can be filled in without one being
    gated behind the other. Used on every screen size now, not just mobile. */

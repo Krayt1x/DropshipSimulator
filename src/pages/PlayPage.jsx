@@ -36,6 +36,23 @@ function PlayPage() {
   const { manufacturers, units, equipment } = useCatalogue();
   const [tokens] = useLocalStorageState('dropshipsimulator:battle:tokens', []);
   const hasActiveGame = tokens.length > 0;
+  // Desktop gets a compact tabbed wizard instead of the ever-growing stacked
+  // cascade (#247) — mobile keeps the cascade as-is, since a single scrolling
+  // column already suits a phone. Same breakpoint the rest of the app's
+  // mobile/desktop split already uses.
+  const [isDesktopWizard, setIsDesktopWizard] = useState(() =>
+    typeof window.matchMedia === 'function'
+      ? window.matchMedia('(min-width: 701px)').matches
+      : true,
+  );
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return undefined;
+    const mql = window.matchMedia('(min-width: 701px)');
+    const handler = (e) => setIsDesktopWizard(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+  const [wizardStep, setWizardStep] = useState('mode');
   const [, setMyPlayer] = useLocalStorageState(
     'dropshipsimulator:myPlayer',
     null,
@@ -120,6 +137,7 @@ function PlayPage() {
 
   function resetPicker() {
     setExpanded(false);
+    setWizardStep('mode');
     setMode(null);
     setDifficulty(null);
     setRosterManufacturer(null);
@@ -145,6 +163,7 @@ function PlayPage() {
   function pickFirstPlayer(side) {
     if (firstPlayerRolling) return;
     setFirstPlayer(side);
+    if (isDesktopWizard) setWizardStep('review');
   }
 
   // Flickers between Player/CPU with intervals that grow from a quick
@@ -170,6 +189,7 @@ function PlayPage() {
       if (isLast) {
         setFirstPlayerRolling(false);
         setFirstPlayerSettled(finalSide);
+        if (isDesktopWizard) setWizardStep('review');
         firstPlayerTimeoutRef.current = setTimeout(
           () => setFirstPlayerSettled(null),
           260,
@@ -219,6 +239,7 @@ function PlayPage() {
     clearTimeout(firstPlayerTimeoutRef.current);
     setFirstPlayer(null);
     setFirstPlayerRolling(false);
+    if (isDesktopWizard) setWizardStep(nextMode === 'cpu' ? 'difficulty' : 'map');
   }
 
   function pickDifficulty(nextDifficulty) {
@@ -234,6 +255,7 @@ function PlayPage() {
     setPlayerRosterManufacturer(null);
     setChosenPlayerRoster(null);
     setShowPlayerRosterImport(false);
+    if (isDesktopWizard) setWizardStep('rosters');
   }
 
   function pickRosterManufacturer(manufacturer) {
@@ -246,6 +268,7 @@ function PlayPage() {
     setBotRoster(botRoster);
     setChosenRoster(label);
     setShowRosterImport(false);
+    if (isDesktopWizard && chosenPlayerRoster) setWizardStep('map');
   }
 
   function previewImport() {
@@ -264,12 +287,24 @@ function PlayPage() {
     setPlayerRoster(roster);
     setChosenPlayerRoster(label);
     setShowPlayerRosterImport(false);
+    if (isDesktopWizard && chosenRoster) setWizardStep('map');
   }
 
   function previewPlayerImport() {
     setPlayerImportPreview(
       parseRosterExport(playerImportText, { units, manufacturers, equipment }),
     );
+  }
+
+  function pickMap(choice) {
+    setMapChoice(choice);
+    setMapPickerOpen(false);
+    if (isDesktopWizard) setWizardStep(mode === 'cpu' ? 'scenario' : 'review');
+  }
+
+  function pickScenario(id) {
+    setScenario(id);
+    if (isDesktopWizard) setWizardStep('first');
   }
 
   function confirmStartGame() {
@@ -316,6 +351,492 @@ function PlayPage() {
         });
   const readyToStart =
     mode === 'sandbox' || (Boolean(firstPlayer) && !firstPlayerRolling);
+
+  // The desktop wizard's tab list (#247) — grows/shrinks with `mode`, same
+  // stages the mobile cascade below shows, just one at a time instead of all
+  // stacked. Map/Scenario already have working defaults, so they're always
+  // "done"; only Rosters and First player require an explicit pick before
+  // the wizard lets you skip past them.
+  const WIZARD_STEPS = [
+    { key: 'mode', label: 'Mode' },
+    ...(mode === 'cpu'
+      ? [
+          { key: 'difficulty', label: 'Difficulty' },
+          { key: 'rosters', label: 'Rosters' },
+        ]
+      : []),
+    { key: 'map', label: 'Map' },
+    ...(mode === 'cpu'
+      ? [
+          { key: 'scenario', label: 'Scenario' },
+          { key: 'first', label: 'First player' },
+        ]
+      : []),
+    { key: 'review', label: 'Review' },
+  ];
+
+  function isWizardStepDone(key) {
+    if (key === 'mode') return Boolean(mode);
+    if (key === 'difficulty') return Boolean(difficulty);
+    if (key === 'rosters') return rosterReady;
+    if (key === 'map') return Boolean(mapChoice);
+    if (key === 'scenario') return Boolean(scenario);
+    if (key === 'first') return Boolean(firstPlayer);
+    return false;
+  }
+
+  function wizardStepSummary(key) {
+    if (key === 'mode') {
+      return mode === 'cpu' ? 'Vs CPU' : mode === 'sandbox' ? 'Sandbox' : '';
+    }
+    if (key === 'difficulty') {
+      return DIFFICULTIES.find((d) => d.id === difficulty)?.label ?? '';
+    }
+    if (key === 'rosters') {
+      return chosenPlayerRoster && chosenRoster
+        ? `${playerRosterManufacturer} vs ${rosterManufacturer}`
+        : '';
+    }
+    if (key === 'map') {
+      return mapChoice === 'current' ? 'Current map' : mapChoice;
+    }
+    if (key === 'scenario') {
+      return SCENARIOS.find((s) => s.id === scenario)?.label ?? '';
+    }
+    if (key === 'first') {
+      return firstPlayer === 'player'
+        ? 'Player'
+        : firstPlayer === 'cpu'
+          ? 'CPU'
+          : '';
+    }
+    return '';
+  }
+
+  // Map/Scenario already default to a valid choice, so picking one isn't the
+  // only way forward — this is the explicit fallback for "I'm happy with the
+  // default, move on" (auto-advance-on-pick above still fires for anyone who
+  // does pick something new).
+  function continueFromWizardStep(key) {
+    const steps = WIZARD_STEPS;
+    const index = steps.findIndex((s) => s.key === key);
+    const next = steps[index + 1];
+    if (next) setWizardStep(next.key);
+  }
+
+  // Each stage's inner content, shared verbatim between the mobile cascade
+  // (all stages stacked, one after another) and the desktop wizard (one
+  // stage shown at a time — #247) so the two layouts can never drift apart.
+  function renderModeOptions() {
+    return (
+      <>
+        <p className="stage-label">How do you want to play?</p>
+        <div className="home-tile-grid two-col-mobile-grid">
+          <button
+            type="button"
+            className={`home-tile ${mode === 'sandbox' ? 'selected' : ''}`}
+            onClick={() => pickMode('sandbox')}
+          >
+            <span className="home-tile-icon">🏖️</span>
+            <span className="home-tile-title">Sandbox</span>
+            <span className="home-tile-description">
+              Control both sides yourself.
+            </span>
+          </button>
+          <button
+            type="button"
+            className={`home-tile ${mode === 'cpu' ? 'selected' : ''}`}
+            onClick={() => pickMode('cpu')}
+          >
+            <span className="home-tile-icon">🖥️</span>
+            <span className="home-tile-title">Vs CPU</span>
+            <span className="home-tile-description">
+              Play against the computer.
+            </span>
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  function renderDifficultyOptions() {
+    return (
+      <>
+        <p className="stage-label">Choose a difficulty</p>
+        <div className="home-tile-grid play-difficulty-grid">
+          {DIFFICULTIES.map((d) => (
+            <button
+              key={d.id}
+              type="button"
+              className={`home-tile ${difficulty === d.id ? 'selected' : ''}`}
+              onClick={() => pickDifficulty(d.id)}
+            >
+              <span className="home-tile-title">{d.label}</span>
+            </button>
+          ))}
+        </div>
+      </>
+    );
+  }
+
+  function renderRostersOptions() {
+    return (
+      <>
+        <p className="stage-label">Choose your list and the computer's</p>
+        <div className="roster-picker-columns">
+          <div>
+            <p className="roster-picker-column-label">You</p>
+            <div className="manufacturer-tile-list">
+              {manufacturers.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  className={`manufacturer-tile ${playerRosterManufacturer === m ? 'selected' : ''}`}
+                  onClick={() => pickPlayerRosterManufacturer(m)}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+            {playerRosterManufacturer && (
+              <>
+                <div className="tile-palette-list" style={{ marginTop: 8 }}>
+                  <button
+                    type="button"
+                    className={`tile-swatch-btn ${chosenPlayerRoster === 'Random' ? 'selected' : ''}`}
+                    onClick={() =>
+                      choosePlayerRoster(
+                        { type: 'random', manufacturer: playerRosterManufacturer },
+                        'Random',
+                      )
+                    }
+                  >
+                    Random
+                  </button>
+                  {DEFAULT_ROSTERS.filter(
+                    (roster) => roster.manufacturer === playerRosterManufacturer,
+                  ).map((roster) => (
+                    <div key={roster.name} className="roster-accordion-item">
+                      <button
+                        type="button"
+                        className={`tile-swatch-btn ${chosenPlayerRoster === roster.name ? 'selected' : ''}`}
+                        onClick={() =>
+                          choosePlayerRoster(
+                            { type: 'specific', name: roster.name },
+                            roster.name,
+                          )
+                        }
+                      >
+                        {roster.name}
+                      </button>
+                      {chosenPlayerRoster === roster.name && (
+                        <pre className="roster-accordion-description">
+                          {roster.text}
+                        </pre>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className={`tile-swatch-btn ${showPlayerRosterImport ? 'selected' : ''}`}
+                    onClick={() => setShowPlayerRosterImport((v) => !v)}
+                  >
+                    Import…
+                  </button>
+                </div>
+                {DEFAULT_ROSTERS.every(
+                  (roster) => roster.manufacturer !== playerRosterManufacturer,
+                ) && (
+                  <p className="unit-meta" style={{ marginTop: 8 }}>
+                    No default lists for {playerRosterManufacturer} yet —
+                    Random will pull from another manufacturer, or import a
+                    list instead.
+                  </p>
+                )}
+                {showPlayerRosterImport && (
+                  <div className="field" style={{ marginTop: 10 }}>
+                    <label htmlFor="player-roster-import-text">
+                      Roster export
+                    </label>
+                    <textarea
+                      id="player-roster-import-text"
+                      rows={6}
+                      placeholder="Paste your exported list here"
+                      value={playerImportText}
+                      onChange={(e) => {
+                        setPlayerImportText(e.target.value);
+                        setPlayerImportPreview(null);
+                      }}
+                    />
+                    <div className="token-owner-row" style={{ marginTop: 8 }}>
+                      <button
+                        type="button"
+                        className="ghost"
+                        disabled={!playerImportText.trim()}
+                        onClick={previewPlayerImport}
+                      >
+                        Preview import
+                      </button>
+                      <button
+                        type="button"
+                        disabled={
+                          !playerImportPreview ||
+                          playerImportPreview.entries.length === 0
+                        }
+                        onClick={() =>
+                          choosePlayerRoster(
+                            { type: 'import', text: playerImportText },
+                            'Imported list',
+                          )
+                        }
+                      >
+                        Use this list
+                      </button>
+                    </div>
+                    {playerImportPreview && (
+                      <p className="unit-meta" style={{ marginTop: 8 }}>
+                        {playerImportPreview.entries.length > 0
+                          ? `${playerImportPreview.entries.length} unit${playerImportPreview.entries.length === 1 ? '' : 's'} found.`
+                          : 'No units found in this export.'}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          <div>
+            <p className="roster-picker-column-label">Computer</p>
+            <div className="manufacturer-tile-list">
+              {manufacturers.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  className={`manufacturer-tile ${rosterManufacturer === m ? 'selected' : ''}`}
+                  onClick={() => pickRosterManufacturer(m)}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+            {rosterManufacturer && (
+              <>
+                <div className="tile-palette-list" style={{ marginTop: 8 }}>
+                  <button
+                    type="button"
+                    className={`tile-swatch-btn ${chosenRoster === 'Random' ? 'selected' : ''}`}
+                    onClick={() =>
+                      chooseRoster(
+                        { type: 'random', manufacturer: rosterManufacturer },
+                        'Random',
+                      )
+                    }
+                  >
+                    Random
+                  </button>
+                  {DEFAULT_ROSTERS.filter(
+                    (roster) => roster.manufacturer === rosterManufacturer,
+                  ).map((roster) => (
+                    <div key={roster.name} className="roster-accordion-item">
+                      <button
+                        type="button"
+                        className={`tile-swatch-btn ${chosenRoster === roster.name ? 'selected' : ''}`}
+                        onClick={() =>
+                          chooseRoster(
+                            { type: 'specific', name: roster.name },
+                            roster.name,
+                          )
+                        }
+                      >
+                        {roster.name}
+                      </button>
+                      {chosenRoster === roster.name && (
+                        <pre className="roster-accordion-description">
+                          {roster.text}
+                        </pre>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className={`tile-swatch-btn ${showRosterImport ? 'selected' : ''}`}
+                    onClick={() => setShowRosterImport((v) => !v)}
+                  >
+                    Import…
+                  </button>
+                </div>
+                {DEFAULT_ROSTERS.every(
+                  (roster) => roster.manufacturer !== rosterManufacturer,
+                ) && (
+                  <p className="unit-meta" style={{ marginTop: 8 }}>
+                    No default lists for {rosterManufacturer} yet — Random
+                    will pull from another manufacturer, or import a list
+                    instead.
+                  </p>
+                )}
+                {showRosterImport && (
+                  <div className="field" style={{ marginTop: 10 }}>
+                    <label htmlFor="bot-roster-import-text">
+                      Roster export
+                    </label>
+                    <textarea
+                      id="bot-roster-import-text"
+                      rows={6}
+                      placeholder="Paste your exported list here"
+                      value={importText}
+                      onChange={(e) => {
+                        setImportText(e.target.value);
+                        setImportPreview(null);
+                      }}
+                    />
+                    <div className="token-owner-row" style={{ marginTop: 8 }}>
+                      <button
+                        type="button"
+                        className="ghost"
+                        disabled={!importText.trim()}
+                        onClick={previewImport}
+                      >
+                        Preview import
+                      </button>
+                      <button
+                        type="button"
+                        disabled={
+                          !importPreview || importPreview.entries.length === 0
+                        }
+                        onClick={() =>
+                          chooseRoster(
+                            { type: 'import', text: importText },
+                            'Imported list',
+                          )
+                        }
+                      >
+                        Use this list
+                      </button>
+                    </div>
+                    {importPreview && (
+                      <p className="unit-meta" style={{ marginTop: 8 }}>
+                        {importPreview.entries.length > 0
+                          ? `${importPreview.entries.length} unit${importPreview.entries.length === 1 ? '' : 's'} found.`
+                          : 'No units found in this export.'}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  function renderMapOptions() {
+    return (
+      <>
+        <p className="stage-label">Which map do you want to play?</p>
+        <button
+          type="button"
+          className="ghost"
+          onClick={() => setMapPickerOpen(true)}
+        >
+          Select map
+        </button>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            marginTop: 8,
+          }}
+        >
+          <MapThumbnail
+            dimensions={selectedMap.dimensions}
+            tileTypes={selectedMap.tileTypes}
+            tiles={selectedMap.tiles}
+            size={64}
+          />
+          <p className="unit-meta" style={{ margin: 0 }}>
+            {mapChoice === 'current' ? 'Current map' : mapChoice}
+          </p>
+        </div>
+      </>
+    );
+  }
+
+  function renderScenarioOptions() {
+    return (
+      <>
+        <p className="stage-label">Which scenario do you want to play?</p>
+        <div className="home-tile-grid two-col-mobile-grid">
+          {SCENARIOS.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className={`home-tile ${scenario === s.id ? 'selected' : ''}`}
+              onClick={() => pickScenario(s.id)}
+            >
+              <span className="home-tile-title">{s.label}</span>
+              <span className="home-tile-description">{s.description}</span>
+            </button>
+          ))}
+        </div>
+      </>
+    );
+  }
+
+  function renderFirstPlayerOptions() {
+    return (
+      <>
+        <p className="stage-label">Who plays first?</p>
+        <div className="first-player-row">
+          <button
+            type="button"
+            className={`home-tile ${firstPlayer === 'player' ? 'selected' : ''} ${firstPlayerSettled === 'player' ? 'settled' : ''}`}
+            disabled={firstPlayerRolling}
+            onClick={() => pickFirstPlayer('player')}
+          >
+            <span className="home-tile-title">Player</span>
+            <span className="home-tile-description">
+              {firstPlayer === 'player' ? 'Going first' : ''}
+            </span>
+          </button>
+          <button
+            type="button"
+            className="first-player-reroll"
+            disabled={firstPlayerRolling}
+            onClick={rerollFirstPlayer}
+            aria-label="Randomize who goes first"
+            title="Randomize who goes first"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+              <path d="M21 3v5h-5" />
+              <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+              <path d="M8 21H3v-5" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className={`home-tile ${firstPlayer === 'cpu' ? 'selected' : ''} ${firstPlayerSettled === 'cpu' ? 'settled' : ''}`}
+            disabled={firstPlayerRolling}
+            onClick={() => pickFirstPlayer('cpu')}
+          >
+            <span className="home-tile-title">CPU</span>
+            <span className="home-tile-description">
+              {firstPlayer === 'cpu' ? 'Going first' : ''}
+            </span>
+          </button>
+        </div>
+      </>
+    );
+  }
 
   return (
     <div className="container home-container">
@@ -373,7 +894,101 @@ function PlayPage() {
         </a>
       </div>
 
-      {expanded && (
+      {expanded && isDesktopWizard && (
+        <div className="card wizard-card" style={{ marginTop: 16 }}>
+          <div className="reserve-header">
+            <p className="unit-name">Single Player</p>
+            <button type="button" className="ghost" onClick={resetPicker}>
+              Cancel
+            </button>
+          </div>
+          <div className="wizard-layout">
+            <div className="wizard-rail">
+              {WIZARD_STEPS.map((s, i) => {
+                const done = isWizardStepDone(s.key);
+                const reachable =
+                  i === 0 ||
+                  isWizardStepDone(WIZARD_STEPS[i - 1].key) ||
+                  done ||
+                  s.key === wizardStep;
+                const summary = wizardStepSummary(s.key);
+                return (
+                  <button
+                    key={s.key}
+                    type="button"
+                    className={`wizard-rail-step ${s.key === wizardStep ? 'current' : ''} ${done ? 'done' : ''}`}
+                    disabled={!reachable}
+                    onClick={() => setWizardStep(s.key)}
+                  >
+                    <span className="wizard-rail-dot">
+                      {done ? '✓' : i + 1}
+                    </span>
+                    <span className="wizard-rail-text">
+                      <span className="wizard-rail-label">{s.label}</span>
+                      {summary && (
+                        <span className="wizard-rail-summary">{summary}</span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="wizard-body">
+              {wizardStep === 'mode' && renderModeOptions()}
+              {wizardStep === 'difficulty' && renderDifficultyOptions()}
+              {wizardStep === 'rosters' && renderRostersOptions()}
+              {wizardStep === 'map' && renderMapOptions()}
+              {wizardStep === 'scenario' && renderScenarioOptions()}
+              {wizardStep === 'first' && renderFirstPlayerOptions()}
+              {wizardStep !== 'review' && (
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    marginTop: 16,
+                  }}
+                >
+                  <button
+                    type="button"
+                    disabled={!isWizardStepDone(wizardStep)}
+                    onClick={() => continueFromWizardStep(wizardStep)}
+                  >
+                    Continue
+                  </button>
+                </div>
+              )}
+              {wizardStep === 'review' && (
+                <>
+                  <p className="stage-label">Review &amp; start</p>
+                  {WIZARD_STEPS.filter((s) => s.key !== 'review').map((s) => (
+                    <div key={s.key} className="wizard-review-line">
+                      <span>{s.label}</span>
+                      <span>{wizardStepSummary(s.key) || '—'}</span>
+                    </div>
+                  ))}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'flex-end',
+                      marginTop: 16,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      disabled={!readyToStart}
+                      onClick={confirmStartGame}
+                    >
+                      Start Game
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {expanded && !isDesktopWizard && (
         <div className="card" style={{ marginTop: 16 }}>
           <div className="reserve-header">
             <p className="unit-name">Single Player</p>
@@ -382,403 +997,26 @@ function PlayPage() {
             </button>
           </div>
 
-          <p className="stage-label">How do you want to play?</p>
-          <div className="home-tile-grid two-col-mobile-grid">
-            <button
-              type="button"
-              className={`home-tile ${mode === 'sandbox' ? 'selected' : ''}`}
-              onClick={() => pickMode('sandbox')}
-            >
-              <span className="home-tile-icon">🏖️</span>
-              <span className="home-tile-title">Sandbox</span>
-              <span className="home-tile-description">
-                Control both sides yourself.
-              </span>
-            </button>
-            <button
-              type="button"
-              className={`home-tile ${mode === 'cpu' ? 'selected' : ''}`}
-              onClick={() => pickMode('cpu')}
-            >
-              <span className="home-tile-icon">🖥️</span>
-              <span className="home-tile-title">Vs CPU</span>
-              <span className="home-tile-description">
-                Play against the computer.
-              </span>
-            </button>
-          </div>
+          {renderModeOptions()}
 
           {mode === 'cpu' && (
-            <div className="cascade-stage">
-              <p className="stage-label">Choose a difficulty</p>
-              <div className="home-tile-grid play-difficulty-grid">
-                {DIFFICULTIES.map((d) => (
-                  <button
-                    key={d.id}
-                    type="button"
-                    className={`home-tile ${difficulty === d.id ? 'selected' : ''}`}
-                    onClick={() => pickDifficulty(d.id)}
-                  >
-                    <span className="home-tile-title">{d.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+            <div className="cascade-stage">{renderDifficultyOptions()}</div>
           )}
 
           {mode === 'cpu' && difficulty && (
-            <div className="cascade-stage">
-              <p className="stage-label">
-                Choose your list and the computer's
-              </p>
-              <div className="roster-picker-columns">
-                <div>
-                  <p className="roster-picker-column-label">You</p>
-                  <div className="manufacturer-tile-list">
-                    {manufacturers.map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        className={`manufacturer-tile ${playerRosterManufacturer === m ? 'selected' : ''}`}
-                        onClick={() => pickPlayerRosterManufacturer(m)}
-                      >
-                        {m}
-                      </button>
-                    ))}
-                  </div>
-                  {playerRosterManufacturer && (
-                    <>
-                      <div className="tile-palette-list" style={{ marginTop: 8 }}>
-                        <button
-                          type="button"
-                          className={`tile-swatch-btn ${chosenPlayerRoster === 'Random' ? 'selected' : ''}`}
-                          onClick={() =>
-                            choosePlayerRoster(
-                              { type: 'random', manufacturer: playerRosterManufacturer },
-                              'Random',
-                            )
-                          }
-                        >
-                          Random
-                        </button>
-                        {DEFAULT_ROSTERS.filter(
-                          (roster) => roster.manufacturer === playerRosterManufacturer,
-                        ).map((roster) => (
-                          <div key={roster.name} className="roster-accordion-item">
-                            <button
-                              type="button"
-                              className={`tile-swatch-btn ${chosenPlayerRoster === roster.name ? 'selected' : ''}`}
-                              onClick={() =>
-                                choosePlayerRoster(
-                                  { type: 'specific', name: roster.name },
-                                  roster.name,
-                                )
-                              }
-                            >
-                              {roster.name}
-                            </button>
-                            {chosenPlayerRoster === roster.name && (
-                              <pre className="roster-accordion-description">
-                                {roster.text}
-                              </pre>
-                            )}
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          className={`tile-swatch-btn ${showPlayerRosterImport ? 'selected' : ''}`}
-                          onClick={() => setShowPlayerRosterImport((v) => !v)}
-                        >
-                          Import…
-                        </button>
-                      </div>
-                      {DEFAULT_ROSTERS.every(
-                        (roster) => roster.manufacturer !== playerRosterManufacturer,
-                      ) && (
-                        <p className="unit-meta" style={{ marginTop: 8 }}>
-                          No default lists for {playerRosterManufacturer} yet
-                          — Random will pull from another manufacturer, or
-                          import a list instead.
-                        </p>
-                      )}
-                      {showPlayerRosterImport && (
-                        <div className="field" style={{ marginTop: 10 }}>
-                          <label htmlFor="player-roster-import-text">
-                            Roster export
-                          </label>
-                          <textarea
-                            id="player-roster-import-text"
-                            rows={6}
-                            placeholder="Paste your exported list here"
-                            value={playerImportText}
-                            onChange={(e) => {
-                              setPlayerImportText(e.target.value);
-                              setPlayerImportPreview(null);
-                            }}
-                          />
-                          <div className="token-owner-row" style={{ marginTop: 8 }}>
-                            <button
-                              type="button"
-                              className="ghost"
-                              disabled={!playerImportText.trim()}
-                              onClick={previewPlayerImport}
-                            >
-                              Preview import
-                            </button>
-                            <button
-                              type="button"
-                              disabled={
-                                !playerImportPreview ||
-                                playerImportPreview.entries.length === 0
-                              }
-                              onClick={() =>
-                                choosePlayerRoster(
-                                  { type: 'import', text: playerImportText },
-                                  'Imported list',
-                                )
-                              }
-                            >
-                              Use this list
-                            </button>
-                          </div>
-                          {playerImportPreview && (
-                            <p className="unit-meta" style={{ marginTop: 8 }}>
-                              {playerImportPreview.entries.length > 0
-                                ? `${playerImportPreview.entries.length} unit${playerImportPreview.entries.length === 1 ? '' : 's'} found.`
-                                : 'No units found in this export.'}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-                <div>
-                  <p className="roster-picker-column-label">Computer</p>
-                  <div className="manufacturer-tile-list">
-                    {manufacturers.map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        className={`manufacturer-tile ${rosterManufacturer === m ? 'selected' : ''}`}
-                        onClick={() => pickRosterManufacturer(m)}
-                      >
-                        {m}
-                      </button>
-                    ))}
-                  </div>
-                  {rosterManufacturer && (
-                    <>
-                      <div className="tile-palette-list" style={{ marginTop: 8 }}>
-                        <button
-                          type="button"
-                          className={`tile-swatch-btn ${chosenRoster === 'Random' ? 'selected' : ''}`}
-                          onClick={() =>
-                            chooseRoster(
-                              { type: 'random', manufacturer: rosterManufacturer },
-                              'Random',
-                            )
-                          }
-                        >
-                          Random
-                        </button>
-                        {DEFAULT_ROSTERS.filter(
-                          (roster) => roster.manufacturer === rosterManufacturer,
-                        ).map((roster) => (
-                          <div key={roster.name} className="roster-accordion-item">
-                            <button
-                              type="button"
-                              className={`tile-swatch-btn ${chosenRoster === roster.name ? 'selected' : ''}`}
-                              onClick={() =>
-                                chooseRoster(
-                                  { type: 'specific', name: roster.name },
-                                  roster.name,
-                                )
-                              }
-                            >
-                              {roster.name}
-                            </button>
-                            {chosenRoster === roster.name && (
-                              <pre className="roster-accordion-description">
-                                {roster.text}
-                              </pre>
-                            )}
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          className={`tile-swatch-btn ${showRosterImport ? 'selected' : ''}`}
-                          onClick={() => setShowRosterImport((v) => !v)}
-                        >
-                          Import…
-                        </button>
-                      </div>
-                      {DEFAULT_ROSTERS.every(
-                        (roster) => roster.manufacturer !== rosterManufacturer,
-                      ) && (
-                        <p className="unit-meta" style={{ marginTop: 8 }}>
-                          No default lists for {rosterManufacturer} yet —
-                          Random will pull from another manufacturer, or
-                          import a list instead.
-                        </p>
-                      )}
-                      {showRosterImport && (
-                        <div className="field" style={{ marginTop: 10 }}>
-                          <label htmlFor="bot-roster-import-text">
-                            Roster export
-                          </label>
-                          <textarea
-                            id="bot-roster-import-text"
-                            rows={6}
-                            placeholder="Paste your exported list here"
-                            value={importText}
-                            onChange={(e) => {
-                              setImportText(e.target.value);
-                              setImportPreview(null);
-                            }}
-                          />
-                          <div className="token-owner-row" style={{ marginTop: 8 }}>
-                            <button
-                              type="button"
-                              className="ghost"
-                              disabled={!importText.trim()}
-                              onClick={previewImport}
-                            >
-                              Preview import
-                            </button>
-                            <button
-                              type="button"
-                              disabled={
-                                !importPreview || importPreview.entries.length === 0
-                              }
-                              onClick={() =>
-                                chooseRoster(
-                                  { type: 'import', text: importText },
-                                  'Imported list',
-                                )
-                              }
-                            >
-                              Use this list
-                            </button>
-                          </div>
-                          {importPreview && (
-                            <p className="unit-meta" style={{ marginTop: 8 }}>
-                              {importPreview.entries.length > 0
-                                ? `${importPreview.entries.length} unit${importPreview.entries.length === 1 ? '' : 's'} found.`
-                                : 'No units found in this export.'}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
+            <div className="cascade-stage">{renderRostersOptions()}</div>
           )}
 
           {mapStageReady && (
-            <div className="cascade-stage">
-              <p className="stage-label">Which map do you want to play?</p>
-              <button
-                type="button"
-                className="ghost"
-                onClick={() => setMapPickerOpen(true)}
-              >
-                Select map
-              </button>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  marginTop: 8,
-                }}
-              >
-                <MapThumbnail
-                  dimensions={selectedMap.dimensions}
-                  tileTypes={selectedMap.tileTypes}
-                  tiles={selectedMap.tiles}
-                  size={64}
-                />
-                <p className="unit-meta" style={{ margin: 0 }}>
-                  {mapChoice === 'current' ? 'Current map' : mapChoice}
-                </p>
-              </div>
-            </div>
+            <div className="cascade-stage">{renderMapOptions()}</div>
           )}
 
           {mapStageReady && mode === 'cpu' && (
-            <div className="cascade-stage">
-              <p className="stage-label">Which scenario do you want to play?</p>
-              <div className="home-tile-grid two-col-mobile-grid">
-                {SCENARIOS.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    className={`home-tile ${scenario === s.id ? 'selected' : ''}`}
-                    onClick={() => setScenario(s.id)}
-                  >
-                    <span className="home-tile-title">{s.label}</span>
-                    <span className="home-tile-description">
-                      {s.description}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
+            <div className="cascade-stage">{renderScenarioOptions()}</div>
           )}
 
           {mapStageReady && mode === 'cpu' && (
-            <div className="cascade-stage">
-              <p className="stage-label">Who plays first?</p>
-              <div className="first-player-row">
-                <button
-                  type="button"
-                  className={`home-tile ${firstPlayer === 'player' ? 'selected' : ''} ${firstPlayerSettled === 'player' ? 'settled' : ''}`}
-                  disabled={firstPlayerRolling}
-                  onClick={() => pickFirstPlayer('player')}
-                >
-                  <span className="home-tile-title">Player</span>
-                  <span className="home-tile-description">
-                    {firstPlayer === 'player' ? 'Going first' : ''}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className="first-player-reroll"
-                  disabled={firstPlayerRolling}
-                  onClick={rerollFirstPlayer}
-                  aria-label="Randomize who goes first"
-                  title="Randomize who goes first"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
-                    <path d="M21 3v5h-5" />
-                    <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
-                    <path d="M8 21H3v-5" />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  className={`home-tile ${firstPlayer === 'cpu' ? 'selected' : ''} ${firstPlayerSettled === 'cpu' ? 'settled' : ''}`}
-                  disabled={firstPlayerRolling}
-                  onClick={() => pickFirstPlayer('cpu')}
-                >
-                  <span className="home-tile-title">CPU</span>
-                  <span className="home-tile-description">
-                    {firstPlayer === 'cpu' ? 'Going first' : ''}
-                  </span>
-                </button>
-              </div>
-            </div>
+            <div className="cascade-stage">{renderFirstPlayerOptions()}</div>
           )}
 
           {mapStageReady && (
@@ -812,10 +1050,7 @@ function PlayPage() {
               <button
                 type="button"
                 className={`home-tile ${mapChoice === 'current' ? 'selected' : ''}`}
-                onClick={() => {
-                  setMapChoice('current');
-                  setMapPickerOpen(false);
-                }}
+                onClick={() => pickMap('current')}
               >
                 <MapThumbnail
                   dimensions={currentMapDimensions}
@@ -832,10 +1067,7 @@ function PlayPage() {
                   key={m.name}
                   type="button"
                   className={`home-tile ${mapChoice === m.name ? 'selected' : ''}`}
-                  onClick={() => {
-                    setMapChoice(m.name);
-                    setMapPickerOpen(false);
-                  }}
+                  onClick={() => pickMap(m.name)}
                 >
                   <MapThumbnail
                     dimensions={m.dimensions}

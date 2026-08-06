@@ -202,6 +202,9 @@ function PlayPage() {
   function pickMode(nextMode) {
     setMode(nextMode);
     setGameMode(nextMode === 'cpu' ? 'vs-computer' : 'sandbox');
+    // Sandbox has no scenario picker (#242) — always plain annihilation,
+    // even if a scenario was already chosen before switching modes.
+    if (nextMode === 'sandbox') setScenario(DEFAULT_SCENARIO);
     setDifficulty(null);
     setRosterManufacturer(null);
     setChosenRoster(null);
@@ -676,7 +679,7 @@ function PlayPage() {
             </div>
           )}
 
-          {mapStageReady && (
+          {mapStageReady && mode === 'cpu' && (
             <div className="cascade-stage">
               <p className="stage-label">Which scenario do you want to play?</p>
               <div className="home-tile-grid two-col-mobile-grid">

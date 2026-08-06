@@ -643,12 +643,29 @@ describe('PlayPage grid layout (#231)', () => {
   });
 });
 
-describe('PlayPage scenario picker (#232)', () => {
-  it('shows a scenario stage after the map stage, defaulting to Annihilation', () => {
-    render(<PlayPage />);
-
+describe('PlayPage scenario picker (#232, #242)', () => {
+  function reachCpuMapStage() {
     fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Sandbox/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Simple/ }));
+    const rosterStage = screen
+      .getByText("Choose your list and the computer's")
+      .closest('.cascade-stage');
+    const playerColumn = within(rosterStage).getByText('You').parentElement;
+    const cpuColumn = within(rosterStage).getByText('Computer').parentElement;
+    fireEvent.click(within(cpuColumn).getByRole('button', { name: 'Corp A' }));
+    fireEvent.click(within(cpuColumn).getByRole('button', { name: 'Random' }));
+    fireEvent.click(
+      within(playerColumn).getByRole('button', { name: 'Corp A' }),
+    );
+    fireEvent.click(
+      within(playerColumn).getByRole('button', { name: 'Random' }),
+    );
+  }
+
+  it('shows a scenario stage after the map stage in vs-computer mode, defaulting to Annihilation', () => {
+    render(<PlayPage />);
+    reachCpuMapStage();
 
     expect(
       screen.getByText('Which scenario do you want to play?'),
@@ -663,10 +680,10 @@ describe('PlayPage scenario picker (#232)', () => {
 
   it('commits the chosen scenario to storage when Start Game is pressed', () => {
     render(<PlayPage />);
+    reachCpuMapStage();
 
-    fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Sandbox/ }));
     fireEvent.click(screen.getByRole('button', { name: /First to 11/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Player', exact: true }));
     fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(window.location.hash).toBe('#battle');
@@ -677,11 +694,29 @@ describe('PlayPage scenario picker (#232)', () => {
 
   it('defaults to Annihilation in storage when the scenario stage is never touched', () => {
     render(<PlayPage />);
+    reachCpuMapStage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Player', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+
+    expect(
+      window.localStorage.getItem('dropshipsimulator:gameScenario'),
+    ).toBe(JSON.stringify('annihilation'));
+  });
+
+  it('never shows the scenario picker in Sandbox mode and always commits Annihilation (#242)', () => {
+    render(<PlayPage />);
 
     fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
     fireEvent.click(screen.getByRole('button', { name: /Sandbox/ }));
+
+    expect(
+      screen.queryByText('Which scenario do you want to play?'),
+    ).toBeNull();
+
     fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
 
+    expect(window.location.hash).toBe('#battle');
     expect(
       window.localStorage.getItem('dropshipsimulator:gameScenario'),
     ).toBe(JSON.stringify('annihilation'));

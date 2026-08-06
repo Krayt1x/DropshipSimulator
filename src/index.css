@@ -1692,9 +1692,9 @@ button.danger:hover {
   border-left: 2px solid var(--border);
 }
 
-/* Mobile-only side-by-side player/CPU list picker (#224) — player on the
-   left, CPU on the right, so both can be filled in without one being
-   gated behind the other the way the desktop cascade stages are. */
+/* Side-by-side player/CPU manufacturer + list picker (#224, #241) — player
+   on the left, CPU on the right, so both can be filled in without one being
+   gated behind the other. Used on every screen size now, not just mobile. */
 .roster-picker-columns {
   display: grid;
   grid-template-columns: 1fr 1fr;

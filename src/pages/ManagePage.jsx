@@ -24,7 +24,7 @@ import {
   armorStringToFields,
   armorFieldsToString,
 } from '../lib/builderConstants.js';
-import { DIE_TYPES, DICE_COLORS } from '../lib/dice.js';
+import { DIE_TYPES, DICE_COLORS, ACTION_DICE_SIDE_KEYS } from '../lib/dice.js';
 import { useCatalogue, nextId, purgeCatalogueCache } from '../lib/catalogue.js';
 import UnitForm from '../components/UnitForm.jsx';
 import EquipmentForm from '../components/EquipmentForm.jsx';
@@ -491,23 +491,46 @@ function ManagePage() {
         {!actionDiceCollapsed && (
           <>
             <p className="unit-meta" style={{ margin: '10px 0' }}>
-              Every unit rolls from these 3 fixed colours — hover a swatch to
-              see a colour&apos;s full set of faces.
+              Every unit rolls from these {ACTION_DIE_TYPES.length} fixed
+              colours — hover a swatch to see a colour&apos;s full set of
+              faces.
             </p>
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-              {ACTION_DIE_TYPES.map((die) => (
-                <div
-                  key={die.id}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-                >
-                  <DiceSwatch die={{ color: die.id, ...Object.fromEntries(
-                    die.faces.map((face, i) => [`side${i + 1}`, face]),
-                  ) }} />
-                  <span style={{ textTransform: 'capitalize' }}>
-                    {die.label}
-                  </span>
-                </div>
-              ))}
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Colour</th>
+                    {ACTION_DICE_SIDE_KEYS.map((key, i) => (
+                      <th key={key}>Side {i + 1}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {ACTION_DIE_TYPES.map((die) => (
+                    <tr key={die.id}>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                          }}
+                        >
+                          <DiceSwatch die={{ color: die.id, ...Object.fromEntries(
+                            die.faces.map((face, i) => [`side${i + 1}`, face]),
+                          ) }} />
+                          <span style={{ textTransform: 'capitalize' }}>
+                            {die.label}
+                          </span>
+                        </div>
+                      </td>
+                      {die.faces.map((face, i) => (
+                        <td key={i}>{face}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </>
         )}

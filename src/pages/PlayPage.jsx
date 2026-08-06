@@ -86,22 +86,6 @@ function PlayPage() {
   const [mpChoice, setMpChoice] = useState(null); // null | 'host' | 'join'
   const [pastedOffer, setPastedOffer] = useState('');
   const [pastedAnswer, setPastedAnswer] = useState('');
-  // Desktop gets a compact tabbed wizard instead of the ever-growing stacked
-  // cascade (#247) — mobile keeps the cascade as-is, since a single scrolling
-  // column already suits a phone. Same breakpoint the rest of the app's
-  // mobile/desktop split already uses.
-  const [isDesktopWizard, setIsDesktopWizard] = useState(() =>
-    typeof window.matchMedia === 'function'
-      ? window.matchMedia('(min-width: 701px)').matches
-      : true,
-  );
-  useEffect(() => {
-    if (typeof window.matchMedia !== 'function') return undefined;
-    const mql = window.matchMedia('(min-width: 701px)');
-    const handler = (e) => setIsDesktopWizard(e.matches);
-    mql.addEventListener('change', handler);
-    return () => mql.removeEventListener('change', handler);
-  }, []);
   const [wizardStep, setWizardStep] = useState(() =>
     mp && mp.phase !== 'idle' ? 'code' : 'platform',
   );
@@ -223,18 +207,18 @@ function PlayPage() {
     setMpChoice(null);
     setPastedOffer('');
     setPastedAnswer('');
-    if (isDesktopWizard) setWizardStep(p === 'single' ? 'mode' : 'role');
+    setWizardStep(p === 'single' ? 'mode' : 'role');
   }
 
   function pickMpChoice(choice) {
     setMpChoice(choice);
-    if (isDesktopWizard) setWizardStep('code');
+    setWizardStep('code');
   }
 
   function pickFirstPlayer(side) {
     if (firstPlayerRolling) return;
     setFirstPlayer(side);
-    if (isDesktopWizard) setWizardStep('review');
+    setWizardStep('review');
   }
 
   // Flickers between Player/CPU with intervals that grow from a quick
@@ -260,7 +244,7 @@ function PlayPage() {
       if (isLast) {
         setFirstPlayerRolling(false);
         setFirstPlayerSettled(finalSide);
-        if (isDesktopWizard) setWizardStep('review');
+        setWizardStep('review');
         firstPlayerTimeoutRef.current = setTimeout(
           () => setFirstPlayerSettled(null),
           260,
@@ -310,7 +294,7 @@ function PlayPage() {
     clearTimeout(firstPlayerTimeoutRef.current);
     setFirstPlayer(null);
     setFirstPlayerRolling(false);
-    if (isDesktopWizard) setWizardStep(nextMode === 'cpu' ? 'difficulty' : 'map');
+    setWizardStep(nextMode === 'cpu' ? 'difficulty' : 'map');
   }
 
   function pickDifficulty(nextDifficulty) {
@@ -326,7 +310,7 @@ function PlayPage() {
     setPlayerRosterManufacturer(null);
     setChosenPlayerRoster(null);
     setShowPlayerRosterImport(false);
-    if (isDesktopWizard) setWizardStep('rosters');
+    setWizardStep('rosters');
   }
 
   function pickRosterManufacturer(manufacturer) {
@@ -339,7 +323,7 @@ function PlayPage() {
     setBotRoster(botRoster);
     setChosenRoster(label);
     setShowRosterImport(false);
-    if (isDesktopWizard && chosenPlayerRoster) setWizardStep('map');
+    if (chosenPlayerRoster) setWizardStep('map');
   }
 
   function previewImport() {
@@ -358,7 +342,7 @@ function PlayPage() {
     setPlayerRoster(roster);
     setChosenPlayerRoster(label);
     setShowPlayerRosterImport(false);
-    if (isDesktopWizard && chosenRoster) setWizardStep('map');
+    if (chosenRoster) setWizardStep('map');
   }
 
   function previewPlayerImport() {
@@ -370,12 +354,12 @@ function PlayPage() {
   function pickMap(choice) {
     setMapChoice(choice);
     setMapPickerOpen(false);
-    if (isDesktopWizard) setWizardStep(mode === 'cpu' ? 'scenario' : 'review');
+    setWizardStep(mode === 'cpu' ? 'scenario' : 'review');
   }
 
   function pickScenario(id) {
     setScenario(id);
-    if (isDesktopWizard) setWizardStep('first');
+    setWizardStep('first');
   }
 
   function confirmStartGame() {
@@ -405,7 +389,6 @@ function PlayPage() {
   // The human also picks their own list before the map (#202), same as the
   // bot's.
   const rosterReady = botRosterReady && Boolean(chosenPlayerRoster);
-  const mapStageReady = mode === 'sandbox' || rosterReady;
   // A render of whichever map is currently chosen (#243) — either the one
   // already saved in the Map Editor, or a DEFAULT_MAPS entry by name.
   const selectedMap =
@@ -432,11 +415,11 @@ function PlayPage() {
         : 'host'
       : mpChoice;
 
-  // The desktop wizard's tab list (#247) — grows/shrinks with `mode` (and now
-  // `platform`, #250), same stages the mobile cascade below shows, just one
-  // at a time instead of all stacked. Map/Scenario already have working
-  // defaults, so they're always "done"; only Rosters and First player
-  // require an explicit pick before the wizard lets you skip past them.
+  // The wizard's tab list (#247) — grows/shrinks with `mode` (and `platform`,
+  // #250), one stage shown at a time regardless of screen width (#251).
+  // Map/Scenario already have working defaults, so they're always "done";
+  // only Rosters and First player require an explicit pick before the
+  // wizard lets you skip past them.
   const WIZARD_STEPS =
     platform === 'multiplayer'
       ? [
@@ -528,9 +511,8 @@ function PlayPage() {
     if (next) setWizardStep(next.key);
   }
 
-  // Each stage's inner content, shared verbatim between the mobile cascade
-  // (all stages stacked, one after another) and the desktop wizard (one
-  // stage shown at a time — #247) so the two layouts can never drift apart.
+  // Each stage's inner content, rendered one at a time by the wizard body
+  // below regardless of screen width (#247, #251).
   function renderPlatformOptions() {
     return (
       <>
@@ -1133,7 +1115,7 @@ function PlayPage() {
         </p>
       )}
 
-      {!hasActiveGame && isDesktopWizard && (
+      {!hasActiveGame && (
         <div className="card wizard-card" style={{ marginTop: 16 }}>
           <div className="reserve-header">
             <p className="unit-name">New Game</p>
@@ -1227,69 +1209,6 @@ function PlayPage() {
               )}
             </div>
           </div>
-        </div>
-      )}
-
-      {!hasActiveGame && !isDesktopWizard && (
-        <div className="card" style={{ marginTop: 16 }}>
-          <div className="reserve-header">
-            <p className="unit-name">New Game</p>
-            <button type="button" className="ghost" onClick={resetPicker}>
-              Cancel
-            </button>
-          </div>
-
-          {renderPlatformOptions()}
-
-          {platform === 'single' && (
-            <div className="cascade-stage">{renderModeOptions()}</div>
-          )}
-
-          {platform === 'single' && mode === 'cpu' && (
-            <div className="cascade-stage">{renderDifficultyOptions()}</div>
-          )}
-
-          {platform === 'single' && mode === 'cpu' && difficulty && (
-            <div className="cascade-stage">{renderRostersOptions()}</div>
-          )}
-
-          {platform === 'single' && mapStageReady && (
-            <div className="cascade-stage">{renderMapOptions()}</div>
-          )}
-
-          {platform === 'single' && mapStageReady && mode === 'cpu' && (
-            <div className="cascade-stage">{renderScenarioOptions()}</div>
-          )}
-
-          {platform === 'single' && mapStageReady && mode === 'cpu' && (
-            <div className="cascade-stage">{renderFirstPlayerOptions()}</div>
-          )}
-
-          {platform === 'single' && mapStageReady && (
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'flex-end',
-                marginTop: 4,
-              }}
-            >
-              <button
-                type="button"
-                disabled={!readyToStart}
-                onClick={confirmStartGame}
-              >
-                Start Game
-              </button>
-            </div>
-          )}
-
-          {platform === 'multiplayer' && (
-            <div className="cascade-stage">{renderRoleOptions()}</div>
-          )}
-
-          {platform === 'multiplayer' && effectiveMpChoice && (
-            <div className="cascade-stage">{renderCodeExchange()}</div>
-          )}
         </div>
       )}
 

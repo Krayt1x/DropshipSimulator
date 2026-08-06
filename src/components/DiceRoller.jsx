@@ -17,18 +17,18 @@ const hitDieTypes = DIE_TYPES.filter((die) => !die.faces);
 const DiceRoller = forwardRef(function DiceRoller(
   {
     onRoll,
-    actionPool,
-    onRollToActionPool,
-    onUseActionPoolDie,
+    dicePool,
+    onRollToDicePool,
+    onUseDicePoolDie,
     onExchangeActionDice,
     activeOwnerDice,
     canRoll = true,
   },
   ref,
 ) {
-  // Rolling is automated now (action pool auto-rolls each turn, #164; attack
+  // Rolling is automated now (dice pool auto-rolls each turn, #164; attack
   // rolls happen in the attack modal), so the manual roll controls default
-  // to collapsed (#171) — only the Action Pool results stay always visible.
+  // to collapsed (#171) — only the Dice Pool results stay always visible.
   const [collapsed, setCollapsed] = useState(true);
   const [pool, setPool] = useState({});
   // Mirrored to the other player over the multiplayer data channel (#119) —
@@ -76,7 +76,7 @@ const DiceRoller = forwardRef(function DiceRoller(
     setResults(rolled);
     onRoll(rolled);
     const colored = rolled.filter((r) => isWordDie(r.label));
-    if (colored.length > 0) onRollToActionPool(colored);
+    if (colored.length > 0) onRollToDicePool(colored);
   }
 
   function roll() {
@@ -89,10 +89,10 @@ const DiceRoller = forwardRef(function DiceRoller(
   }
 
   // Adds the player's own action dice to the pool and rolls them immediately
-  // (#140) — replaces the old two-click "Add Action Pool" then "Roll" flow.
+  // (#140) — replaces the old two-click "Add Dice Pool" then "Roll" flow.
   // Limited to once per turn since it's meant to represent that turn's single
-  // Action Pool roll, not a repeatable way to reroll it.
-  function rollActionPool() {
+  // Dice Pool roll, not a repeatable way to reroll it.
+  function rollDicePool() {
     const merged = { ...pool };
     DICE_COLORS.forEach((color) => {
       merged[color] = (merged[color] ?? 0) + (activeOwnerDice?.[color] ?? 0);
@@ -114,19 +114,19 @@ const DiceRoller = forwardRef(function DiceRoller(
   // whichever pooled die of that type comes first.
   const actionCounts = WORD_ORDER.map((value) => ({
     value,
-    count: actionPool.filter((d) => !d.used && d.value === value).length,
+    count: dicePool.filter((d) => !d.used && d.value === value).length,
   }));
 
   function useSelectedAction() {
     if (!selectedAction) return;
-    const match = actionPool.find((d) => !d.used && d.value === selectedAction);
-    if (match) onUseActionPoolDie(match.id);
+    const match = dicePool.find((d) => !d.used && d.value === selectedAction);
+    if (match) onUseDicePoolDie(match.id);
     setSelectedAction(null);
   }
 
   // Only unused colored (action) dice can take part in an Exchange (#134) —
   // spending one lets the player pick a different one's new outcome.
-  const unusedActionDice = actionPool.filter((d) => !d.used);
+  const unusedActionDice = dicePool.filter((d) => !d.used);
 
   // The distinct outcomes a die's color can actually land on (#147) — what
   // it's exchanged into is a player choice, not another random roll.
@@ -137,7 +137,7 @@ const DiceRoller = forwardRef(function DiceRoller(
 
   function pickTarget(id) {
     setTargetId(id);
-    const targetDie = actionPool.find((d) => d.id === id);
+    const targetDie = dicePool.find((d) => d.id === id);
     setIntoValue(distinctFaces(targetDie?.label)[0] ?? '');
   }
 
@@ -260,11 +260,11 @@ const DiceRoller = forwardRef(function DiceRoller(
               type="button"
               className="ghost"
               disabled={
-                playerDiceTotal === 0 || !canRoll || actionPool.length > 0
+                playerDiceTotal === 0 || !canRoll || dicePool.length > 0
               }
-              onClick={rollActionPool}
+              onClick={rollDicePool}
             >
-              Roll Action Pool
+              Roll Dice Pool
             </button>
             <button
               type="button"
@@ -316,10 +316,10 @@ const DiceRoller = forwardRef(function DiceRoller(
             })()}
         </>
       )}
-      {actionPool.length > 0 && (
+      {dicePool.length > 0 && (
         <div className="dice-action-pool">
           <p className="unit-meta" style={{ marginBottom: 6 }}>
-            Action Pool
+            Dice Pool
           </p>
           <div className="dice-summary">
             {actionCounts.map(({ value, count }) => (
@@ -410,7 +410,7 @@ const DiceRoller = forwardRef(function DiceRoller(
                   onChange={(e) => setIntoValue(e.target.value)}
                 >
                   {distinctFaces(
-                    actionPool.find((d) => d.id === targetId)?.label,
+                    dicePool.find((d) => d.id === targetId)?.label,
                   ).map((value) => (
                     <option key={value} value={value}>
                       {value}

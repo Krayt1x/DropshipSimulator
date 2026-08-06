@@ -415,21 +415,21 @@ function BattlePage() {
     'dropshipsimulator:battle:bankedDice',
     DEFAULT_BANKED_DICE,
   );
-  const [actionPool, setActionPool] = useLocalStorageState(
-    'dropshipsimulator:battle:actionPool',
+  const [dicePool, setDicePool] = useLocalStorageState(
+    'dropshipsimulator:battle:dicePool',
     [],
   );
 
   // The bot's turn driver (runBotTurn, below) runs as one long-lived async
   // function per turn, chained together with real delays for pacing — by
-  // the time it reaches its 2nd/3rd action, the plain `tokens`/`actionPool`
+  // the time it reaches its 2nd/3rd action, the plain `tokens`/`dicePool`
   // variables it closed over at the top of this render are stale (React
   // doesn't retroactively update a function's already-captured locals). This
   // ref is kept in sync every render so the bot can always read the *actual*
   // current state mid-turn instead.
-  const stateRef = useRef({ tokens, actionPool, deploymentPhase });
+  const stateRef = useRef({ tokens, dicePool, deploymentPhase });
   useEffect(() => {
-    stateRef.current = { tokens, actionPool, deploymentPhase };
+    stateRef.current = { tokens, dicePool, deploymentPhase };
   });
 
   function appendLog(message) {
@@ -500,7 +500,7 @@ function BattlePage() {
           : t,
       ),
     );
-    setActionPool([]);
+    setDicePool([]);
     setActionHistory([]);
   }
 
@@ -508,14 +508,14 @@ function BattlePage() {
     appendLog(formatRollLogMessage(rolled));
   }
 
-  function rollToActionPool(dice) {
-    setActionPool(dice.map((d) => ({ ...d, used: false })));
+  function rollToDicePool(dice) {
+    setDicePool(dice.map((d) => ({ ...d, used: false })));
     pushHistory({ type: 'rollToPool', dieIds: dice.map((d) => d.id) });
   }
 
-  function useActionPoolDie(dieId) {
-    const die = actionPool.find((d) => d.id === dieId);
-    setActionPool((current) =>
+  function useDicePoolDie(dieId) {
+    const die = dicePool.find((d) => d.id === dieId);
+    setDicePool((current) =>
       current.map((d) => (d.id === dieId ? { ...d, used: true } : d)),
     );
     pushHistory({ type: 'useDie', dieId });
@@ -527,7 +527,7 @@ function BattlePage() {
   // bot already follows (bot.js's pickDie). Moving or attacking spends one
   // of these and is blocked without one (#162).
   function pickActionDie(preferredValue) {
-    const unused = actionPool.filter((d) => !d.used);
+    const unused = dicePool.filter((d) => !d.used);
     return (
       unused.find((d) => d.value === preferredValue) ??
       unused.find((d) => d.value === 'Action') ??
@@ -538,14 +538,14 @@ function BattlePage() {
   const hasMoveDie = Boolean(pickActionDie('Move'));
   const hasAttackDie = Boolean(pickActionDie('Attack'));
   // Counts shown on the mobile Move/Attack FABs (#162) — each die only
-  // belongs to one bucket, matching DiceRoller's own Action Pool summary
+  // belongs to one bucket, matching DiceRoller's own Dice Pool summary
   // (actionCounts). A flexible Action die can still cover either action
   // (see pickActionDie), but counting it in both totals at once summed to
   // more dice than the pool actually has (#167).
-  const moveDieCount = actionPool.filter(
+  const moveDieCount = dicePool.filter(
     (d) => !d.used && d.value === 'Move',
   ).length;
-  const attackDieCount = actionPool.filter(
+  const attackDieCount = dicePool.filter(
     (d) => !d.used && d.value === 'Attack',
   ).length;
 
@@ -553,11 +553,11 @@ function BattlePage() {
   // outcome (#134) — DiceRoller picks the new value (it already has the
   // die-type/face data) and hands it up here to apply + log.
   function exchangeActionDie(spendId, targetId, newValue) {
-    const spendDie = actionPool.find((d) => d.id === spendId);
-    const targetDie = actionPool.find((d) => d.id === targetId);
+    const spendDie = dicePool.find((d) => d.id === spendId);
+    const targetDie = dicePool.find((d) => d.id === targetId);
     if (!spendDie || !targetDie) return;
     const previousValue = targetDie.value;
-    setActionPool((current) =>
+    setDicePool((current) =>
       current.map((d) => {
         if (d.id === spendId) return { ...d, used: true };
         if (d.id === targetId) return { ...d, value: newValue };
@@ -573,20 +573,20 @@ function BattlePage() {
   function undoLastAction() {
     if (!lastAction) return;
     if (lastAction.type === 'rollToPool') {
-      setActionPool((current) =>
+      setDicePool((current) =>
         current.filter((d) => !lastAction.dieIds.includes(d.id)),
       );
-      appendLog('Undid dice roll into Action Pool');
+      appendLog('Undid dice roll into Dice Pool');
     } else if (lastAction.type === 'useDie') {
-      setActionPool((current) =>
+      setDicePool((current) =>
         current.map((d) =>
           d.id === lastAction.dieId ? { ...d, used: false } : d,
         ),
       );
-      appendLog('Undid using a die from the Action Pool');
+      appendLog('Undid using a die from the Dice Pool');
     } else if (lastAction.type === 'exchange') {
       const { spendId, targetId, previousValue } = lastAction;
-      setActionPool((current) =>
+      setDicePool((current) =>
         current.map((d) => {
           if (d.id === spendId) return { ...d, used: false };
           if (d.id === targetId) return { ...d, value: previousValue };
@@ -615,7 +615,7 @@ function BattlePage() {
       // Refund the Move (or Action) die this move spent, if any (#168) —
       // a free initial placement never had one to refund.
       if (dieId) {
-        setActionPool((current) =>
+        setDicePool((current) =>
           current.map((d) => (d.id === dieId ? { ...d, used: false } : d)),
         );
       }
@@ -952,7 +952,7 @@ function BattlePage() {
     const attacker = tokens.find((t) => t.id === attackWeapon.tokenId);
     const rolled = rollAttackDice(attackWeapon.item.hit_dice);
     if (!attacker || !rolled) return;
-    useActionPoolDie(die.id);
+    useDicePoolDie(die.id);
     const currentHeat =
       attacker.weaponState[attackWeapon.instanceIndex]?.heat ?? 0;
     // Firing generates whatever the weapon's own heat_rating stipulates
@@ -1158,7 +1158,7 @@ function BattlePage() {
     const attacker = tokens.find((t) => t.id === attackWeapon.tokenId);
     const rolled = rollAttackDice(attackWeapon.item.hit_dice);
     if (!attacker || !rolled) return;
-    useActionPoolDie(die.id);
+    useDicePoolDie(die.id);
     const currentHeat =
       attacker.weaponState[attackWeapon.instanceIndex]?.heat ?? 0;
     const { generate } = parseHeatRating(attackWeapon.item.heat_rating);
@@ -1564,10 +1564,10 @@ function BattlePage() {
           if (die) {
             // Order matters: both calls set lastAction, and a short move
             // finishes synchronously inside animateMove while a longer one
-            // completes later on a timeout — calling useActionPoolDie first
+            // completes later on a timeout — calling useDicePoolDie first
             // guarantees moveTokenTo's own 'move' record (carrying dieId)
             // is always the one left standing either way (#168).
-            useActionPoolDie(die.id);
+            useDicePoolDie(die.id);
             animateMove(movingToken, col, row, die.id);
           }
         } else if (!tokenAt(key)) {
@@ -1616,9 +1616,9 @@ function BattlePage() {
       }
       const die = pickActionDie('Move');
       if (!die) return;
-      // See handleHexClick's identical comment on why useActionPoolDie runs
+      // See handleHexClick's identical comment on why useDicePoolDie runs
       // first (#168).
-      useActionPoolDie(die.id);
+      useDicePoolDie(die.id);
       animateMove(token, col, row, die.id);
     } else {
       animateMove(token, col, row);
@@ -1627,7 +1627,7 @@ function BattlePage() {
   }
 
   function hasUnusedActionDie() {
-    return actionPool.some((d) => !d.used && d.value === 'Action');
+    return dicePool.some((d) => !d.used && d.value === 'Action');
   }
 
   // Arms a reserve drop pod to be aimed at the next hex click (#158) — only
@@ -1648,7 +1648,7 @@ function BattlePage() {
   // and lands it on the final empty hex.
   function resolveDropPodDrop(tokenId, aim) {
     const token = tokens.find((t) => t.id === tokenId);
-    const actionDie = actionPool.find((d) => !d.used && d.value === 'Action');
+    const actionDie = dicePool.find((d) => !d.used && d.value === 'Action');
     if (!token || !actionDie) {
       setDropPodArmed(null);
       return;
@@ -1687,7 +1687,7 @@ function BattlePage() {
 
     placeTokenAt(token.id, hex.col, hex.row);
     triggerDeployEffect(token.id, hex.col, hex.row);
-    useActionPoolDie(actionDie.id);
+    useDicePoolDie(actionDie.id);
     setDropPodArmed(null);
     setSelectedTokenId(token.id);
   }
@@ -2034,7 +2034,7 @@ function BattlePage() {
       }
     });
     if (rolled.length > 0) {
-      rollToActionPool(rolled);
+      rollToDicePool(rolled);
       handleDiceRoll(rolled);
       await sleep(500);
     }
@@ -2042,13 +2042,13 @@ function BattlePage() {
     // Capped as a safety net — a real turn only ever has a handful of dice —
     // so a logic bug can't wedge this into looping forever.
     for (let i = 0; i < 50; i++) {
-      const { tokens: freshTokens, actionPool: freshPool } = stateRef.current;
+      const { tokens: freshTokens, dicePool: freshPool } = stateRef.current;
       const action = chooseBotAction({
         tokens: freshTokens,
         units,
         equipment,
         botOwner,
-        actionPool: freshPool,
+        dicePool: freshPool,
         difficulty: botDifficulty,
         dimensions,
         tiles,
@@ -2062,18 +2062,18 @@ function BattlePage() {
         await sleep(400);
       } else if (action.type === 'attack') {
         performBotAttack(action);
-        useActionPoolDie(action.dieId);
+        useDicePoolDie(action.dieId);
         await sleep(700);
       } else if (action.type === 'dropPod') {
         performBotDropPod(action);
-        useActionPoolDie(action.dieId);
+        useDicePoolDie(action.dieId);
         await sleep(700);
       } else if (action.type === 'move') {
         const token = freshTokens.find((t) => t.id === action.tokenId);
         if (!token) break;
         const steps = hexDistance(token.position, action.destination);
         animateMove(token, action.destination.col, action.destination.row);
-        useActionPoolDie(action.dieId);
+        useDicePoolDie(action.dieId);
         await sleep(steps * MOVE_STEP_MS + 400);
       } else if (action.type === 'exchange') {
         exchangeActionDie(action.spendId, action.targetId, action.newValue);
@@ -2093,9 +2093,9 @@ function BattlePage() {
     runBotTurn();
   }, [turn, gameMode, deploymentPhase, botOwner]);
 
-  // Auto-rolls the active player's Action Pool the moment their turn starts
-  // (#164), instead of waiting on a manual "Roll Action Pool" click. Lives
-  // here (not inside DiceRoller) since it needs to call appendLog/rollToActionPool
+  // Auto-rolls the active player's Dice Pool the moment their turn starts
+  // (#164), instead of waiting on a manual "Roll Dice Pool" click. Lives
+  // here (not inside DiceRoller) since it needs to call appendLog/rollToDicePool
   // directly — a child component's effect calling those same callbacks
   // during the same render cascade as endTurn()'s own state updates was
   // silently losing the log entry. Guarded the same way DiceRoller's old
@@ -2122,7 +2122,7 @@ function BattlePage() {
       }
     });
     if (rolled.length > 0) {
-      rollToActionPool(rolled);
+      rollToDicePool(rolled);
       handleDiceRoll(rolled);
     }
   }, [turn, deploymentPhase, myPlayer]);
@@ -2399,9 +2399,9 @@ function BattlePage() {
             <DiceRoller
               ref={diceRollerRef}
               onRoll={handleDiceRoll}
-              actionPool={actionPool}
-              onRollToActionPool={rollToActionPool}
-              onUseActionPoolDie={useActionPoolDie}
+              dicePool={dicePool}
+              onRollToDicePool={rollToDicePool}
+              onUseDicePoolDie={useDicePoolDie}
               onExchangeActionDice={exchangeActionDie}
               activeOwnerDice={activeOwnerDice}
               canRoll={!myPlayer || myPlayer === turn.active}

@@ -13,7 +13,7 @@ const BATTLE_RESET_VALUES = {
   'dropshipsimulator:battle:turn': DEFAULT_TURN,
   'dropshipsimulator:battle:log': [],
   'dropshipsimulator:battle:bankedDice': DEFAULT_BANKED_DICE,
-  'dropshipsimulator:battle:actionPool': [],
+  'dropshipsimulator:battle:dicePool': [],
   'dropshipsimulator:battle:victoryPoints': DEFAULT_VICTORY_POINTS,
   'dropshipsimulator:battle:matchStats': DEFAULT_MATCH_STATS,
 };

@@ -296,7 +296,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [],
+      dicePool: [],
       difficulty: 'simple',
     });
     expect(result).toBeNull();
@@ -322,7 +322,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+      dicePool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
       difficulty: 'simple',
     });
     expect(result).toMatchObject({
@@ -353,7 +353,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+      dicePool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
       difficulty: 'simple',
     });
     expect(result).toBeNull();
@@ -379,7 +379,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+      dicePool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
       difficulty: 'simple',
     });
     expect(result).toMatchObject({ type: 'move', tokenId: 'bot1', dieId: 'd1' });
@@ -406,7 +406,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Red', value: 'Attack', used: true }],
+      dicePool: [{ id: 'd1', label: 'Red', value: 'Attack', used: true }],
       difficulty: 'simple',
     });
     expect(result).toBeNull();
@@ -443,7 +443,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+      dicePool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
       difficulty: 'tactical',
     });
     expect(result.targetId).toBe('weak');
@@ -468,7 +468,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+      dicePool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
       difficulty: 'simple',
     });
     expect(result).toEqual({ type: 'destroy', tokenId: 'bot1', dieColor: 'blue' });
@@ -495,7 +495,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+      dicePool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
       difficulty: 'simple',
       dimensions: { cols: 3, rows: 3 },
     });
@@ -530,7 +530,7 @@ describe('chooseBotAction', () => {
       units,
       equipment: hotEquipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+      dicePool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
       difficulty: 'simple',
     });
     expect(result).toBeNull();
@@ -562,7 +562,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Green', value: 'Action', used: false }],
+      dicePool: [{ id: 'd1', label: 'Green', value: 'Action', used: false }],
       difficulty: 'simple',
     });
     expect(result).toMatchObject({
@@ -598,7 +598,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Green', value: 'Action', used: false }],
+      dicePool: [{ id: 'd1', label: 'Green', value: 'Action', used: false }],
       difficulty: 'simple',
     });
     expect(result).toMatchObject({ type: 'move', tokenId: 'bot1' });
@@ -624,7 +624,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+      dicePool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
       difficulty: 'simple',
       dimensions: { cols: 10, rows: 10 },
       tiles,
@@ -657,7 +657,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+      dicePool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
       difficulty: 'simple',
       dimensions: { cols: 10, rows: 10 },
       tiles,
@@ -697,7 +697,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+      dicePool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
       difficulty: 'simple',
       dimensions: { cols: 10, rows: 10 },
       tiles,
@@ -728,7 +728,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+      dicePool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
       difficulty: 'simple',
     });
     expect(result).toBeNull();
@@ -760,7 +760,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+      dicePool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
       difficulty: 'tactical',
     });
     expect(result).toBeNull();
@@ -792,7 +792,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+      dicePool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
     };
 
     // Tactical only ranks by raw expected damage, so it fires the bigger
@@ -836,7 +836,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+      dicePool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
     };
 
     // Tactical only asks whether the trade is nominally favorable — the
@@ -878,7 +878,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+      dicePool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
     };
 
     const tacticalResult = chooseBotAction({ ...base, difficulty: 'tactical' });
@@ -917,7 +917,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+      dicePool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
       difficulty: 'simple',
       tiles,
       terrainTypes,
@@ -947,7 +947,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+      dicePool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
       difficulty: 'simple',
       tiles,
       terrainTypes,
@@ -976,7 +976,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+      dicePool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
       difficulty: 'simple',
       tiles,
       terrainTypes,
@@ -1004,7 +1004,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+      dicePool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
       difficulty: 'simple',
       tiles,
       terrainTypes,
@@ -1034,7 +1034,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+      dicePool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
       difficulty: 'simple',
     });
     // No live enemy to attack, no Move die to reposition with either.
@@ -1069,7 +1069,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+      dicePool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
       difficulty: 'tactical',
     });
     expect(result.targetId).toBe('enemy1');
@@ -1095,7 +1095,7 @@ describe('chooseBotAction', () => {
       units,
       equipment,
       botOwner: 'p2',
-      actionPool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+      dicePool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
       difficulty: 'simple',
     });
     expect(result.targetId).toBe('pod1');
@@ -1128,7 +1128,7 @@ describe('chooseBotAction', () => {
         units,
         equipment,
         botOwner: 'p2',
-        actionPool: [
+        dicePool: [
           { id: 'green1', label: 'Green', value: 'Move', used: false },
           { id: 'blue1', label: 'Blue', value: 'Move', used: false },
         ],
@@ -1162,7 +1162,7 @@ describe('chooseBotAction', () => {
         units,
         equipment,
         botOwner: 'p2',
-        actionPool: [
+        dicePool: [
           { id: 'red1', label: 'Red', value: 'Attack', used: false },
           { id: 'blue1', label: 'Blue', value: 'Attack', used: false },
         ],
@@ -1197,7 +1197,7 @@ describe('chooseBotAction', () => {
         units,
         equipment,
         botOwner: 'p2',
-        actionPool: [
+        dicePool: [
           { id: 'red1', label: 'Red', value: 'Attack', used: false },
           { id: 'blue1', label: 'Blue', value: 'Attack', used: false },
         ],
@@ -1226,7 +1226,7 @@ describe('chooseBotAction', () => {
         units,
         equipment,
         botOwner: 'p2',
-        actionPool: [{ id: 'blue1', label: 'Blue', value: 'Move', used: false }],
+        dicePool: [{ id: 'blue1', label: 'Blue', value: 'Move', used: false }],
         difficulty: 'simple',
       });
       expect(result).toBeNull();

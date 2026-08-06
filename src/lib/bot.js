@@ -128,8 +128,8 @@ function unitFor(token, units) {
 // Picks a die from the pool matching `preferredValue` ('Move'/'Attack'), or
 // an 'Action' die as a flexible fallback — mirrors the Move/Action/Attack
 // die-face economy (WORD_ORDER in dice.js) without hard-coding it here.
-function pickDie(actionPool, preferredValue) {
-  const unused = actionPool.filter((d) => !d.used);
+function pickDie(dicePool, preferredValue) {
+  const unused = dicePool.filter((d) => !d.used);
   return (
     unused.find((d) => d.value === preferredValue) ??
     unused.find((d) => d.value === 'Action') ??
@@ -151,8 +151,8 @@ function distinctFacesForLabel(label) {
 // dice to trade — one consumed as the cost, the other's face rewritten —
 // rather than the bot just giving up on an attack or move it otherwise could
 // make (#200).
-function findExchangeAction(actionPool, neededValue) {
-  const unused = actionPool.filter((d) => !d.used);
+function findExchangeAction(dicePool, neededValue) {
+  const unused = dicePool.filter((d) => !d.used);
   if (unused.length < 2) return null;
   const target = unused.find(
     (d) =>
@@ -372,9 +372,9 @@ function chooseMoveTarget(position, enemyTokens, difficulty) {
 // at whichever enemy is closest to the bot's own front line (or the first
 // enemy, if nothing's deployed yet), matching a human reinforcing near where
 // the fight already is rather than picking a spot at random.
-function findDropPodAction({ tokens, units, botOwner, actionPool, enemyTokens }) {
+function findDropPodAction({ tokens, units, botOwner, dicePool, enemyTokens }) {
   if (enemyTokens.length === 0) return null;
-  const actionDie = actionPool.find((d) => !d.used && d.value === 'Action');
+  const actionDie = dicePool.find((d) => !d.used && d.value === 'Action');
   if (!actionDie) return null;
 
   const podToken = tokens.find(
@@ -540,7 +540,7 @@ function computeMoveCandidate({
 }
 
 function findMoveAction(args) {
-  const moveDie = pickDie(args.actionPool, 'Move');
+  const moveDie = pickDie(args.dicePool, 'Move');
   if (!moveDie) return null;
   const candidate = computeMoveCandidate(args);
   if (!candidate) return null;
@@ -555,7 +555,7 @@ export function chooseBotAction({
   units,
   equipment,
   botOwner,
-  actionPool,
+  dicePool,
   difficulty,
   dimensions,
   tiles,
@@ -563,7 +563,7 @@ export function chooseBotAction({
   scenario,
 }) {
   // Clean up a wrecked model before doing anything else with it (#154) —
-  // doesn't need an enemy on the board or spend an action-pool die, matching
+  // doesn't need an enemy on the board or spend a dice-pool die, matching
   // the human "Model Destroyed" button, which is always available and free.
   const destroyAction = findDestroyAction({ tokens, units, botOwner });
   if (destroyAction) return destroyAction;
@@ -578,11 +578,11 @@ export function chooseBotAction({
   // With nothing deployed to attack or move with, reinforcing via a reserve
   // drop pod is the only thing left to try (#157, #158).
   if (myTokens.length === 0) {
-    return findDropPodAction({ tokens, units, botOwner, actionPool, enemyTokens });
+    return findDropPodAction({ tokens, units, botOwner, dicePool, enemyTokens });
   }
   if (enemyTokens.length === 0) return null;
 
-  const attackDie = pickDie(actionPool, 'Attack');
+  const attackDie = pickDie(dicePool, 'Attack');
   // Computed either way (#200): even without an Attack die yet, knowing
   // whether there's actually something worth shooting decides whether an
   // Exchange is worth spending a second die on below.
@@ -596,7 +596,7 @@ export function chooseBotAction({
     terrainTypes,
   });
   if (!attackDie && options.length > 0) {
-    const exchange = findExchangeAction(actionPool, 'Attack');
+    const exchange = findExchangeAction(dicePool, 'Attack');
     if (exchange) return exchange;
   }
   if (attackDie) {
@@ -651,7 +651,7 @@ export function chooseBotAction({
     tokens,
     equipment,
     botOwner,
-    actionPool,
+    dicePool,
     difficulty,
     dimensions,
     tiles,
@@ -665,15 +665,15 @@ export function chooseBotAction({
     tokens,
     units,
     botOwner,
-    actionPool,
+    dicePool,
     enemyTokens,
   });
   if (dropPodAction) return dropPodAction;
 
   // No Move (or Action) die to spend, but exchanging into one would let a
   // token that actually wants to move do so this turn (#200).
-  if (!pickDie(actionPool, 'Move') && computeMoveCandidate(moveArgs)) {
-    return findExchangeAction(actionPool, 'Move');
+  if (!pickDie(dicePool, 'Move') && computeMoveCandidate(moveArgs)) {
+    return findExchangeAction(dicePool, 'Move');
   }
   return null;
 }

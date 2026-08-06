@@ -42,7 +42,7 @@ function endDeploymentPhase() {
   fireEvent.click(screen.getByRole('button', { name: 'End deployment phase' }));
 }
 
-// The Dice roller's manual controls (Roll Action Pool, etc.) are collapsed
+// The Dice roller's manual controls (Roll Dice Pool, etc.) are collapsed
 // by default now that rolling is automated (#171) — idempotent, so it's
 // safe to call even if already expanded.
 function expandDiceRoller() {
@@ -215,7 +215,7 @@ describe('BattlePage', () => {
     // Math.random mocked so red's face-index-3 ("Move") comes up reliably.
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Move' }));
     fireEvent.click(screen.getByTestId('hex-3,3'));
@@ -241,7 +241,7 @@ describe('BattlePage', () => {
 
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
     fireEvent.click(screen.getByRole('button', { name: 'Move' }));
     fireEvent.click(screen.getByTestId('hex-1,0'));
     finishMoveAnimation();
@@ -266,7 +266,7 @@ describe('BattlePage', () => {
     // A real move spends a Move die (#162); mock so red's "Move" face wins.
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     const tokenMarker = container.querySelector('[data-testid^="token-"]');
     const targetHex = screen.getByTestId('hex-4,4');
@@ -304,7 +304,7 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByTestId('hex-0,0'));
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Move' }));
     fireEvent.click(screen.getByTestId('hex-0,4'));
@@ -351,7 +351,7 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByTestId('hex-0,0'));
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
     fireEvent.click(screen.getByRole('button', { name: 'Move' }));
     fireEvent.click(screen.getByTestId('hex-0,4'));
     finishMoveAnimation();
@@ -396,7 +396,7 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByTestId('hex-0,0'));
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
     fireEvent.click(screen.getByRole('button', { name: 'Move' }));
     fireEvent.click(screen.getByTestId('hex-0,8'));
     finishMoveAnimation();
@@ -454,7 +454,7 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByTestId('hex-0,0'));
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
     fireEvent.click(screen.getByRole('button', { name: 'Move' }));
     fireEvent.click(screen.getByTestId('hex-0,2'));
     finishMoveAnimation();
@@ -481,7 +481,7 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByTestId('hex-0,0'));
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
     fireEvent.click(screen.getByRole('button', { name: 'Move' }));
 
     const highlighted = (col, row) => {
@@ -593,7 +593,7 @@ describe('BattlePage', () => {
     // A real move spends a Move die (#162); mock so red's "Move" face wins.
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Move' }));
     fireEvent.click(screen.getByTestId('hex-3,3'));
@@ -622,7 +622,7 @@ describe('BattlePage', () => {
       used: false,
     }));
     window.localStorage.setItem(
-      'dropshipsimulator:battle:actionPool',
+      'dropshipsimulator:battle:dicePool',
       JSON.stringify(dice),
     );
     // Re-render with the seeded pool in place.
@@ -670,12 +670,12 @@ describe('BattlePage', () => {
       .spyOn(Math, 'random')
       .mockImplementation(() => 0.5 + (rollCall++ % 5) * 0.01);
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
     poolRollSpy.mockRestore();
     expect(screen.getByRole('button', { name: /2 Move/ })).toBeDefined();
 
     // Adjacent hex -> the move completes synchronously (no animation),
-    // exercising the same-tick race between useActionPoolDie and
+    // exercising the same-tick race between useDicePoolDie and
     // moveTokenTo's own lastAction write.
     fireEvent.click(screen.getByRole('button', { name: 'Move' }));
     fireEvent.click(screen.getByTestId('hex-0,1'));
@@ -943,7 +943,7 @@ describe('BattlePage', () => {
     // neither a manual nor an automatic roll (#164) would populate one here
     // (#162).
     window.localStorage.setItem(
-      'dropshipsimulator:battle:actionPool',
+      'dropshipsimulator:battle:dicePool',
       JSON.stringify([{ id: 'test-move-die', label: 'Red', value: 'Move' }]),
     );
     render(<BattlePage />);
@@ -1159,7 +1159,7 @@ describe('BattlePage', () => {
     // A real move spends a Move die (#162); mock so red's "Move" face wins.
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Move' }));
     fireEvent.click(screen.getByTestId('hex-3,3'));
@@ -1170,7 +1170,7 @@ describe('BattlePage', () => {
     expect(screen.getByText(/Player 1 ended their turn/)).toBeDefined();
   });
 
-  it('starts the Dice roller collapsed, hiding its manual controls but not the Action Pool results (#171)', () => {
+  it('starts the Dice roller collapsed, hiding its manual controls but not the Dice Pool results (#171)', () => {
     render(<BattlePage />);
 
     // Collapsed from the start — the manual pool controls aren't there yet.
@@ -1179,7 +1179,7 @@ describe('BattlePage', () => {
     ).toBeNull();
     expect(screen.queryByRole('button', { name: /^Roll/ })).toBeNull();
 
-    // Roll a pool manually, then collapse again — the Action Pool results
+    // Roll a pool manually, then collapse again — the Dice Pool results
     // stay visible even though the roller itself is collapsed.
     expandDiceRoller();
     fireEvent.click(screen.getByRole('button', { name: 'Add Blue to pool' }));
@@ -1206,7 +1206,7 @@ describe('BattlePage', () => {
     expect(screen.getByText(/Rolled 2d6/)).toBeDefined();
   });
 
-  it("rolls the deployed unit's action dice immediately via Roll Action Pool, once per turn (#140)", () => {
+  it("rolls the deployed unit's action dice immediately via Roll Dice Pool, once per turn (#140)", () => {
     render(<BattlePage />);
     startDeploymentPhase();
 
@@ -1219,18 +1219,18 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByTestId('hex-5,5'));
 
     expandDiceRoller();
-    const rollActionPoolBtn = screen.getByRole('button', {
-      name: 'Roll Action Pool',
+    const rollDicePoolBtn = screen.getByRole('button', {
+      name: 'Roll Dice Pool',
     });
-    expect(rollActionPoolBtn.disabled).toBe(false);
+    expect(rollDicePoolBtn.disabled).toBe(false);
 
-    fireEvent.click(rollActionPoolBtn);
+    fireEvent.click(rollDicePoolBtn);
 
     expect(
       screen.getByText('Red', { selector: 'p.equipment-subheader' }),
     ).toBeDefined();
     expect(screen.getByText(/Rolled 2 red/i)).toBeDefined();
-    expect(rollActionPoolBtn.disabled).toBe(true);
+    expect(rollDicePoolBtn.disabled).toBe(true);
 
     // Ending Player 1's turn hands it to Player 2, who has no deployed units
     // (and so no action dice of their own); ending again comes back around
@@ -1241,14 +1241,14 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
     expandDiceRoller();
     expect(
-      screen.getByRole('button', { name: 'Roll Action Pool' }).disabled,
+      screen.getByRole('button', { name: 'Roll Dice Pool' }).disabled,
     ).toBe(true);
     // Two log entries now: the manual roll above, and the auto-roll (#164)
     // for this new turn.
     expect(screen.getAllByText(/Rolled 2 red/i)).toHaveLength(2);
   });
 
-  it("automatically rolls the Action Pool at the start of a player's turn, without a manual click (#164)", () => {
+  it("automatically rolls the Dice Pool at the start of a player's turn, without a manual click (#164)", () => {
     render(<BattlePage />);
     startDeploymentPhase();
 
@@ -1262,19 +1262,19 @@ describe('BattlePage', () => {
     // a roll — only an actual turn-start transition does.
     expandDiceRoller();
     expect(
-      screen.getByRole('button', { name: 'Roll Action Pool' }).disabled,
+      screen.getByRole('button', { name: 'Roll Dice Pool' }).disabled,
     ).toBe(false);
 
     fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
     fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
 
     expect(
-      screen.getByRole('button', { name: 'Roll Action Pool' }).disabled,
+      screen.getByRole('button', { name: 'Roll Dice Pool' }).disabled,
     ).toBe(true);
     expect(screen.getByText(/Rolled 2 red/i)).toBeDefined();
   });
 
-  it('does not auto-roll the Action Pool during deployment phase, even once dice are available (#164)', () => {
+  it('does not auto-roll the Dice Pool during deployment phase, even once dice are available (#164)', () => {
     render(<BattlePage />);
     startDeploymentPhase();
 
@@ -1283,9 +1283,9 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByTestId('hex-5,5'));
 
     // Deployed with dice available, but still mid-deployment-phase — the
-    // action pool must stay untouched until the real game starts.
+    // dice pool must stay untouched until the real game starts.
     expect(
-      window.localStorage.getItem('dropshipsimulator:battle:actionPool'),
+      window.localStorage.getItem('dropshipsimulator:battle:dicePool'),
     ).toBe(JSON.stringify([]));
   });
 
@@ -1358,7 +1358,7 @@ describe('BattlePage', () => {
     // A real move spends a Move die (#162); mock so red's "Move" face wins.
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Move' }));
     fireEvent.click(screen.getByTestId('hex-8,8'));
@@ -1420,7 +1420,7 @@ describe('BattlePage', () => {
     // A10's attack spends an Attack (or Action) die (#162); Math.random is
     // already mocked to 0 above, so this manual roll produces "Attack" too.
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
@@ -1525,7 +1525,7 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
@@ -1608,7 +1608,7 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
@@ -1667,7 +1667,7 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
@@ -1723,7 +1723,7 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
@@ -1780,7 +1780,7 @@ describe('BattlePage', () => {
       .spyOn(Math, 'random')
       .mockImplementation(() => (rollCall++ % 5) * 0.02);
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
     poolRollSpy.mockRestore();
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
@@ -1983,7 +1983,7 @@ describe('BattlePage', () => {
     // A10's attack spends an Attack (or Action) die (#162); Math.random is
     // already mocked to 0 above, so this manual roll produces "Attack" too.
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
@@ -2070,7 +2070,7 @@ describe('BattlePage', () => {
     // A10's attack spends an Attack (or Action) die (#162); Math.random is
     // already mocked to 0 above, so this manual roll produces "Attack" too.
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
@@ -2109,7 +2109,7 @@ describe('BattlePage', () => {
     // "Attack" face wins.
     vi.spyOn(Math, 'random').mockReturnValue(0);
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     expect(screen.queryByText('OVERHEATED')).toBeNull();
     expect(screen.getByRole('button', { name: 'Attack' }).disabled).toBe(false);
@@ -2139,7 +2139,7 @@ describe('BattlePage', () => {
     // red's "Action" face wins, covering both.
     vi.spyOn(Math, 'random').mockReturnValue(0.9);
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     expect(screen.getByRole('button', { name: 'Attack' }).disabled).toBe(false);
     expect(screen.getByRole('button', { name: 'Move' }).disabled).toBe(false);
@@ -2194,7 +2194,7 @@ describe('BattlePage', () => {
     // "Attack" face wins.
     vi.spyOn(Math, 'random').mockReturnValue(0);
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
@@ -2259,7 +2259,7 @@ describe('BattlePage', () => {
     // it doesn't affect the A20 tokens' ids created right after.
     const dieRollSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
     dieRollSpy.mockRestore();
 
     // Origin-tile model (5,9 — 4 hexes due south, within Artillery's 3-9
@@ -2501,7 +2501,7 @@ describe('BattlePage', () => {
     // 1 Move + 3 Action + 4 Attack = 8 dice total; Move and Weapons must not
     // each separately add the Action dice on top of their own type.
     window.localStorage.setItem(
-      'dropshipsimulator:battle:actionPool',
+      'dropshipsimulator:battle:dicePool',
       JSON.stringify([
         { id: 'd-move', label: 'Blue', value: 'Move' },
         { id: 'd-action-1', label: 'Blue', value: 'Action' },
@@ -3029,7 +3029,7 @@ describe('BattlePage', () => {
     // "Attack" face wins.
     vi.spyOn(Math, 'random').mockReturnValue(0);
     expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Action Pool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: /^Weapons \(/ }));
     const picker = screen
@@ -3075,7 +3075,7 @@ describe('BattlePage', () => {
       ]),
     );
     window.localStorage.setItem(
-      'dropshipsimulator:battle:actionPool',
+      'dropshipsimulator:battle:dicePool',
       JSON.stringify([{ id: 'test-attack-die', label: 'Red', value: 'Attack' }]),
     );
 
@@ -3141,7 +3141,7 @@ describe('BattlePage', () => {
     endDeploymentPhase();
     fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
 
-    // The bot rolls its Action Pool, takes whatever actions it can (which
+    // The bot rolls its Dice Pool, takes whatever actions it can (which
     // depend on real dice rolls, so not asserted specifically here), and
     // hands the turn back — verified via the same log line a human's own
     // End Turn produces.

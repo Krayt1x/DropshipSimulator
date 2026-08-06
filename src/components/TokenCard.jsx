@@ -222,7 +222,7 @@ function TokenCard({
                   : overheated
                     ? 'Overheated — let it cool down before firing again'
                     : !hasAttackDie
-                      ? 'No Attack dice left in the action pool'
+                      ? 'No Attack dice left in the dice pool'
                       : "Show this weapon's arc and pick a target to attack"
               }
               disabled={
@@ -252,7 +252,7 @@ function TokenCard({
                     : movementBlocked
                       ? 'Overheated — let it cool down before moving again'
                       : token.position && !hasMoveDie
-                        ? 'No Move dice left in the action pool'
+                        ? 'No Move dice left in the dice pool'
                         : undefined
               }
               onClick={onArmMove}
@@ -518,7 +518,7 @@ function TokenCard({
                 wrecked
                   ? 'Destroyed — this model can no longer move'
                   : token.position && !hasMoveDie
-                    ? 'No Move dice left in the action pool'
+                    ? 'No Move dice left in the dice pool'
                     : undefined
               }
               onClick={onArmMove}

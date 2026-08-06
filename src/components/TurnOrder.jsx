@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 const PHASES = [
   { title: 'Pre-Maintenance Phase', steps: ['Start of Turn Effects'] },
-  { title: 'Roll dice in the Action Pool', steps: [] },
+  { title: 'Roll dice in the Dice Pool', steps: [] },
   {
     title: 'Model Activation',
     steps: [

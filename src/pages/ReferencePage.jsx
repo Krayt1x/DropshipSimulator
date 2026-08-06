@@ -61,10 +61,10 @@ const SECTIONS = [
     ],
   },
   {
-    title: 'Action dice & the Action Pool',
+    title: 'Action dice & the Dice Pool',
     terms: [
       {
-        term: 'Action Pool',
+        term: 'Dice Pool',
         body: 'The dice rolled at the start of your turn, spent on moving and attacking. Rolled automatically from your dice color counts (see each unit\'s Blue/Red/Green/Yellow/Purple/Orange dice).',
       },
       {

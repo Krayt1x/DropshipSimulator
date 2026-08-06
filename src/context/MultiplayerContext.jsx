@@ -23,7 +23,7 @@ const SYNCED_KEYS = [
   'dropshipsimulator:battle:turn',
   'dropshipsimulator:battle:log',
   'dropshipsimulator:battle:bankedDice',
-  'dropshipsimulator:battle:actionPool',
+  'dropshipsimulator:battle:dicePool',
   'dropshipsimulator:battle:victoryPoints',
   'dropshipsimulator:battle:matchStats',
   // Transient (non-persisted) UI events (#117, #118, #119) — mirrored live

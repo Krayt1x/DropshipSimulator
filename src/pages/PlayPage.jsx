@@ -300,6 +300,20 @@ function PlayPage() {
   // bot's.
   const rosterReady = botRosterReady && Boolean(chosenPlayerRoster);
   const mapStageReady = mode === 'sandbox' || rosterReady;
+  // A render of whichever map is currently chosen (#243) — either the one
+  // already saved in the Map Editor, or a DEFAULT_MAPS entry by name.
+  const selectedMap =
+    mapChoice === 'current'
+      ? {
+          dimensions: currentMapDimensions,
+          tileTypes: currentMapTileTypes,
+          tiles: currentMapTiles,
+        }
+      : (DEFAULT_MAPS.find((m) => m.name === mapChoice) ?? {
+          dimensions: currentMapDimensions,
+          tileTypes: currentMapTileTypes,
+          tiles: currentMapTiles,
+        });
   const readyToStart =
     mode === 'sandbox' || (Boolean(firstPlayer) && !firstPlayerRolling);
 
@@ -673,9 +687,24 @@ function PlayPage() {
               >
                 Select map
               </button>
-              <p className="unit-meta" style={{ marginTop: 8 }}>
-                {mapChoice === 'current' ? 'Current map' : mapChoice}
-              </p>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  marginTop: 8,
+                }}
+              >
+                <MapThumbnail
+                  dimensions={selectedMap.dimensions}
+                  tileTypes={selectedMap.tileTypes}
+                  tiles={selectedMap.tiles}
+                  size={64}
+                />
+                <p className="unit-meta" style={{ margin: 0 }}>
+                  {mapChoice === 'current' ? 'Current map' : mapChoice}
+                </p>
+              </div>
             </div>
           )}
 

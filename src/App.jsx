@@ -8,7 +8,6 @@ import ReferencePage from './pages/ReferencePage.jsx';
 import MapViewPage from './pages/MapViewPage.jsx';
 import MapEditorPage from './pages/MapEditorPage.jsx';
 import BattlePage from './pages/BattlePage.jsx';
-import ConnectPage from './pages/ConnectPage.jsx';
 import {
   MultiplayerProvider,
   useMultiplayer,
@@ -23,19 +22,23 @@ function currentPage() {
   // the actual Creator (today's paint/build/export UI).
   if (path === '#map/edit') return 'map-edit';
   if (path === '#map') return 'map';
-  if (path === '#play') return 'play';
+  // #connect is a legacy deep link — Multiplayer now lives inside PlayPage's
+  // own wizard as a step, not a separate page (#250), so it just resolves to
+  // 'play' too. mp's phase (persisted in context regardless of which page
+  // renders) is what actually decides whether PlayPage shows the picker from
+  // scratch or resumes mid-handshake.
+  if (path === '#play' || path === '#connect') return 'play';
   if (path === '#builder') return 'builder';
   if (path === '#manage') return 'manage';
   if (path === '#reference') return 'reference';
   if (path === '#battle') return 'battle';
-  if (path === '#connect') return 'connect';
   return 'home';
 }
 
 // Once connected, this expands in place into a small pill (role +
-// Disconnect) instead of linking out to the full Connect page (#115) — the
-// permanent "Multiplayer" card there is gone once connected, so this badge
-// is the only way to see status or disconnect.
+// Disconnect) instead of linking back to the Play page's picker (#115) —
+// that picker is gone once connected, so this badge is the only way to see
+// status or disconnect.
 function ConnectionBadge() {
   const mp = useMultiplayer();
   const [expanded, setExpanded] = useState(false);
@@ -81,7 +84,7 @@ function ConnectionBadge() {
   const label =
     mp.phase === 'offer-ready' ? 'Waiting for peer…' : 'Connecting…';
   return (
-    <a href="#connect" className="connection-badge">
+    <a href="#play" className="connection-badge">
       ● {label}
     </a>
   );
@@ -168,6 +171,7 @@ function PlayerIdentityPicker() {
 
 function AppShell() {
   const [page, setPage] = useState(currentPage);
+  const mp = useMultiplayer();
   // Two independent menus (#172) rather than one shared hamburger: site
   // navigation (Play/Map editor) on the left, settings + in-game controls
   // on the right — each gets its own toggle instead of dumping everything
@@ -211,7 +215,7 @@ function AppShell() {
                 <a
                   href="#play"
                   className={
-                    ['play', 'battle', 'connect'].includes(page) ? 'active' : ''
+                    ['play', 'battle'].includes(page) ? 'active' : ''
                   }
                 >
                   Play
@@ -252,7 +256,8 @@ function AppShell() {
           <div
             className={`topnav-settings-menu ${settingsMenuOpen ? 'open' : ''}`}
           >
-            {(page === 'battle' || page === 'connect') && (
+            {(page === 'battle' ||
+              (page === 'play' && mp?.phase !== 'idle')) && (
               <PlayerIdentityPicker />
             )}
             {page === 'battle' && <EndGameButton />}
@@ -277,8 +282,6 @@ function AppShell() {
       </nav>
       {page === 'battle' ? (
         <BattlePage />
-      ) : page === 'connect' ? (
-        <ConnectPage />
       ) : page === 'map-edit' ? (
         <MapEditorPage />
       ) : page === 'map' ? (

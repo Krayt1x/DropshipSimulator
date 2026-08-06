@@ -1570,6 +1570,12 @@ button.danger:hover {
 
 .home-tile:hover {
   border-color: var(--accent);
+  /* The base button{}'s :hover (element+pseudo-class) would otherwise
+     outrank .home-tile's plain background rule by specificity, painting
+     --accent-hover behind the label on mouse hover — unreadable against the
+     dark text these tiles use (#250, only surfaced once a real mouse could
+     rest on one; touch devices never trigger :hover). */
+  background: var(--bg-card);
 }
 
 .home-tile-icon {
@@ -1681,9 +1687,13 @@ button.danger:hover {
 
 /* Desktop-only tabbed wizard (#247) — one stage at a time behind a compact
    left rail, instead of the mobile cascade's ever-growing stacked column.
-   Only ever rendered on wide screens (gated in JS), but the min-width query
-   keeps the rule set out of any narrow-viewport cascade it might momentarily
-   share a stylesheet with. */
+   Single Player vs Multiplayer is the wizard's own first stage (#250), so
+   the same rail also carries the Host/Join and code-exchange stages for the
+   multiplayer branch — nesting that code exchange in the body on the right
+   instead of the old standalone Connect page's two full-width competing
+   cards. Only ever rendered on wide screens (gated in JS, same as the rest
+   of this wizard), but the min-width query keeps the rule set out of any
+   narrow-viewport cascade it might momentarily share a stylesheet with. */
 @media (min-width: 701px) {
   .wizard-layout {
     display: flex;
@@ -1720,6 +1730,15 @@ button.danger:hover {
   .wizard-rail-step:disabled {
     cursor: default;
     opacity: 0.4;
+  }
+
+  /* Without this, the base button{}'s :hover (element+pseudo-class) outranks
+     this rule's background:none by specificity, painting --accent-hover
+     behind the label on mouse hover (#250, only surfaced once a real mouse
+     could rest on a rail step — reachable tabs are clickable, and even
+     unreachable ones are still hoverable). */
+  .wizard-rail-step:hover {
+    background: var(--bg-track);
   }
 
   .wizard-rail-step.current {

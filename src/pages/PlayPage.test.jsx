@@ -8,6 +8,7 @@ import {
   act,
 } from '@testing-library/react';
 import PlayPage from './PlayPage.jsx';
+import { MultiplayerProvider } from '../context/MultiplayerContext.jsx';
 
 function stubMatchMedia(matches) {
   vi.stubGlobal('matchMedia', () => ({
@@ -49,13 +50,13 @@ describe('PlayPage', () => {
     );
   });
 
-  it('links straight to #battle instead of showing the mode picker when a game is already in progress', () => {
+  it('points at Resume Game instead of showing the mode picker when a game is already in progress', () => {
     window.localStorage.setItem(
       'dropshipsimulator:battle:tokens',
       JSON.stringify([{ id: 'token-1' }]),
     );
     render(<PlayPage />);
-    expect(screen.getByRole('link', { name: /Single Player/ })).toHaveProperty(
+    expect(screen.getByRole('link', { name: /Resume Game/ })).toHaveProperty(
       'href',
       expect.stringContaining('#battle'),
     );
@@ -492,13 +493,21 @@ describe('PlayPage', () => {
     expect(screen.queryByLabelText('Map export')).toBeNull();
   });
 
-  it('Cancel dismisses the mode picker without starting a game', () => {
+  it('Cancel resets the picker all the way back to the Platform step', () => {
     render(<PlayPage />);
 
     fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Sandbox/ }));
+    expect(
+      screen.getByRole('button', { name: /Sandbox/ }).className,
+    ).toContain('selected');
+
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
-    expect(screen.queryByText('How do you want to play?')).toBeNull();
+    // Still on the picker (it's part of the New Game card, not a dismissible
+    // overlay) but back to an unpicked Platform step.
+    expect(screen.getByText('How do you want to play?')).toBeDefined();
+    expect(screen.queryByRole('button', { name: /Sandbox/ })).toBeNull();
     expect(window.location.hash).toBe('');
   });
 });
@@ -605,11 +614,8 @@ describe('PlayPage roster picker (#224, #241)', () => {
 });
 
 describe('PlayPage grid layout (#231)', () => {
-  it('marks the Single Player/Multiplayer and Sandbox/Vs CPU grids so they stay 2-up on mobile', () => {
+  it('marks the Sandbox/Vs CPU grid so it stays 2-up on mobile', () => {
     render(<PlayPage />);
-
-    const topGrid = screen.getByRole('link', { name: /Multiplayer/ }).closest('.home-tile-grid');
-    expect(topGrid.className).toContain('two-col-mobile-grid');
 
     fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
     const modeGrid = screen.getByRole('button', { name: /Sandbox/ }).closest('.home-tile-grid');
@@ -760,12 +766,18 @@ describe('PlayPage desktop wizard (#247)', () => {
       .closest('button');
   }
 
-  it('shows a compact tab rail instead of the stacked cascade, one stage at a time', () => {
+  it('shows a compact tab rail with Platform as the first stage, one at a time', () => {
     render(<PlayPage />);
-    fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
 
     expect(document.querySelector('.wizard-rail')).not.toBeNull();
     expect(screen.getByText('How do you want to play?')).toBeDefined();
+    expect(railTab('Play as')).toBeDefined();
+    // Nothing else exists as a tab yet — Platform hasn't been picked.
+    expect(screen.queryByText('Sandbox or Vs CPU?')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+
+    expect(screen.getByText('Sandbox or Vs CPU?')).toBeDefined();
     // Difficulty/Rosters/Scenario/First player don't exist as tabs yet —
     // mode hasn't been picked, so the wizard doesn't know it's a Vs CPU game.
     expect(screen.queryByText('Choose a difficulty')).toBeNull();
@@ -852,7 +864,7 @@ describe('PlayPage desktop wizard (#247)', () => {
 
     expect(screen.getByText('Which map do you want to play?')).toBeDefined();
     fireEvent.click(railTab('Mode'));
-    expect(screen.getByText('How do you want to play?')).toBeDefined();
+    expect(screen.getByText('Sandbox or Vs CPU?')).toBeDefined();
 
     fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
     expect(screen.getByText('Choose a difficulty')).toBeDefined();
@@ -864,5 +876,102 @@ describe('PlayPage desktop wizard (#247)', () => {
     fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
 
     expect(railTab('Rosters').disabled).toBe(true);
+  });
+});
+
+describe('PlayPage Single Player/Multiplayer as the wizard\'s first step (#250)', () => {
+  it('offers Single Player and Multiplayer as the picker\'s first stage, not a separate outer picker', () => {
+    render(<PlayPage />);
+
+    expect(screen.getByText('How do you want to play?')).toBeDefined();
+    expect(screen.getByRole('button', { name: /Single Player/ })).toBeDefined();
+    expect(screen.getByRole('button', { name: /Multiplayer/ })).toBeDefined();
+  });
+
+  it('picking Multiplayer stays on the Play page and shows Host/Join instead of Sandbox/Vs CPU', () => {
+    render(<PlayPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Multiplayer/ }));
+
+    // Multiplayer used to navigate away to #connect (#231) — it's the
+    // wizard's own next stage now, so picking it must not navigate anywhere.
+    expect(window.location.hash).toBe('');
+    expect(screen.getByText('Host or join a game?')).toBeDefined();
+    expect(screen.queryByText('Sandbox or Vs CPU?')).toBeNull();
+  });
+
+  it('embeds the host/join code exchange inline instead of navigating to a separate page', () => {
+    render(
+      <MultiplayerProvider>
+        <PlayPage />
+      </MultiplayerProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Multiplayer/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Host a game/ }));
+
+    expect(
+      screen.getByRole('button', { name: 'Host a game' }),
+    ).toBeDefined();
+    expect(window.location.hash).toBe('');
+  });
+
+  it('switching back to Single Player after picking Multiplayer shows Sandbox/Vs CPU again', () => {
+    render(<PlayPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Multiplayer/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+
+    expect(screen.getByText('Sandbox or Vs CPU?')).toBeDefined();
+  });
+
+  it('shows a resume message instead of the picker while a game is already in progress', () => {
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:tokens',
+      JSON.stringify([{ id: 'token-1' }]),
+    );
+    render(<PlayPage />);
+
+    expect(screen.queryByText('How do you want to play?')).toBeNull();
+    expect(
+      screen.getByText('A game is already in progress — use Resume Game above, or End Game to start a new one.'),
+    ).toBeDefined();
+  });
+});
+
+describe('PlayPage desktop wizard — multiplayer branch (#250)', () => {
+  beforeEach(() => stubMatchMedia(true));
+
+  it('nests the host code exchange in the wizard body next to the Play as/Host or Join rail', () => {
+    render(
+      <MultiplayerProvider>
+        <PlayPage />
+      </MultiplayerProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Multiplayer/ }));
+
+    const rail = document.querySelector('.wizard-rail');
+    expect(within(rail).getByText('Play as')).toBeDefined();
+    expect(within(rail).getByText('Host or Join')).toBeDefined();
+    expect(within(rail).getByText('Code exchange')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: /Host a game/ }));
+
+    const body = document.querySelector('.wizard-body');
+    expect(
+      within(body).getByRole('button', { name: 'Host a game' }),
+    ).toBeDefined();
+  });
+
+  it("doesn't offer the single-player Mode/Map/Review stages on the multiplayer branch", () => {
+    render(<PlayPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Multiplayer/ }));
+
+    const rail = document.querySelector('.wizard-rail');
+    expect(within(rail).queryByText('Mode')).toBeNull();
+    expect(within(rail).queryByText('Map')).toBeNull();
+    expect(within(rail).queryByText('Review')).toBeNull();
   });
 });

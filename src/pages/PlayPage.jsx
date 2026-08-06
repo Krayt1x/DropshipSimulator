@@ -6,6 +6,8 @@ import { DEFAULT_ROSTERS } from '../components/RosterImport.jsx';
 import { DEFAULT_MAPS } from '../lib/maps.js';
 import { useCatalogue } from '../lib/catalogue.js';
 import MapThumbnail from '../components/MapThumbnail.jsx';
+import BattlePage from './BattlePage.jsx';
+import { useMultiplayer } from '../context/MultiplayerContext.jsx';
 
 const DIFFICULTIES = [
   { id: 'simple', label: 'Simple' },
@@ -32,10 +34,58 @@ const SCENARIOS = [
 // Importing a map here was removed (#191) — map creation/maintenance is a
 // Map Editor concern now, not something to redo on every new game.
 
+// Shown inline wherever a WebRTC code needs handing to the other browser —
+// read-only so the whole thing is easy to select, plus a one-click copy for
+// browsers that support the Clipboard API.
+function CopyCode({ code }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard unavailable — the textarea below can still be copied manually
+    }
+  }
+
+  return (
+    <div className="field">
+      <textarea
+        readOnly
+        rows={4}
+        value={code}
+        onClick={(e) => e.target.select()}
+      />
+      <button type="button" className="ghost" onClick={copy}>
+        {copied ? 'Copied!' : 'Copy code'}
+      </button>
+    </div>
+  );
+}
+
 function PlayPage() {
   const { manufacturers, units, equipment } = useCatalogue();
   const [tokens] = useLocalStorageState('dropshipsimulator:battle:tokens', []);
   const hasActiveGame = tokens.length > 0;
+  const mp = useMultiplayer();
+  // Single Player vs Multiplayer is the wizard's own first step now (#250)
+  // instead of a picker that lived above/outside it — picking either grows
+  // the rest of the rail underneath, same pattern Vs CPU already uses for
+  // its own extra steps. Lazily reads mp's current phase so navigating back
+  // here mid-handshake (e.g. via the nav connection badge) lands on the
+  // Multiplayer branch already, instead of resetting to unpicked.
+  const [platform, setPlatform] = useState(() =>
+    mp && mp.phase !== 'idle' ? 'multiplayer' : null,
+  ); // null | 'single' | 'multiplayer'
+  // Host/Join is a local UI choice, kept separate from mp.role so picking
+  // "Host a game" can reveal its explanation/button before any WebRTC call
+  // actually fires, instead of the old idle phase's two full-width cards
+  // competing for space up front.
+  const [mpChoice, setMpChoice] = useState(null); // null | 'host' | 'join'
+  const [pastedOffer, setPastedOffer] = useState('');
+  const [pastedAnswer, setPastedAnswer] = useState('');
   // Desktop gets a compact tabbed wizard instead of the ever-growing stacked
   // cascade (#247) — mobile keeps the cascade as-is, since a single scrolling
   // column already suits a phone. Same breakpoint the rest of the app's
@@ -52,7 +102,9 @@ function PlayPage() {
     mql.addEventListener('change', handler);
     return () => mql.removeEventListener('change', handler);
   }, []);
-  const [wizardStep, setWizardStep] = useState('mode');
+  const [wizardStep, setWizardStep] = useState(() =>
+    mp && mp.phase !== 'idle' ? 'code' : 'platform',
+  );
   const [, setMyPlayer] = useLocalStorageState(
     'dropshipsimulator:myPlayer',
     null,
@@ -99,7 +151,6 @@ function PlayPage() {
   // (#184), each answer just grows this one card downward: Sandbox/Vs CPU
   // tiles, then (for Vs CPU) difficulty tiles, then the CPU's list, then the
   // map — each stage staying visible and re-pickable once the next appears.
-  const [expanded, setExpanded] = useState(false);
   const [mode, setMode] = useState(null); // null | 'sandbox' | 'cpu'
   const [difficulty, setDifficulty] = useState(null);
   // Which manufacturer's lists to offer (#198) — chosen before the specific
@@ -136,8 +187,15 @@ function PlayPage() {
   const firstPlayerTimeoutRef = useRef(null);
 
   function resetPicker() {
-    setExpanded(false);
-    setWizardStep('mode');
+    // A mid-handshake host/join attempt needs tearing down too, or mp.phase
+    // would stay stuck non-idle in the background while the picker above it
+    // shows a fresh, unpicked Platform step (#250).
+    if (mp && mp.phase !== 'idle') mp.disconnect();
+    setPlatform(null);
+    setMpChoice(null);
+    setPastedOffer('');
+    setPastedAnswer('');
+    setWizardStep('platform');
     setMode(null);
     setDifficulty(null);
     setRosterManufacturer(null);
@@ -159,6 +217,19 @@ function PlayPage() {
   }
 
   useEffect(() => () => clearTimeout(firstPlayerTimeoutRef.current), []);
+
+  function pickPlatform(p) {
+    setPlatform(p);
+    setMpChoice(null);
+    setPastedOffer('');
+    setPastedAnswer('');
+    if (isDesktopWizard) setWizardStep(p === 'single' ? 'mode' : 'role');
+  }
+
+  function pickMpChoice(choice) {
+    setMpChoice(choice);
+    if (isDesktopWizard) setWizardStep('code');
+  }
 
   function pickFirstPlayer(side) {
     if (firstPlayerRolling) return;
@@ -351,41 +422,67 @@ function PlayPage() {
         });
   const readyToStart =
     mode === 'sandbox' || (Boolean(firstPlayer) && !firstPlayerRolling);
+  // Once mp.role is set (past the idle phase), the actual handshake already
+  // decided Host vs Join — mpChoice only matters for the brief window before
+  // that, while still on the idle phase picking one (#250).
+  const effectiveMpChoice =
+    mp && mp.phase !== 'idle'
+      ? mp.role === 'guest'
+        ? 'join'
+        : 'host'
+      : mpChoice;
 
-  // The desktop wizard's tab list (#247) — grows/shrinks with `mode`, same
-  // stages the mobile cascade below shows, just one at a time instead of all
-  // stacked. Map/Scenario already have working defaults, so they're always
-  // "done"; only Rosters and First player require an explicit pick before
-  // the wizard lets you skip past them.
-  const WIZARD_STEPS = [
-    { key: 'mode', label: 'Mode' },
-    ...(mode === 'cpu'
+  // The desktop wizard's tab list (#247) — grows/shrinks with `mode` (and now
+  // `platform`, #250), same stages the mobile cascade below shows, just one
+  // at a time instead of all stacked. Map/Scenario already have working
+  // defaults, so they're always "done"; only Rosters and First player
+  // require an explicit pick before the wizard lets you skip past them.
+  const WIZARD_STEPS =
+    platform === 'multiplayer'
       ? [
-          { key: 'difficulty', label: 'Difficulty' },
-          { key: 'rosters', label: 'Rosters' },
+          { key: 'platform', label: 'Play as' },
+          { key: 'role', label: 'Host or Join' },
+          { key: 'code', label: 'Code exchange' },
         ]
-      : []),
-    { key: 'map', label: 'Map' },
-    ...(mode === 'cpu'
-      ? [
-          { key: 'scenario', label: 'Scenario' },
-          { key: 'first', label: 'First player' },
-        ]
-      : []),
-    { key: 'review', label: 'Review' },
-  ];
+      : [
+          { key: 'platform', label: 'Play as' },
+          { key: 'mode', label: 'Mode' },
+          ...(mode === 'cpu'
+            ? [
+                { key: 'difficulty', label: 'Difficulty' },
+                { key: 'rosters', label: 'Rosters' },
+              ]
+            : []),
+          { key: 'map', label: 'Map' },
+          ...(mode === 'cpu'
+            ? [
+                { key: 'scenario', label: 'Scenario' },
+                { key: 'first', label: 'First player' },
+              ]
+            : []),
+          { key: 'review', label: 'Review' },
+        ];
 
   function isWizardStepDone(key) {
+    if (key === 'platform') return Boolean(platform);
     if (key === 'mode') return Boolean(mode);
     if (key === 'difficulty') return Boolean(difficulty);
     if (key === 'rosters') return rosterReady;
     if (key === 'map') return Boolean(mapChoice);
     if (key === 'scenario') return Boolean(scenario);
     if (key === 'first') return Boolean(firstPlayer);
+    if (key === 'role') return Boolean(effectiveMpChoice);
     return false;
   }
 
   function wizardStepSummary(key) {
+    if (key === 'platform') {
+      return platform === 'single'
+        ? 'Single Player'
+        : platform === 'multiplayer'
+          ? 'Multiplayer'
+          : '';
+    }
     if (key === 'mode') {
       return mode === 'cpu' ? 'Vs CPU' : mode === 'sandbox' ? 'Sandbox' : '';
     }
@@ -410,6 +507,13 @@ function PlayPage() {
           ? 'CPU'
           : '';
     }
+    if (key === 'role') {
+      return effectiveMpChoice === 'host'
+        ? 'Hosting'
+        : effectiveMpChoice === 'join'
+          ? 'Joining'
+          : '';
+    }
     return '';
   }
 
@@ -427,10 +531,164 @@ function PlayPage() {
   // Each stage's inner content, shared verbatim between the mobile cascade
   // (all stages stacked, one after another) and the desktop wizard (one
   // stage shown at a time — #247) so the two layouts can never drift apart.
-  function renderModeOptions() {
+  function renderPlatformOptions() {
     return (
       <>
         <p className="stage-label">How do you want to play?</p>
+        <div className="home-tile-grid two-col-mobile-grid">
+          <button
+            type="button"
+            className={`home-tile ${platform === 'single' ? 'selected' : ''}`}
+            onClick={() => pickPlatform('single')}
+          >
+            <span className="home-tile-icon">🧍</span>
+            <span className="home-tile-title">Single Player</span>
+            <span className="home-tile-description">
+              Play locally on one device — no connection needed.
+            </span>
+          </button>
+          <button
+            type="button"
+            className={`home-tile ${platform === 'multiplayer' ? 'selected' : ''}`}
+            onClick={() => pickPlatform('multiplayer')}
+          >
+            <span className="home-tile-icon">🔗</span>
+            <span className="home-tile-title">Multiplayer</span>
+            <span className="home-tile-description">
+              Connect two browsers so a match stays in sync live.
+            </span>
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  function renderRoleOptions() {
+    return (
+      <>
+        <p className="stage-label">Host or join a game?</p>
+        <div className="home-tile-grid two-col-mobile-grid">
+          <button
+            type="button"
+            className={`home-tile ${effectiveMpChoice === 'host' ? 'selected' : ''}`}
+            disabled={mp?.phase !== 'idle'}
+            onClick={() => pickMpChoice('host')}
+          >
+            <span className="home-tile-icon">📡</span>
+            <span className="home-tile-title">Host a game</span>
+            <span className="home-tile-description">
+              Creates a code to send to your opponent.
+            </span>
+          </button>
+          <button
+            type="button"
+            className={`home-tile ${effectiveMpChoice === 'join' ? 'selected' : ''}`}
+            disabled={mp?.phase !== 'idle'}
+            onClick={() => pickMpChoice('join')}
+          >
+            <span className="home-tile-icon">📥</span>
+            <span className="home-tile-title">Join a game</span>
+            <span className="home-tile-description">
+              Paste the code your host sent you.
+            </span>
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  function renderCodeExchange() {
+    if (!mp) return null;
+    const { role, phase, offerCode, answerCode, error } = mp;
+
+    return (
+      <>
+        {error && (
+          <div className="card" style={{ borderColor: '#dc2626', marginBottom: 12 }}>
+            <p className="unit-meta" style={{ color: '#dc2626' }}>
+              {error}
+            </p>
+          </div>
+        )}
+
+        {phase === 'idle' && effectiveMpChoice === 'host' && (
+          <>
+            <p className="stage-label">Host a game</p>
+            <button type="button" onClick={mp.startHost}>
+              Host a game
+            </button>
+          </>
+        )}
+
+        {phase === 'idle' && effectiveMpChoice === 'join' && (
+          <>
+            <p className="stage-label">Join a game</p>
+            <div className="field">
+              <label htmlFor="join-offer-code">Paste host's code here</label>
+              <textarea
+                id="join-offer-code"
+                rows={4}
+                placeholder="Paste host's code here"
+                value={pastedOffer}
+                onChange={(e) => setPastedOffer(e.target.value)}
+              />
+            </div>
+            <button
+              type="button"
+              disabled={!pastedOffer.trim()}
+              onClick={() => mp.joinWithOffer(pastedOffer.trim())}
+            >
+              Join a game
+            </button>
+          </>
+        )}
+
+        {phase === 'offer-ready' && role === 'host' && (
+          <>
+            <p className="stage-label">Step 1: send this code to your opponent</p>
+            <CopyCode code={offerCode} />
+            <p className="stage-label" style={{ marginTop: 16 }}>
+              Step 2: paste the answer code they send back
+            </p>
+            <div className="field">
+              <textarea
+                rows={4}
+                placeholder="Paste their answer code here"
+                value={pastedAnswer}
+                onChange={(e) => setPastedAnswer(e.target.value)}
+              />
+            </div>
+            <button
+              type="button"
+              disabled={!pastedAnswer.trim()}
+              onClick={() => mp.submitAnswer(pastedAnswer.trim())}
+            >
+              Connect
+            </button>
+          </>
+        )}
+
+        {phase === 'connecting' && role === 'guest' && answerCode && (
+          <>
+            <p className="stage-label">Send this code back to your host</p>
+            <CopyCode code={answerCode} />
+            <p className="unit-meta">
+              Waiting for the host to finish connecting…
+            </p>
+          </>
+        )}
+
+        {phase === 'connecting' && !(role === 'guest' && answerCode) && (
+          <p className="unit-meta">Connecting…</p>
+        )}
+      </>
+    );
+  }
+
+  function renderModeOptions() {
+    return (
+      <>
+        <p className="stage-label">Sandbox or Vs CPU?</p>
         <div className="home-tile-grid two-col-mobile-grid">
           <button
             type="button"
@@ -838,6 +1096,10 @@ function PlayPage() {
     );
   }
 
+  // Once connected, status and Disconnect live in the nav's connection badge
+  // instead (#115) — the picker above it is only for getting there.
+  if (mp?.phase === 'connected') return <BattlePage />;
+
   return (
     <div className="container home-container">
       <h1 style={{ textAlign: 'center' }}>Play</h1>
@@ -863,41 +1125,18 @@ function PlayPage() {
           </button>
         </div>
       )}
-      <div className="home-tile-grid two-col-mobile-grid">
-        {hasActiveGame ? (
-          <a className="home-tile" href="#battle">
-            <span className="home-tile-icon">🧍</span>
-            <span className="home-tile-title">Single Player</span>
-            <span className="home-tile-description">
-              Play locally on one device — no connection needed.
-            </span>
-          </a>
-        ) : (
-          <button
-            type="button"
-            className="home-tile"
-            onClick={() => setExpanded(true)}
-          >
-            <span className="home-tile-icon">🧍</span>
-            <span className="home-tile-title">Single Player</span>
-            <span className="home-tile-description">
-              Play locally on one device — no connection needed.
-            </span>
-          </button>
-        )}
-        <a className="home-tile" href="#connect">
-          <span className="home-tile-icon">🔗</span>
-          <span className="home-tile-title">Multiplayer</span>
-          <span className="home-tile-description">
-            Connect two browsers so a match stays in sync live.
-          </span>
-        </a>
-      </div>
 
-      {expanded && isDesktopWizard && (
+      {hasActiveGame && (
+        <p className="unit-meta" style={{ textAlign: 'center' }}>
+          A game is already in progress — use Resume Game above, or End Game
+          to start a new one.
+        </p>
+      )}
+
+      {!hasActiveGame && isDesktopWizard && (
         <div className="card wizard-card" style={{ marginTop: 16 }}>
           <div className="reserve-header">
-            <p className="unit-name">Single Player</p>
+            <p className="unit-name">New Game</p>
             <button type="button" className="ghost" onClick={resetPicker}>
               Cancel
             </button>
@@ -934,13 +1173,16 @@ function PlayPage() {
               })}
             </div>
             <div className="wizard-body">
+              {wizardStep === 'platform' && renderPlatformOptions()}
+              {wizardStep === 'role' && renderRoleOptions()}
+              {wizardStep === 'code' && renderCodeExchange()}
               {wizardStep === 'mode' && renderModeOptions()}
               {wizardStep === 'difficulty' && renderDifficultyOptions()}
               {wizardStep === 'rosters' && renderRostersOptions()}
               {wizardStep === 'map' && renderMapOptions()}
               {wizardStep === 'scenario' && renderScenarioOptions()}
               {wizardStep === 'first' && renderFirstPlayerOptions()}
-              {wizardStep !== 'review' && (
+              {wizardStep !== 'review' && wizardStep !== 'code' && (
                 <div
                   style={{
                     display: 'flex',
@@ -988,38 +1230,42 @@ function PlayPage() {
         </div>
       )}
 
-      {expanded && !isDesktopWizard && (
+      {!hasActiveGame && !isDesktopWizard && (
         <div className="card" style={{ marginTop: 16 }}>
           <div className="reserve-header">
-            <p className="unit-name">Single Player</p>
+            <p className="unit-name">New Game</p>
             <button type="button" className="ghost" onClick={resetPicker}>
               Cancel
             </button>
           </div>
 
-          {renderModeOptions()}
+          {renderPlatformOptions()}
 
-          {mode === 'cpu' && (
+          {platform === 'single' && (
+            <div className="cascade-stage">{renderModeOptions()}</div>
+          )}
+
+          {platform === 'single' && mode === 'cpu' && (
             <div className="cascade-stage">{renderDifficultyOptions()}</div>
           )}
 
-          {mode === 'cpu' && difficulty && (
+          {platform === 'single' && mode === 'cpu' && difficulty && (
             <div className="cascade-stage">{renderRostersOptions()}</div>
           )}
 
-          {mapStageReady && (
+          {platform === 'single' && mapStageReady && (
             <div className="cascade-stage">{renderMapOptions()}</div>
           )}
 
-          {mapStageReady && mode === 'cpu' && (
+          {platform === 'single' && mapStageReady && mode === 'cpu' && (
             <div className="cascade-stage">{renderScenarioOptions()}</div>
           )}
 
-          {mapStageReady && mode === 'cpu' && (
+          {platform === 'single' && mapStageReady && mode === 'cpu' && (
             <div className="cascade-stage">{renderFirstPlayerOptions()}</div>
           )}
 
-          {mapStageReady && (
+          {platform === 'single' && mapStageReady && (
             <div
               style={{
                 display: 'flex',
@@ -1035,6 +1281,14 @@ function PlayPage() {
                 Start Game
               </button>
             </div>
+          )}
+
+          {platform === 'multiplayer' && (
+            <div className="cascade-stage">{renderRoleOptions()}</div>
+          )}
+
+          {platform === 'multiplayer' && effectiveMpChoice && (
+            <div className="cascade-stage">{renderCodeExchange()}</div>
           )}
         </div>
       )}

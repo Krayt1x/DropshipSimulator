@@ -2530,6 +2530,46 @@ describe('BattlePage', () => {
     expect(boardPanel.classList.contains('mobile-tab-panel-active')).toBe(true);
   });
 
+  it('shows the tab bar as a top strip on desktop and a fixed bottom bar on mobile (#249)', () => {
+    const { unmount } = render(<BattlePage />);
+    expect(
+      screen.getByRole('button', { name: 'Board' }).closest('.mobile-tab-bar-top'),
+    ).not.toBeNull();
+    unmount();
+
+    vi.stubGlobal('matchMedia', () => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+
+    render(<BattlePage />);
+    expect(
+      screen
+        .getByRole('button', { name: 'Board' })
+        .closest('.mobile-tab-bar-bottom'),
+    ).not.toBeNull();
+  });
+
+  it('only ever shows one panel at a time on desktop too, matching mobile (#249)', () => {
+    render(<BattlePage />);
+
+    const boardPanel = document.querySelector('.battle-board-column');
+    expect(boardPanel.classList.contains('mobile-tab-panel-active')).toBe(
+      false,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Board' }));
+    expect(boardPanel.classList.contains('mobile-tab-panel-active')).toBe(
+      true,
+    );
+
+    const dicePanel = screen.getByText('Game log').closest('.mobile-tab-panel');
+    expect(dicePanel.classList.contains('mobile-tab-panel-active')).toBe(
+      false,
+    );
+  });
+
   it('combines the dice roller and the game log into one Dice tab (#248)', () => {
     render(<BattlePage />);
 

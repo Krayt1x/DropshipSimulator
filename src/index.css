@@ -419,20 +419,7 @@ button.danger:hover {
 }
 
 .battle-layout {
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr) 280px;
-  gap: 1.25rem;
-  align-items: start;
-}
-
-@media (max-width: 1100px) {
-  .battle-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .battle-layout > .battle-board-column {
-    order: -1;
-  }
+  display: block;
 }
 
 @media (max-width: 900px) {
@@ -2281,16 +2268,70 @@ button.danger:hover {
   padding-bottom: 0;
 }
 
-/* Bottom app-style tab bar (Board/Units/Dice/Log) replacing the old
-   slide-in unit-card overlay and dice tray (#101) — those made sense one
-   at a time but didn't fix the underlying cramped/small-touch-target
-   scaling everywhere else on mobile. On desktop .mobile-tab-panel has no
-   display rule at all, so every panel still shows at once as before.
+/* One-panel-at-a-time tab bar (Board/Units/Dice) replacing the old slide-in
+   unit-card overlay and dice tray (#101) — those made sense one at a time
+   but didn't fix the underlying cramped/small-touch-target scaling
+   everywhere else on mobile. Desktop now uses the same one-panel model
+   behind a top tab strip instead of a permanent 3-column layout (#249), so
+   .mobile-tab-panel's visibility rule applies at every width; only the tab
+   bar's chrome (bottom-fixed vs top strip) differs by platform.
    Placed at the very end of this file (rather than near the other mobile
    media queries above) so its ties with every component's own unconditional
    `display` rule resolve by source order in this block's favor. */
+.mobile-tab-panel {
+  display: none;
+}
+
+.mobile-tab-panel.mobile-tab-panel-active {
+  display: block;
+}
+
 .mobile-tab-bar {
   display: none;
+}
+
+.mobile-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  /* --text-muted's light-theme value only clears ~2.4:1 contrast against
+     --bg-card, unreadable for these always-visible nav labels (#148);
+     --text-secondary clears ~5.3:1 in both themes. */
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 0;
+}
+
+/* The base button{} rule's :hover (element+pseudo-class) outranks this
+   class's plain background rule above, so without this it'd paint
+   --accent-hover behind the label on mouse hover — invisible against the
+   active tab's --accent-colored text (#249, only surfaced once these tabs
+   could be desktop-hovered with a mouse). */
+.mobile-tab-btn:hover {
+  background: transparent;
+}
+
+.mobile-tab-btn.active {
+  color: var(--accent);
+}
+
+.mobile-tab-bar-top {
+  display: flex;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 1.25rem;
+}
+
+.mobile-tab-bar-top .mobile-tab-btn {
+  border-bottom: 3px solid transparent;
+  border-radius: 10px 10px 0 0;
+  padding: 11px 0;
+}
+
+.mobile-tab-bar-top .mobile-tab-btn.active {
+  border-bottom-color: var(--accent);
 }
 
 .mobile-move-fab {
@@ -2310,19 +2351,11 @@ button.danger:hover {
 }
 
 @media (max-width: 900px) {
-  .mobile-tab-panel {
-    display: none;
-  }
-
-  .mobile-tab-panel.mobile-tab-panel-active {
-    display: block;
-  }
-
   .battle-page {
     padding-bottom: 130px;
   }
 
-  .mobile-tab-bar {
+  .mobile-tab-bar-bottom {
     display: flex;
     position: fixed;
     left: 0;
@@ -2332,23 +2365,6 @@ button.danger:hover {
     background: var(--bg-card);
     border-top: 1px solid var(--border);
     z-index: 40;
-  }
-
-  .mobile-tab-btn {
-    flex: 1;
-    background: transparent;
-    border: none;
-    /* --text-muted's light-theme value only clears ~2.4:1 contrast against
-       --bg-card, unreadable for these always-visible nav labels (#148);
-       --text-secondary clears ~5.3:1 in both themes. */
-    color: var(--text-secondary);
-    font-size: 12px;
-    font-weight: 700;
-    padding: 8px 0;
-  }
-
-  .mobile-tab-btn.active {
-    color: var(--accent);
   }
 
   /* Groups the deployment-phase toggle with the Move/Weapons buttons in one

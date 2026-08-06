@@ -4,15 +4,15 @@ const TABS = [
   { id: 'dice', label: 'Dice' },
 ];
 
-// A bottom app-style tab bar replacing the old slide-in overlays (#101) —
-// only shown on narrow viewports via CSS; on desktop all panels render
-// simultaneously in the existing 3-column layout regardless of activeTab.
+// A one-panel-at-a-time tab bar replacing the old slide-in overlays (#101).
+// On mobile it's a fixed bottom bar; on desktop it's a top strip using the
+// same panel-switching model instead of a permanent 3-column layout (#249).
 // Dice and Log used to be separate tabs but always shared one stacked
-// column on desktop anyway, so mobile now combines them into "Dice" too
-// (#248) instead of a 4th tab.
-function MobileTabBar({ activeTab, onSelectTab }) {
+// column on desktop anyway, so both variants now combine them into "Dice"
+// too (#248) instead of a 4th tab.
+function MobileTabBar({ activeTab, onSelectTab, position = 'bottom' }) {
   return (
-    <nav className="mobile-tab-bar">
+    <nav className={`mobile-tab-bar mobile-tab-bar-${position}`}>
       {TABS.map((tab) => (
         <button
           type="button"

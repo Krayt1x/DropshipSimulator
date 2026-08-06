@@ -220,11 +220,12 @@ function BattlePage() {
   // that lands under the cursor on release.
   const suppressNextHexClickRef = useRef(false);
   const diceRollerRef = useRef(null);
-  // Which of the 4 panels is showing on narrow (mobile) viewports (#101) —
-  // replaces the old slide-in overlay/tray approach. Irrelevant on desktop,
-  // where all 4 panels render at once in the existing 3-column layout.
-  // Defaults to Units (which itself opens on its Import sub-tab while
-  // reserve is empty) so a fresh mobile game starts on roster import (#165).
+  // Which of the 3 panels (Board/Units/Dice) is showing — replaces the old
+  // slide-in overlay/tray approach on mobile (#101), and desktop now uses
+  // the same one-panel-at-a-time model behind a top tab bar instead of a
+  // permanent 3-column layout (#249). Defaults to Units (which itself opens
+  // on its Import sub-tab while reserve is empty) so a fresh game starts on
+  // roster import regardless of platform (#165).
   const [mobileTab, setMobileTab] = useState('units');
   // Mirrored to the other player over the multiplayer data channel (#117,
   // #118) rather than just local state, since these are transient
@@ -2528,42 +2529,48 @@ function BattlePage() {
         </div>
       )}
 
+      {!isMobile && (
+        <MobileTabBar
+          activeTab={mobileTab}
+          onSelectTab={setMobileTab}
+          position="top"
+        />
+      )}
+
       <div className="battle-layout">
-        <div>
-          <div
-            className={`mobile-tab-panel ${mobileTab === 'dice' ? 'mobile-tab-panel-active' : ''}`}
-          >
-            <DiceRoller
-              ref={diceRollerRef}
-              onRoll={handleDiceRoll}
-              dicePool={dicePool}
-              onRollToDicePool={rollToDicePool}
-              onUseDicePoolDie={useDicePoolDie}
-              onExchangeActionDice={exchangeActionDie}
-              activeOwnerDice={activeOwnerDice}
-              canRoll={!myPlayer || myPlayer === turn.active}
-              turn={turn}
-            />
-            <TurnOrder />
-            <div className="card">
-              <button
-                type="button"
-                className="ghost"
-                style={{ width: '100%' }}
-                disabled={!lastAction}
-                onClick={undoLastAction}
-              >
-                {lastAction?.type === 'rollToPool'
-                  ? 'Undo dice roll'
-                  : lastAction?.type === 'useDie'
-                    ? 'Undo used die'
-                    : lastAction?.type === 'exchange'
-                      ? 'Undo exchange'
-                      : 'Undo last move'}
-              </button>
-            </div>
-            <GameLog entries={logEntries} />
+        <div
+          className={`mobile-tab-panel ${mobileTab === 'dice' ? 'mobile-tab-panel-active' : ''}`}
+        >
+          <DiceRoller
+            ref={diceRollerRef}
+            onRoll={handleDiceRoll}
+            dicePool={dicePool}
+            onRollToDicePool={rollToDicePool}
+            onUseDicePoolDie={useDicePoolDie}
+            onExchangeActionDice={exchangeActionDie}
+            activeOwnerDice={activeOwnerDice}
+            canRoll={!myPlayer || myPlayer === turn.active}
+            turn={turn}
+          />
+          <TurnOrder />
+          <div className="card">
+            <button
+              type="button"
+              className="ghost"
+              style={{ width: '100%' }}
+              disabled={!lastAction}
+              onClick={undoLastAction}
+            >
+              {lastAction?.type === 'rollToPool'
+                ? 'Undo dice roll'
+                : lastAction?.type === 'useDie'
+                  ? 'Undo used die'
+                  : lastAction?.type === 'exchange'
+                    ? 'Undo exchange'
+                    : 'Undo last move'}
+            </button>
           </div>
+          <GameLog entries={logEntries} />
         </div>
         <div
           className={`battle-board-column mobile-tab-panel ${mobileTab === 'board' ? 'mobile-tab-panel-active' : ''}`}
@@ -2958,7 +2965,13 @@ function BattlePage() {
           />
         </div>
       </div>
-      <MobileTabBar activeTab={mobileTab} onSelectTab={setMobileTab} />
+      {isMobile && (
+        <MobileTabBar
+          activeTab={mobileTab}
+          onSelectTab={setMobileTab}
+          position="bottom"
+        />
+      )}
     </div>
   );
 }

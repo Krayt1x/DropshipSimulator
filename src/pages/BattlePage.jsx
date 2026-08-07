@@ -238,6 +238,15 @@ function BattlePage() {
     null,
   );
   const moveTimeoutsRef = useRef([]);
+  // The move a multi-step animateMove() has scheduled but not yet committed
+  // to `tokens` (#301) — its real position/log/undo update only lands once
+  // the animation's timeout fires (see animateMove's own comment), so a turn
+  // ending mid-animation (a player clicking End Turn right after arming a
+  // move, or the bot's own end-of-turn) would otherwise read the token's
+  // stale pre-move position for that turn-transition's objective VP check,
+  // wrongly treating a just-vacated or just-approached hex as if the move
+  // had never happened. flushPendingMove() below commits it immediately.
+  const pendingMoveRef = useRef(null);
   const [deployEffect, setDeployEffect] = useSyncedTransientState(
     'dropshipsimulator:battle:deployEffect',
     null,
@@ -462,6 +471,10 @@ function BattlePage() {
   }
 
   function endTurn() {
+    // Commit any still-animating move before anything else here (#301) —
+    // the objective-VP effect below reacts to `turn` changing and reads
+    // `tokens` synchronously, so it must see this turn's moves as done.
+    flushPendingMove();
     const endingPlayer = turn.active;
     const next =
       turn.active === 'p1'
@@ -1502,6 +1515,7 @@ function BattlePage() {
   function animateMove(token, col, row, dieId) {
     moveTimeoutsRef.current.forEach(clearTimeout);
     moveTimeoutsRef.current = [];
+    pendingMoveRef.current = null;
     // Repositioning during deployment is instant (#263) — the step-by-step
     // walk is meant to sell an in-game move actually taking time, which
     // doesn't apply to setting up the board before the match starts.
@@ -1525,6 +1539,9 @@ function BattlePage() {
       moveTokenTo(token, col, row, dieId);
       return;
     }
+    // Recorded so flushPendingMove() (#301) can commit this move's real
+    // position immediately if the turn ends before this timeout fires.
+    pendingMoveRef.current = { token, col, row, dieId };
     path.slice(1, -1).forEach((hex, i) => {
       moveTimeoutsRef.current.push(
         setTimeout(
@@ -1540,10 +1557,27 @@ function BattlePage() {
         () => {
           setAnimatingToken(null);
           moveTokenTo(token, col, row, dieId);
+          pendingMoveRef.current = null;
         },
         MOVE_STEP_MS * (path.length - 1),
       ),
     );
+  }
+
+  // Commits an in-flight animated move's real position right away instead of
+  // waiting on its timeout (#301) — called before a turn is allowed to end,
+  // since the objective-VP check that fires the moment the new turn starts
+  // reads `tokens` directly and would otherwise see the mover's stale,
+  // pre-move position for a move that's already been decided and is only
+  // still mid-flight visually.
+  function flushPendingMove() {
+    if (!pendingMoveRef.current) return;
+    moveTimeoutsRef.current.forEach(clearTimeout);
+    moveTimeoutsRef.current = [];
+    const { token, col, row, dieId } = pendingMoveRef.current;
+    pendingMoveRef.current = null;
+    setAnimatingToken(null);
+    moveTokenTo(token, col, row, dieId);
   }
 
   function handleHexClick(key) {

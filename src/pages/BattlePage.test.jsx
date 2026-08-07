@@ -854,6 +854,68 @@ describe('BattlePage', () => {
     expect(screen.getAllByText('🏆 0').length).toBeGreaterThan(0);
   });
 
+  it('does not score a contested objective for the other side when the contesting move ends the turn before its animation finishes (#301)', () => {
+    vi.useFakeTimers();
+    const a10 = units.find((u) => u.name === 'A10');
+    function makeToken(id, owner, col, row) {
+      return {
+        id,
+        unitId: a10.id,
+        manufacturer: a10.manufacturer,
+        owner,
+        position: { col, row },
+        facing: 0,
+        currentHp: a10.hp,
+        equippedIds: [],
+        weaponState: {},
+        destroyed: false,
+        label: null,
+      };
+    }
+    // p2 sits adjacent to the objective at (5,4) and would score when its
+    // turn starts, unless contested.
+    const p1 = makeToken('p1-token', 'p1', 4, 7);
+    const p2 = makeToken('p2-token', 'p2', 5, 5);
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:tokens',
+      JSON.stringify([p1, p2]),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:mapEditor:tiles',
+      JSON.stringify({ '5,4': 'objective' }),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:deploymentPhase',
+      JSON.stringify(false),
+    );
+    // Turn 2, not 1 — the very first turn never scores (#282).
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:turn',
+      JSON.stringify({ number: 2, active: 'p1' }),
+    );
+    // A10 has 2 red dice; mocked so red's "Move" face comes up reliably
+    // (same trick other move tests use).
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+
+    render(<BattlePage />);
+
+    fireEvent.click(screen.getByTestId('hex-4,7'));
+    fireEvent.click(screen.getByRole('button', { name: /^Move/ }));
+    // (4,5) is 2 hexes away (an animated, not instant, move) and lands
+    // adjacent to p2's token — contesting its hold on the objective.
+    fireEvent.click(screen.getByTestId('hex-4,5'));
+
+    // Ends the turn immediately, before the move's animation timeout has
+    // fired — same as a player clicking End Turn right after arming a move.
+    // Player 2's objective hold is contested by this move regardless of
+    // whether its landing animation has visually finished yet (#301: it
+    // used to read the mover's stale, pre-move position here and award
+    // Player 2 the point as if the board were still uncontested).
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+
+    expect(screen.queryByText(/scored .* victory point/)).toBeNull();
+  });
+
   it('declares a winner once a side has more than 5 points and leads by 3+ from the first player\'s third turn on (#232, #259, #282)', () => {
     const a10 = units.find((u) => u.name === 'A10');
     window.localStorage.setItem(

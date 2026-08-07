@@ -202,23 +202,31 @@ function PlayPage() {
 
   useEffect(() => () => clearTimeout(firstPlayerTimeoutRef.current), []);
 
+  // Picking a tile auto-advances the wizard (#247) — a brief pause first
+  // (#256) lets the pick's own "selected" highlight register before the
+  // stage is swapped out from under it, instead of the two happening in the
+  // same instant.
+  function advanceWizardStep(nextStep) {
+    setTimeout(() => setWizardStep(nextStep), 500);
+  }
+
   function pickPlatform(p) {
     setPlatform(p);
     setMpChoice(null);
     setPastedOffer('');
     setPastedAnswer('');
-    setWizardStep(p === 'single' ? 'mode' : 'role');
+    advanceWizardStep(p === 'single' ? 'mode' : 'role');
   }
 
   function pickMpChoice(choice) {
     setMpChoice(choice);
-    setWizardStep('code');
+    advanceWizardStep('code');
   }
 
   function pickFirstPlayer(side) {
     if (firstPlayerRolling) return;
     setFirstPlayer(side);
-    setWizardStep('review');
+    advanceWizardStep('review');
   }
 
   // Flickers between Player/CPU with intervals that grow from a quick
@@ -294,7 +302,7 @@ function PlayPage() {
     clearTimeout(firstPlayerTimeoutRef.current);
     setFirstPlayer(null);
     setFirstPlayerRolling(false);
-    setWizardStep(nextMode === 'cpu' ? 'difficulty' : 'map');
+    advanceWizardStep(nextMode === 'cpu' ? 'difficulty' : 'map');
   }
 
   function pickDifficulty(nextDifficulty) {
@@ -310,7 +318,7 @@ function PlayPage() {
     setPlayerRosterManufacturer(null);
     setChosenPlayerRoster(null);
     setShowPlayerRosterImport(false);
-    setWizardStep('rosters');
+    advanceWizardStep('rosters');
   }
 
   function pickRosterManufacturer(manufacturer) {
@@ -323,7 +331,7 @@ function PlayPage() {
     setBotRoster(botRoster);
     setChosenRoster(label);
     setShowRosterImport(false);
-    if (chosenPlayerRoster) setWizardStep('map');
+    if (chosenPlayerRoster) advanceWizardStep('map');
   }
 
   function previewImport() {
@@ -342,7 +350,7 @@ function PlayPage() {
     setPlayerRoster(roster);
     setChosenPlayerRoster(label);
     setShowPlayerRosterImport(false);
-    if (chosenRoster) setWizardStep('map');
+    if (chosenRoster) advanceWizardStep('map');
   }
 
   function previewPlayerImport() {
@@ -354,12 +362,12 @@ function PlayPage() {
   function pickMap(choice) {
     setMapChoice(choice);
     setMapPickerOpen(false);
-    setWizardStep(mode === 'cpu' ? 'scenario' : 'review');
+    advanceWizardStep(mode === 'cpu' ? 'scenario' : 'review');
   }
 
   function pickScenario(id) {
     setScenario(id);
-    setWizardStep('first');
+    advanceWizardStep('first');
   }
 
   function confirmStartGame() {

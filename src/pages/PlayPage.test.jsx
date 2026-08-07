@@ -12,6 +12,7 @@ import { MultiplayerProvider } from '../context/MultiplayerContext.jsx';
 
 beforeEach(() => {
   window.localStorage.clear();
+  vi.useFakeTimers();
 });
 afterEach(() => {
   cleanup();
@@ -19,6 +20,19 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
 });
+
+// Picking a wizard tile now waits half a second before advancing to the next
+// stage (#256), so every click in these tests needs to flush that timer
+// before asserting on what comes next — a plain fireEvent.click would leave
+// the previous stage still on screen. Advancing time is a no-op for clicks
+// that don't schedule a delayed transition (manufacturer picks, rail-tab
+// navigation, Continue), so this is safe to use for every click uniformly.
+function click(el) {
+  fireEvent.click(el);
+  act(() => {
+    vi.advanceTimersByTime(500);
+  });
+}
 
 // The wizard's rail buttons put the numbered dot span before the label span
 // (#247), so the accessible name concatenates as e.g. "3Rosters" — matching
@@ -31,19 +45,19 @@ function railTab(name) {
 }
 
 function pickSinglePlayer() {
-  fireEvent.click(screen.getByRole('button', { name: /Single Player/ }));
+  click(screen.getByRole('button', { name: /Single Player/ }));
 }
 
 function pickSandbox() {
   pickSinglePlayer();
-  fireEvent.click(screen.getByRole('button', { name: /Sandbox/ }));
+  click(screen.getByRole('button', { name: /Sandbox/ }));
 }
 
 // Reaches the Rosters stage of a Vs CPU game at the given difficulty.
 function reachRostersStage(difficultyName = 'Simple') {
   pickSinglePlayer();
-  fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
-  fireEvent.click(
+  click(screen.getByRole('button', { name: /Vs CPU/ }));
+  click(
     screen.getByRole('button', { name: new RegExp(`^${difficultyName}$`) }),
   );
 }
@@ -62,8 +76,8 @@ function rosterColumns() {
 }
 
 function pickRoster(column, manufacturer, listName) {
-  fireEvent.click(within(column).getByRole('button', { name: manufacturer }));
-  fireEvent.click(within(column).getByRole('button', { name: listName }));
+  click(within(column).getByRole('button', { name: manufacturer }));
+  click(within(column).getByRole('button', { name: listName }));
 }
 
 // Reaches the Map stage of a Vs CPU game with both sides given a random
@@ -76,11 +90,11 @@ function reachMapStageCpu(difficultyName = 'Simple') {
 }
 
 // Reaches the First player stage of a Vs CPU game, accepting the Scenario
-// stage's default (Annihilation) via Continue along the way.
+// stage's default (Destruction) via Continue along the way.
 function reachFirstPlayerStage(difficultyName = 'Simple') {
   reachMapStageCpu(difficultyName);
-  fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+  click(screen.getByRole('button', { name: 'Continue' }));
+  click(screen.getByRole('button', { name: 'Continue' }));
 }
 
 describe('PlayPage', () => {
@@ -128,7 +142,7 @@ describe('PlayPage', () => {
     pickSinglePlayer();
     expect(screen.getByText('Sandbox or Vs CPU?')).toBeDefined();
 
-    fireEvent.click(screen.getByRole('button', { name: /Sandbox/ }));
+    click(screen.getByRole('button', { name: /Sandbox/ }));
 
     // Picking Sandbox replaces the Mode stage with Map — one stage at a
     // time (#247, #251) rather than the old cascade stacking both — and
@@ -138,9 +152,9 @@ describe('PlayPage', () => {
     expect(screen.queryByText('Sandbox or Vs CPU?')).toBeNull();
     expect(screen.getByText('Which map do you want to play?')).toBeDefined();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    click(screen.getByRole('button', { name: 'Continue' }));
     expect(screen.getByText('Review & start')).toBeDefined();
-    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+    click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(window.location.hash).toBe('#battle');
     expect(window.localStorage.getItem('dropshipsimulator:gameMode')).toBe(
@@ -151,10 +165,10 @@ describe('PlayPage', () => {
   it('walks a full Vs CPU game through every stage to Start Game (#173, #176, #184, #239)', () => {
     render(<PlayPage />);
     pickSinglePlayer();
-    fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
+    click(screen.getByRole('button', { name: /Vs CPU/ }));
     expect(screen.getByText('Choose a difficulty')).toBeDefined();
 
-    fireEvent.click(screen.getByRole('button', { name: /Tactical/ }));
+    click(screen.getByRole('button', { name: /Tactical/ }));
 
     // Picking a difficulty alone doesn't start the game yet — a
     // manufacturer (#198) and roster still need an answer for both sides
@@ -171,20 +185,20 @@ describe('PlayPage', () => {
 
     expect(window.location.hash).toBe('');
     expect(screen.getByText('Which map do you want to play?')).toBeDefined();
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    click(screen.getByRole('button', { name: 'Continue' }));
 
     expect(
       screen.getByText('Which scenario do you want to play?'),
     ).toBeDefined();
-    fireEvent.click(screen.getByRole('button', { name: /First to 11/ }));
+    click(screen.getByRole('button', { name: /Scenario Control/ }));
 
     expect(screen.getByText('Who plays first?')).toBeDefined();
     // Start Game only appears on the Review stage, reached once who goes
     // first is answered (#239).
-    fireEvent.click(screen.getByRole('button', { name: 'Player', exact: true }));
+    click(screen.getByRole('button', { name: 'Player', exact: true }));
 
     expect(screen.getByText('Review & start')).toBeDefined();
-    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+    click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(window.location.hash).toBe('#battle');
     expect(window.localStorage.getItem('dropshipsimulator:gameMode')).toBe(
@@ -215,14 +229,14 @@ describe('PlayPage', () => {
 
       expect(screen.getByText('Who plays first?')).toBeDefined();
 
-      fireEvent.click(screen.getByRole('button', { name: 'CPU' }));
+      click(screen.getByRole('button', { name: 'CPU' }));
       // Picking auto-advances straight to Review, so the pick itself is
       // only visible afterward via the rail's summary, not a lingering
       // "selected" tile.
       expect(screen.getByText('Review & start')).toBeDefined();
       expect(within(railTab('First player')).getByText('CPU')).toBeDefined();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+      click(screen.getByRole('button', { name: 'Start Game' }));
       expect(window.location.hash).toBe('#battle');
       expect(
         JSON.parse(window.localStorage.getItem('dropshipsimulator:battle:turn')),
@@ -233,8 +247,8 @@ describe('PlayPage', () => {
       render(<PlayPage />);
       reachFirstPlayerStage();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Player', exact: true }));
-      fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+      click(screen.getByRole('button', { name: 'Player', exact: true }));
+      click(screen.getByRole('button', { name: 'Start Game' }));
 
       expect(
         JSON.parse(window.localStorage.getItem('dropshipsimulator:battle:turn')),
@@ -246,7 +260,7 @@ describe('PlayPage', () => {
       render(<PlayPage />);
       reachFirstPlayerStage();
 
-      fireEvent.click(
+      click(
         screen.getByRole('button', { name: 'Randomize who goes first' }),
       );
 
@@ -273,7 +287,7 @@ describe('PlayPage', () => {
     it('does not gate reaching Start Game on a first-player pick in Sandbox mode', () => {
       render(<PlayPage />);
       pickSandbox();
-      fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+      click(screen.getByRole('button', { name: 'Continue' }));
 
       expect(screen.queryByText('Who plays first?')).toBeNull();
       expect(screen.getByRole('button', { name: 'Start Game' }).disabled).toBe(
@@ -294,7 +308,7 @@ describe('PlayPage', () => {
 
     // Corp B has no default rosters in this catalogue — only Random and
     // Import should be on offer, with a note explaining why.
-    fireEvent.click(within(cpuColumn).getByRole('button', { name: 'Corp B' }));
+    click(within(cpuColumn).getByRole('button', { name: 'Corp B' }));
     expect(within(cpuColumn).getByRole('button', { name: 'Random' })).toBeDefined();
     expect(within(cpuColumn).getByRole('button', { name: 'Import…' })).toBeDefined();
     expect(within(cpuColumn).queryByText('Default A Corp List')).toBeNull();
@@ -303,7 +317,7 @@ describe('PlayPage', () => {
     ).toBeDefined();
 
     // Switching to Corp A shows its own default rosters instead.
-    fireEvent.click(within(cpuColumn).getByRole('button', { name: 'Corp A' }));
+    click(within(cpuColumn).getByRole('button', { name: 'Corp A' }));
     expect(
       within(cpuColumn).getByRole('button', { name: 'Default A Corp List' }),
     ).toBeDefined();
@@ -316,9 +330,9 @@ describe('PlayPage', () => {
     render(<PlayPage />);
     reachRostersStage();
     const { cpuColumn, playerColumn } = rosterColumns();
-    fireEvent.click(within(cpuColumn).getByRole('button', { name: 'Corp A' }));
+    click(within(cpuColumn).getByRole('button', { name: 'Corp A' }));
 
-    fireEvent.click(
+    click(
       within(cpuColumn).getByRole('button', { name: 'Flame Chicken Spam' }),
     );
     expect(
@@ -328,10 +342,10 @@ describe('PlayPage', () => {
 
     pickRoster(playerColumn, 'Corp A', 'Default A Corp List');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Player', exact: true }));
-    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+    click(screen.getByRole('button', { name: 'Continue' }));
+    click(screen.getByRole('button', { name: 'Continue' }));
+    click(screen.getByRole('button', { name: 'Player', exact: true }));
+    click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(window.location.hash).toBe('#battle');
     expect(window.localStorage.getItem('dropshipsimulator:botRoster')).toBe(
@@ -346,8 +360,8 @@ describe('PlayPage', () => {
     render(<PlayPage />);
     reachRostersStage();
     const { cpuColumn, playerColumn } = rosterColumns();
-    fireEvent.click(within(cpuColumn).getByRole('button', { name: 'Corp A' }));
-    fireEvent.click(within(cpuColumn).getByRole('button', { name: 'Import…' }));
+    click(within(cpuColumn).getByRole('button', { name: 'Corp A' }));
+    click(within(cpuColumn).getByRole('button', { name: 'Import…' }));
 
     const rosterText = [
       'Test List (Corp A)',
@@ -363,17 +377,17 @@ describe('PlayPage', () => {
       true,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
+    click(screen.getByRole('button', { name: 'Preview import' }));
     expect(screen.getByText('1 unit found.')).toBeDefined();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Use this list' }));
+    click(screen.getByRole('button', { name: 'Use this list' }));
 
     pickRoster(playerColumn, 'Corp A', 'Random');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Player', exact: true }));
-    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+    click(screen.getByRole('button', { name: 'Continue' }));
+    click(screen.getByRole('button', { name: 'Continue' }));
+    click(screen.getByRole('button', { name: 'Player', exact: true }));
+    click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(window.location.hash).toBe('#battle');
     expect(window.localStorage.getItem('dropshipsimulator:botRoster')).toBe(
@@ -388,15 +402,15 @@ describe('PlayPage', () => {
     );
     render(<PlayPage />);
     pickSandbox();
-    fireEvent.click(screen.getByRole('button', { name: 'Select map' }));
-    fireEvent.click(
+    click(screen.getByRole('button', { name: 'Select map' }));
+    click(
       within(screen.getByText('Choose a map').closest('.map-picker-modal')).getByRole(
         'button',
         { name: /Blank/ },
       ),
     );
     expect(screen.getByText('Review & start')).toBeDefined();
-    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+    click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(window.location.hash).toBe('#battle');
     expect(
@@ -407,17 +421,17 @@ describe('PlayPage', () => {
   it('lists every pre-existing map in the picker modal, not just Blank (#222)', () => {
     render(<PlayPage />);
     pickSandbox();
-    fireEvent.click(screen.getByRole('button', { name: 'Select map' }));
+    click(screen.getByRole('button', { name: 'Select map' }));
 
     const modal = screen.getByText('Choose a map').closest('.map-picker-modal');
-    fireEvent.click(within(modal).getByRole('button', { name: /Map 1/ }));
+    click(within(modal).getByRole('button', { name: /Map 1/ }));
     // The picker closes and picking a map auto-advances straight to Review
     // (#247), which shows the chosen map in its own summary line (#228).
     expect(screen.queryByText('Choose a map')).toBeNull();
     expect(screen.getByText('Review & start')).toBeDefined();
     expect(screen.getAllByText('Map 1').length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+    click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(
       JSON.parse(
@@ -433,8 +447,8 @@ describe('PlayPage', () => {
     );
     render(<PlayPage />);
     pickSandbox();
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+    click(screen.getByRole('button', { name: 'Continue' }));
+    click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(
       JSON.parse(window.localStorage.getItem('dropshipsimulator:mapEditor:tiles')),
@@ -446,7 +460,7 @@ describe('PlayPage', () => {
     reachMapStageCpu('Tactical');
     expect(screen.getByText('Which map do you want to play?')).toBeDefined();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Select map' }));
+    click(screen.getByRole('button', { name: 'Select map' }));
     const mapPickerModal = screen
       .getByText('Choose a map')
       .closest('.map-picker-modal');
@@ -465,7 +479,7 @@ describe('PlayPage', () => {
   it('confirms the difficulty tiles have no emoji icons', () => {
     render(<PlayPage />);
     pickSinglePlayer();
-    fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
+    click(screen.getByRole('button', { name: /Vs CPU/ }));
 
     expect(screen.getByRole('button', { name: 'Simple' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Tactical' })).toBeDefined();
@@ -479,7 +493,7 @@ describe('PlayPage', () => {
     // choice only shows afterward via the rail's summary.
     expect(within(railTab('Mode')).getByText('Sandbox')).toBeDefined();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    click(screen.getByRole('button', { name: 'Cancel' }));
 
     // Still on the picker (it's part of the New Game card, not a
     // dismissible overlay) but back to an unpicked Platform stage.
@@ -529,16 +543,16 @@ describe('PlayPage roster picker (#224, #241)', () => {
     reachRostersStage('Tactical');
     const { cpuColumn } = rosterColumns();
 
-    fireEvent.click(within(cpuColumn).getByRole('button', { name: 'Corp A' }));
+    click(within(cpuColumn).getByRole('button', { name: 'Corp A' }));
     expect(within(cpuColumn).queryByText(/Weight:/)).toBeNull();
 
-    fireEvent.click(
+    click(
       within(cpuColumn).getByRole('button', { name: 'Default A Corp List' }),
     );
     expect(within(cpuColumn).getByText(/Weight:/)).toBeDefined();
 
     // Picking a different list collapses the first one's description.
-    fireEvent.click(
+    click(
       within(cpuColumn).getByRole('button', { name: 'Flame Chicken Spam' }),
     );
     expect(within(cpuColumn).getAllByText(/Weight:/).length).toBe(1);
@@ -562,7 +576,7 @@ describe('PlayPage grid layout (#231)', () => {
   it('marks the difficulty grid so it stays 3-up in one row on mobile', () => {
     render(<PlayPage />);
     pickSinglePlayer();
-    fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
+    click(screen.getByRole('button', { name: /Vs CPU/ }));
 
     const difficultyGrid = screen
       .getByRole('button', { name: 'Simple' })
@@ -590,31 +604,31 @@ describe('PlayPage grid layout (#231)', () => {
 });
 
 describe('PlayPage scenario picker (#232, #242)', () => {
-  it('shows a scenario stage after the map stage in vs-computer mode, defaulting to Annihilation', () => {
+  it('shows a scenario stage after the map stage in vs-computer mode, defaulting to Destruction (#260)', () => {
     render(<PlayPage />);
     reachMapStageCpu();
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    click(screen.getByRole('button', { name: 'Continue' }));
 
     const body = document.querySelector('.wizard-body');
     expect(
       within(body).getByText('Which scenario do you want to play?'),
     ).toBeDefined();
     expect(
-      within(body).getByRole('button', { name: /Annihilation/ }).className,
+      within(body).getByRole('button', { name: /Destruction/ }).className,
     ).toContain('selected');
     expect(
-      within(body).getByRole('button', { name: /First to 11/ }).className,
+      within(body).getByRole('button', { name: /Scenario Control/ }).className,
     ).not.toContain('selected');
   });
 
   it('commits the chosen scenario to storage when Start Game is pressed', () => {
     render(<PlayPage />);
     reachMapStageCpu();
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    click(screen.getByRole('button', { name: 'Continue' }));
 
-    fireEvent.click(screen.getByRole('button', { name: /First to 11/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Player', exact: true }));
-    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+    click(screen.getByRole('button', { name: /Scenario Control/ }));
+    click(screen.getByRole('button', { name: 'Player', exact: true }));
+    click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(window.location.hash).toBe('#battle');
     expect(
@@ -622,19 +636,19 @@ describe('PlayPage scenario picker (#232, #242)', () => {
     ).toBe(JSON.stringify('first-to-11'));
   });
 
-  it('defaults to Annihilation in storage when the scenario stage is never touched', () => {
+  it("defaults to Destruction (stored as 'annihilation') when the scenario stage is never touched", () => {
     render(<PlayPage />);
     reachFirstPlayerStage();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Player', exact: true }));
-    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+    click(screen.getByRole('button', { name: 'Player', exact: true }));
+    click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(
       window.localStorage.getItem('dropshipsimulator:gameScenario'),
     ).toBe(JSON.stringify('annihilation'));
   });
 
-  it('never shows the scenario picker in Sandbox mode and always commits Annihilation (#242)', () => {
+  it('never shows the scenario picker in Sandbox mode and always commits Destruction (#242)', () => {
     render(<PlayPage />);
     pickSandbox();
 
@@ -642,8 +656,8 @@ describe('PlayPage scenario picker (#232, #242)', () => {
       screen.queryByText('Which scenario do you want to play?'),
     ).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+    click(screen.getByRole('button', { name: 'Continue' }));
+    click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(window.location.hash).toBe('#battle');
     expect(
@@ -656,7 +670,7 @@ describe('PlayPage map picker grid on mobile (#234)', () => {
   it('marks the map picker grid so it stays a grid on mobile instead of stacking', () => {
     render(<PlayPage />);
     pickSandbox();
-    fireEvent.click(screen.getByRole('button', { name: 'Select map' }));
+    click(screen.getByRole('button', { name: 'Select map' }));
 
     const modal = screen.getByText('Choose a map').closest('.map-picker-modal');
     const grid = within(modal).getByRole('button', { name: /Current map/ }).closest('.home-tile-grid');
@@ -693,12 +707,36 @@ describe('PlayPage wizard (#247, #251)', () => {
     expect(railTab('Mode').className).toContain('done');
   });
 
+  it('waits half a second after a pick before swapping in the next stage (#256)', () => {
+    render(<PlayPage />);
+    pickSinglePlayer();
+
+    const body = document.querySelector('.wizard-body');
+    fireEvent.click(within(body).getByRole('button', { name: /Sandbox/ }));
+    // The pick registers immediately (the tile shows selected)...
+    expect(
+      within(body).getByRole('button', { name: /Sandbox/ }).className,
+    ).toContain('selected');
+    // ...but the stage itself hasn't swapped yet.
+    expect(screen.queryByText('Which map do you want to play?')).toBeNull();
+
+    act(() => {
+      vi.advanceTimersByTime(499);
+    });
+    expect(screen.queryByText('Which map do you want to play?')).toBeNull();
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(screen.getByText('Which map do you want to play?')).toBeDefined();
+  });
+
   it("lets Continue accept a stage's default without an explicit pick", () => {
     render(<PlayPage />);
     pickSandbox();
 
     expect(screen.getByText('Which map do you want to play?')).toBeDefined();
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    click(screen.getByRole('button', { name: 'Continue' }));
 
     expect(screen.getByText('Review & start')).toBeDefined();
     expect(screen.getByRole('button', { name: 'Start Game' }).disabled).toBe(
@@ -711,17 +749,17 @@ describe('PlayPage wizard (#247, #251)', () => {
     pickSandbox();
 
     expect(screen.getByText('Which map do you want to play?')).toBeDefined();
-    fireEvent.click(railTab('Mode'));
+    click(railTab('Mode'));
     expect(screen.getByText('Sandbox or Vs CPU?')).toBeDefined();
 
-    fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
+    click(screen.getByRole('button', { name: /Vs CPU/ }));
     expect(screen.getByText('Choose a difficulty')).toBeDefined();
   });
 
   it("doesn't let you skip ahead to a tab that isn't reachable yet", () => {
     render(<PlayPage />);
     pickSinglePlayer();
-    fireEvent.click(screen.getByRole('button', { name: /Vs CPU/ }));
+    click(screen.getByRole('button', { name: /Vs CPU/ }));
 
     expect(railTab('Rosters').disabled).toBe(true);
   });
@@ -741,7 +779,7 @@ describe("PlayPage Single Player/Multiplayer as the wizard's first stage (#250)"
   it('picking Multiplayer stays on the Play page and shows Host/Join instead of Sandbox/Vs CPU', () => {
     render(<PlayPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Multiplayer/ }));
+    click(screen.getByRole('button', { name: /Multiplayer/ }));
 
     // Multiplayer used to navigate away to #connect (#231) — it's the
     // wizard's own next stage now, so picking it must not navigate anywhere.
@@ -757,8 +795,8 @@ describe("PlayPage Single Player/Multiplayer as the wizard's first stage (#250)"
       </MultiplayerProvider>,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Multiplayer/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Host a game/ }));
+    click(screen.getByRole('button', { name: /Multiplayer/ }));
+    click(screen.getByRole('button', { name: /Host a game/ }));
 
     expect(screen.getByRole('button', { name: 'Host a game' })).toBeDefined();
     expect(window.location.hash).toBe('');
@@ -767,10 +805,10 @@ describe("PlayPage Single Player/Multiplayer as the wizard's first stage (#250)"
   it('switching back to Single Player after picking Multiplayer shows Sandbox/Vs CPU again', () => {
     render(<PlayPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Multiplayer/ }));
+    click(screen.getByRole('button', { name: /Multiplayer/ }));
     // Picking Multiplayer auto-advances past the Platform stage — jump back
     // via the rail to revise the choice (#247).
-    fireEvent.click(railTab('Play as'));
+    click(railTab('Play as'));
     pickSinglePlayer();
 
     expect(screen.getByText('Sandbox or Vs CPU?')).toBeDefined();
@@ -783,14 +821,14 @@ describe("PlayPage Single Player/Multiplayer as the wizard's first stage (#250)"
       </MultiplayerProvider>,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Multiplayer/ }));
+    click(screen.getByRole('button', { name: /Multiplayer/ }));
 
     const rail = document.querySelector('.wizard-rail');
     expect(within(rail).getByText('Play as')).toBeDefined();
     expect(within(rail).getByText('Host or Join')).toBeDefined();
     expect(within(rail).getByText('Code exchange')).toBeDefined();
 
-    fireEvent.click(screen.getByRole('button', { name: /Host a game/ }));
+    click(screen.getByRole('button', { name: /Host a game/ }));
 
     const body = document.querySelector('.wizard-body');
     expect(
@@ -801,7 +839,7 @@ describe("PlayPage Single Player/Multiplayer as the wizard's first stage (#250)"
   it("doesn't offer the single-player Mode/Map/Review stages on the multiplayer branch", () => {
     render(<PlayPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Multiplayer/ }));
+    click(screen.getByRole('button', { name: /Multiplayer/ }));
 
     const rail = document.querySelector('.wizard-rail');
     expect(within(rail).queryByText('Mode')).toBeNull();

@@ -569,9 +569,22 @@ function BattlePage() {
   // Spends one unused action die to re-roll a different unused action die's
   // outcome (#134) — DiceRoller picks the new value (it already has the
   // die-type/face data) and hands it up here to apply + log.
+  //
+  // Reads from stateRef.current.dicePool rather than the render-closure
+  // `dicePool`, for the same stale-closure reason performBotAttack/
+  // performBotDropPod do (#157, #158): runBotTurn is one long-lived async
+  // function that calls this mid-loop, after earlier iterations already
+  // called setDicePool one or more times. Looking the dice up in the stale
+  // closure meant spendDie/targetDie were never found (the closure still
+  // held the pool from before this turn's dice were even rolled), so the
+  // `if (!spendDie || !targetDie) return;` guard below silently swallowed
+  // every bot Exchange (#294) — it never wrote state or logged anything.
+  // The actual setDicePool call already used the functional-updater form,
+  // so that part was always safe; only these lookups needed to change.
   function exchangeActionDie(spendId, targetId, newValue) {
-    const spendDie = dicePool.find((d) => d.id === spendId);
-    const targetDie = dicePool.find((d) => d.id === targetId);
+    const freshPool = stateRef.current.dicePool;
+    const spendDie = freshPool.find((d) => d.id === spendId);
+    const targetDie = freshPool.find((d) => d.id === targetId);
     if (!spendDie || !targetDie) return;
     const previousValue = targetDie.value;
     setDicePool((current) =>
@@ -583,7 +596,7 @@ function BattlePage() {
     );
     pushHistory({ type: 'exchange', spendId, targetId, previousValue });
     // Same pool summary as useDicePoolDie (#286).
-    const remaining = dicePool.map((d) => {
+    const remaining = freshPool.map((d) => {
       if (d.id === spendId) return { ...d, used: true };
       if (d.id === targetId) return { ...d, value: newValue };
       return d;

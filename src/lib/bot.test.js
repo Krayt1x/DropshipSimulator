@@ -106,6 +106,23 @@ const equipment = [
     heat_rating: '1/6',
     effect_stats: [{ stat: 'tags', amount: 'indirect_fire' }],
   },
+  {
+    id: 20,
+    name: 'Light Assault',
+    type: 'Weapon',
+    hit_dice: '4d4',
+    range: '3',
+    heat_rating: '1/4',
+  },
+  {
+    id: 21,
+    name: 'Flame Thrower',
+    type: 'Weapon',
+    hit_dice: '2d4',
+    range: '3',
+    heat_rating: '2/4',
+    effect_stats: [{ stat: 'tags', amount: 'Fire' }],
+  },
 ];
 
 function makeToken({
@@ -1625,5 +1642,62 @@ describe('chooseBotAction', () => {
     expect(
       hexDistance(result.destination, enemy.position),
     ).toBeLessThan(hexDistance(bot.position, enemy.position));
+  });
+
+  describe('does not prefer a strictly worse weapon (#302)', () => {
+    // Reproduces the reported scenario: a unit carrying both a Light Assault
+    // (4d4, no tag) and a Flame Thrower (2d4, Fire-tagged) with a live enemy
+    // dead ahead, in range and in arc of both mounts, whose hit side already
+    // has equipment on it (so the Flame Thrower's damage would convert to
+    // near-harmless heat, per #125/#209). Light Assault's raw EV (3) vastly
+    // outweighs the Flame Thrower's fire-discounted EV (0.375) here, so any
+    // difficulty should fire Light Assault — never the Flame Thrower.
+    function buildScenario(equippedIds) {
+      const bot = makeToken({
+        id: 'bot1',
+        unitId: 2,
+        owner: 'p2',
+        position: { col: 5, row: 5 },
+        facing: 0,
+        equippedIds,
+        weaponState: {
+          0: { side: equippedIds[0] === 20 ? 'left' : 'right', heat: 0, broken: false },
+          1: { side: equippedIds[1] === 20 ? 'left' : 'right', heat: 0, broken: false },
+        },
+      });
+      const enemy = makeToken({
+        id: 'enemy1',
+        unitId: 2,
+        owner: 'p1',
+        position: { col: 5, row: 2 },
+        facing: 4,
+        currentHp: 100,
+        equippedIds: [11],
+        weaponState: { 0: { side: 'left', heat: 0, broken: false } },
+      });
+      return { bot, enemy };
+    }
+
+    it.each(['simple', 'tactical', 'expert'])(
+      'fires Light Assault, not the Flame Thrower, regardless of equipped-slot order (%s)',
+      (difficulty) => {
+        for (const equippedIds of [
+          [20, 21],
+          [21, 20],
+        ]) {
+          const { bot, enemy } = buildScenario(equippedIds);
+          const result = chooseBotAction({
+            tokens: [bot, enemy],
+            units,
+            equipment,
+            botOwner: 'p2',
+            dicePool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+            difficulty,
+          });
+          expect(result).toMatchObject({ type: 'attack', attackerId: 'bot1' });
+          expect(result.item.name).toBe('Light Assault');
+        }
+      },
+    );
   });
 });

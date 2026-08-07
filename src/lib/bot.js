@@ -675,9 +675,18 @@ export function chooseBotAction({
     const nonPodOptions = beforePodFilter.filter((o) => !o.isDropPodTarget);
     const viable = nonPodOptions.length > 0 ? nonPodOptions : beforePodFilter;
     if (viable.length > 0) {
+      // Simple still doesn't chase kills or break EV ties cleverly like
+      // tactical/expert do below — but picking blind off whatever happened
+      // to land first in `viable` (iteration order over a token's equipped
+      // slots) let it fire a strictly worse weapon (fewer dice, worse heat,
+      // no real damage into an equipped side) over a plainly better one just
+      // because it appeared earlier in that list, with no comparison at all
+      // (#302). Ranking by raw expected damage is the minimum every
+      // difficulty needs to avoid a dominated weapon choice; kill-seeking
+      // and overheat-awareness stay reserved for tactical/expert.
       const chosen =
         difficulty === 'simple'
-          ? viable[0]
+          ? viable.reduce((best, o) => (o.ev > best.ev ? o : best))
           : viable.reduce((best, o) => {
               // Prefer a kill outright, otherwise the highest expected damage.
               const bestIsKill = best.targetHp != null && best.ev >= best.targetHp;

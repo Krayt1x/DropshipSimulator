@@ -194,16 +194,13 @@ describe('App', () => {
     );
   });
 
-  it('portals the turn tracker into the top menu bar and drops the battle board blurb (#136)', () => {
+  it('no longer portals the turn tracker into the top menu bar on desktop (#261)', () => {
     window.location.hash = '#battle';
     const { container } = render(<App />);
 
-    const slot = container.querySelector('#topnav-turn-slot');
-    expect(slot).not.toBeNull();
-    expect(slot.querySelector('.split-tracker')).not.toBeNull();
-    expect(
-      slot.contains(screen.getByRole('button', { name: 'End Turn' })),
-    ).toBe(true);
+    expect(container.querySelector('#topnav-turn-slot')).toBeNull();
+    // The turn tracker now lives in BattlePage's own desktop sidebar instead.
+    expect(screen.getByRole('button', { name: 'End Turn' })).toBeDefined();
 
     expect(screen.queryByText(/Place units from the catalogue/)).toBeNull();
   });

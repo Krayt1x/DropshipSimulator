@@ -136,18 +136,6 @@ body {
   display: flex;
 }
 
-/* Turn counter + End Turn (#172) — centered in the bar regardless of how
-   wide the menus on either side are. */
-.topnav-turn-slot {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.topnav-turn-slot:empty {
-  display: none;
-}
-
 .player-identity-picker {
   display: flex;
   align-items: center;
@@ -261,11 +249,6 @@ body {
 .topnav-end-game {
   padding: 6px 12px;
   font-size: 13px;
-}
-
-/* BattlePage portals its TurnTracker in here (#136). */
-.topnav-turn-slot:empty {
-  display: none;
 }
 
 .theme-toggle {
@@ -420,6 +403,81 @@ button.danger:hover {
 
 .battle-layout {
   display: block;
+}
+
+/* Desktop-only layout (#261): the board stays visible at all times instead
+   of being one more tab to switch away from, with a fixed-width sidebar for
+   Units/Dice next to it — mirrors .map-editor-layout's own board+panel
+   split above. */
+.battle-layout-desktop {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.battle-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* TurnTracker's own row lays the split-tracker and End Turn button side by
+   side, which suited sitting inline in the nav bar (#136) — stacked here
+   instead, End Turn full width below, to read naturally at the top of a
+   narrow sidebar column. */
+.desktop-sidebar-turn .turn-tracker-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.desktop-sidebar-turn .turn-tracker-row button {
+  width: 100%;
+}
+
+.battle-sidebar-tabs {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+
+.battle-sidebar-tabs button {
+  flex: 1;
+  padding: 10px 0;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+}
+
+/* Same base-button:hover specificity fight as the wizard rail/home tiles
+   (#249, #251) — button:hover's element+pseudo-class rule otherwise paints
+   --accent-hover behind the label on mouse hover. */
+.battle-sidebar-tabs button:hover {
+  background: transparent;
+}
+
+.battle-sidebar-tabs button.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.sidebar-deploy-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.sidebar-deploy-toggle {
+  width: 100%;
 }
 
 @media (max-width: 900px) {
@@ -2357,10 +2415,9 @@ button.danger:hover {
 /* One-panel-at-a-time tab bar (Board/Units/Dice) replacing the old slide-in
    unit-card overlay and dice tray (#101) — those made sense one at a time
    but didn't fix the underlying cramped/small-touch-target scaling
-   everywhere else on mobile. Desktop now uses the same one-panel model
-   behind a top tab strip instead of a permanent 3-column layout (#249), so
-   .mobile-tab-panel's visibility rule applies at every width; only the tab
-   bar's chrome (bottom-fixed vs top strip) differs by platform.
+   everywhere else on mobile. Mobile only now (#261 gave desktop its own
+   always-visible-board + sidebar layout instead, .battle-layout-desktop
+   above, which never uses these classes).
    Placed at the very end of this file (rather than near the other mobile
    media queries above) so its ties with every component's own unconditional
    `display` rule resolve by source order in this block's favor. */
@@ -2400,24 +2457,6 @@ button.danger:hover {
 
 .mobile-tab-btn.active {
   color: var(--accent);
-}
-
-.mobile-tab-bar-top {
-  display: flex;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  margin-bottom: 1.25rem;
-}
-
-.mobile-tab-bar-top .mobile-tab-btn {
-  border-bottom: 3px solid transparent;
-  border-radius: 10px 10px 0 0;
-  padding: 11px 0;
-}
-
-.mobile-tab-bar-top .mobile-tab-btn.active {
-  border-bottom-color: var(--accent);
 }
 
 .mobile-move-fab {

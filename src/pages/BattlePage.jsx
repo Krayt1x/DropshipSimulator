@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import {
   useLocalStorageState,
   useSyncedTransientState,
@@ -266,17 +265,11 @@ function BattlePage() {
     {},
   );
   const [hoverInfo, setHoverInfo] = useState(null);
-  // The turn tracker portals into a slot App.jsx renders in the top menu
-  // bar (#136) rather than lifting turn/endTurn/playerDice state up there —
-  // grabbed after mount since the DOM node doesn't exist during this
-  // component's own first render.
-  const [turnSlot, setTurnSlot] = useState(null);
-  useEffect(() => {
-    setTurnSlot(document.getElementById('topnav-turn-slot'));
-  }, []);
-  // On mobile the nav bar (and its portaled TurnTracker) is hidden behind
-  // the hamburger menu, so the full Player 1/Player 2/End Turn panel is
-  // rendered inline in the page instead of in the nav slot there (#141).
+  // The turn tracker used to portal into a slot App.jsx renders in the top
+  // menu bar (#136) — on desktop it now renders directly in the battle
+  // sidebar instead (#261), and on mobile the nav bar (hidden behind the
+  // hamburger menu there anyway) never used the portal to begin with, so the
+  // full Player 1/Player 2/End Turn panel renders inline in the page (#141).
   // Tracked via matchMedia rather than a CSS-only duplicate so only one
   // TurnTracker (and one "End Turn" button) ever exists in the DOM at once.
   const [isMobile, setIsMobile] = useState(() =>
@@ -2429,147 +2422,11 @@ function BattlePage() {
     />
   ) : null;
 
-  return (
-    <div className="container-wide battle-page">
-      <TurnNotificationToast notice={turnNotice} myPlayer={myPlayer} />
-      {winner && (
-        <div className="winner-overlay">
-          <div className="card winner-modal">
-            <div className="winner-trophy">🏆</div>
-            <h1 className="winner-heading">{ownerLabel(winner)} Wins!</h1>
-            <p className="unit-meta winner-reason">
-              {wonByAnnihilation
-                ? `${ownerLabel(loser)} has no models left on the board.`
-                : `${ownerLabel(winner)} leads by ${SCENARIO_CONTROL_LEAD}+ scenario points.`}
-            </p>
-            {gameMode === 'vs-computer' && (
-              <p className="unit-meta winner-difficulty">
-                vs Computer ·{' '}
-                {BOT_DIFFICULTY_LABELS[botDifficulty] ?? 'Simple'}
-              </p>
-            )}
-            <div className="card winner-summary">
-              <p className="unit-name">Match summary</p>
-              <div className="token-stat-row">
-                <span>Turns played</span>
-                <span className="winner-summary-value">{turn.number}</span>
-              </div>
-              <div className="token-stat-row">
-                <span>{ownerLabel('p1')} models remaining</span>
-                <span className="winner-summary-value">
-                  {p1ModelsRemaining}
-                </span>
-              </div>
-              <div className="token-stat-row">
-                <span>{ownerLabel('p2')} models remaining</span>
-                <span className="winner-summary-value">
-                  {p2ModelsRemaining}
-                </span>
-              </div>
-            </div>
-            {damageChart.length > 0 && (
-              <div className="card winner-summary winner-damage-chart">
-                <p className="unit-name">Damage chart</p>
-                <div className="table-scroll">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Mech</th>
-                        <th>Player</th>
-                        <th>Damage dealt</th>
-                        <th>Kills</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {damageChart.map((row) => (
-                        <tr key={row.tokenId}>
-                          <td>
-                            <span
-                              className="tile-swatch"
-                              style={{ background: ownerColor(row.owner) }}
-                            />
-                            {row.name}
-                          </td>
-                          <td>{ownerLabel(row.owner)}</td>
-                          <td>{row.damageDealt}</td>
-                          <td>{row.kills}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-            <div className="winner-actions">
-              <button type="button" onClick={playAgain}>
-                Play Again
-              </button>
-              <button type="button" className="ghost" onClick={returnHome}>
-                Return Home
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {!isMobile &&
-        turnSlot &&
-        createPortal(
-          <TurnTracker
-            turn={turn}
-            onEndTurn={endTurn}
-            playerDice={playerDice}
-            victoryPoints={victoryPoints}
-            ownerLabel={ownerLabel}
-          />,
-          turnSlot,
-        )}
-      {isMobile && (
-        <div className="mobile-turn-tracker">
-          <TurnTracker
-            turn={turn}
-            onEndTurn={endTurn}
-            playerDice={playerDice}
-            victoryPoints={victoryPoints}
-            ownerLabel={ownerLabel}
-          />
-        </div>
-      )}
-
-      {(!isMobile || !deploymentZonesValid) && (
-        <div className="deployment-controls">
-          {/* On mobile this toggle moves into the bottom action toolbar next
-              to Move/Weapons instead (#143) — kept here for desktop, where
-              there's no such toolbar. */}
-          {!isMobile && (
-            <button
-              type="button"
-              className={deploymentPhase ? '' : 'ghost'}
-              disabled={!deploymentZonesValid}
-              onClick={() => setDeploymentPhase((current) => !current)}
-            >
-              {deploymentPhase ? 'End deployment phase' : 'Deployment Phase'}
-            </button>
-          )}
-          {!deploymentZonesValid && (
-            <span className="unit-meta">
-              Board needs at least 7 rows for deployment zones.
-            </span>
-          )}
-        </div>
-      )}
-
-      {!isMobile && (
-        <MobileTabBar
-          activeTab={mobileTab}
-          onSelectTab={setMobileTab}
-          position="top"
-        />
-      )}
-
-      <div className="battle-layout">
-        <div
-          className={`mobile-tab-panel ${mobileTab === 'dice' ? 'mobile-tab-panel-active' : ''}`}
-        >
+  // Extracted so mobile (one-panel-at-a-time tabs) and desktop (board
+  // always visible + a Units/Dice sidebar, #261) can arrange the exact
+  // same content differently instead of duplicating it.
+  const diceTabContent = (
+    <>
           <DiceRoller
             ref={diceRollerRef}
             onRoll={handleDiceRoll}
@@ -2600,10 +2457,11 @@ function BattlePage() {
             </button>
           </div>
           <GameLog entries={logEntries} />
-        </div>
-        <div
-          className={`battle-board-column mobile-tab-panel ${mobileTab === 'board' ? 'mobile-tab-panel-active' : ''}`}
-        >
+    </>
+  );
+
+  const boardTabContent = (
+    <>
           {deployingToken && (
             <div className="deploy-hint-banner">
               Tap a tile to deploy {unitName(deployingToken)}
@@ -2905,10 +2763,11 @@ function BattlePage() {
               </div>
             )}
           </div>
-        </div>
-        <div
-          className={`mobile-tab-panel ${mobileTab === 'units' ? 'mobile-tab-panel-active' : ''}`}
-        >
+    </>
+  );
+
+  const unitsTabContent = (
+    <>
           {/* Starting deployment happens from here on mobile (#145) — it's
               where Reserve units are managed, so it's the natural place to
               re-open deployment for reinforcements. Ending it stays on the
@@ -3001,14 +2860,210 @@ function BattlePage() {
             onReturnToReserve={returnDestroyedToReserve}
             ownerLabel={ownerLabel}
           />
+    </>
+  );
+
+  return (
+    <div className="container-wide battle-page">
+      <TurnNotificationToast notice={turnNotice} myPlayer={myPlayer} />
+      {winner && (
+        <div className="winner-overlay">
+          <div className="card winner-modal">
+            <div className="winner-trophy">🏆</div>
+            <h1 className="winner-heading">{ownerLabel(winner)} Wins!</h1>
+            <p className="unit-meta winner-reason">
+              {wonByAnnihilation
+                ? `${ownerLabel(loser)} has no models left on the board.`
+                : `${ownerLabel(winner)} leads by ${SCENARIO_CONTROL_LEAD}+ scenario points.`}
+            </p>
+            {gameMode === 'vs-computer' && (
+              <p className="unit-meta winner-difficulty">
+                vs Computer ·{' '}
+                {BOT_DIFFICULTY_LABELS[botDifficulty] ?? 'Simple'}
+              </p>
+            )}
+            <div className="card winner-summary">
+              <p className="unit-name">Match summary</p>
+              <div className="token-stat-row">
+                <span>Turns played</span>
+                <span className="winner-summary-value">{turn.number}</span>
+              </div>
+              <div className="token-stat-row">
+                <span>{ownerLabel('p1')} models remaining</span>
+                <span className="winner-summary-value">
+                  {p1ModelsRemaining}
+                </span>
+              </div>
+              <div className="token-stat-row">
+                <span>{ownerLabel('p2')} models remaining</span>
+                <span className="winner-summary-value">
+                  {p2ModelsRemaining}
+                </span>
+              </div>
+            </div>
+            {damageChart.length > 0 && (
+              <div className="card winner-summary winner-damage-chart">
+                <p className="unit-name">Damage chart</p>
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Mech</th>
+                        <th>Player</th>
+                        <th>Damage dealt</th>
+                        <th>Kills</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {damageChart.map((row) => (
+                        <tr key={row.tokenId}>
+                          <td>
+                            <span
+                              className="tile-swatch"
+                              style={{ background: ownerColor(row.owner) }}
+                            />
+                            {row.name}
+                          </td>
+                          <td>{ownerLabel(row.owner)}</td>
+                          <td>{row.damageDealt}</td>
+                          <td>{row.kills}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            <div className="winner-actions">
+              <button type="button" onClick={playAgain}>
+                Play Again
+              </button>
+              <button type="button" className="ghost" onClick={returnHome}>
+                Return Home
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+      {/* On desktop the turn tracker moves out of the nav bar and into the
+          sidebar instead, above the Units/Dice tabs (#261) — see
+          .desktop-sidebar-turn below — so the nav's own slot's :empty rule
+          already hides it without any extra code here. */}
       {isMobile && (
-        <MobileTabBar
-          activeTab={mobileTab}
-          onSelectTab={setMobileTab}
-          position="bottom"
-        />
+        <div className="mobile-turn-tracker">
+          <TurnTracker
+            turn={turn}
+            onEndTurn={endTurn}
+            playerDice={playerDice}
+            victoryPoints={victoryPoints}
+            ownerLabel={ownerLabel}
+          />
+        </div>
+      )}
+
+      {/* On desktop this message moves into the sidebar's Units tab next to
+          the Deployment Phase toggle it's about (#261) — kept here only for
+          mobile, where the toggle lives in the board's action toolbar
+          instead. */}
+      {isMobile && !deploymentZonesValid && (
+        <div className="deployment-controls">
+          <span className="unit-meta">
+            Board needs at least 7 rows for deployment zones.
+          </span>
+        </div>
+      )}
+
+      {isMobile ? (
+        <div className="battle-layout">
+          <div
+            className={`mobile-tab-panel ${mobileTab === 'dice' ? 'mobile-tab-panel-active' : ''}`}
+          >
+            {diceTabContent}
+          </div>
+          <div
+            className={`battle-board-column mobile-tab-panel ${mobileTab === 'board' ? 'mobile-tab-panel-active' : ''}`}
+          >
+            {boardTabContent}
+          </div>
+          <div
+            className={`mobile-tab-panel ${mobileTab === 'units' ? 'mobile-tab-panel-active' : ''}`}
+          >
+            {unitsTabContent}
+          </div>
+        </div>
+      ) : (
+        <div className="battle-layout-desktop">
+          <div className="battle-board-column">{boardTabContent}</div>
+          <div className="battle-sidebar">
+            {/* Used to portal into the nav bar's own slot (#136) — moved
+                here directly instead (#261). Stacked (split-tracker above,
+                End Turn full-width below) via .desktop-sidebar-turn instead
+                of TurnTracker's own side-by-side row, which only fit next to
+                the old nav menus. */}
+            <div className="desktop-sidebar-turn">
+              <TurnTracker
+                turn={turn}
+                onEndTurn={endTurn}
+                playerDice={playerDice}
+                victoryPoints={victoryPoints}
+                ownerLabel={ownerLabel}
+              />
+            </div>
+            <div className="battle-sidebar-tabs">
+              <button
+                type="button"
+                className={mobileTab !== 'dice' ? 'active' : ''}
+                onClick={() => setMobileTab('units')}
+              >
+                Units
+              </button>
+              <button
+                type="button"
+                className={mobileTab === 'dice' ? 'active' : ''}
+                onClick={() => setMobileTab('dice')}
+              >
+                Dice
+              </button>
+            </div>
+            {/* Both panels stay mounted, one hidden via the same
+                mobile-tab-panel/-active classes the mobile layout uses,
+                rather than actually unmounting the other tab's content —
+                keeps things like an in-progress dice roll or an expanded
+                roster entry alive if you flip tabs and back. */}
+            <div
+              className={`mobile-tab-panel ${mobileTab === 'dice' ? 'mobile-tab-panel-active' : ''}`}
+            >
+              {diceTabContent}
+            </div>
+            <div
+              className={`mobile-tab-panel ${mobileTab !== 'dice' ? 'mobile-tab-panel-active' : ''}`}
+            >
+              {/* Folded in from the page's old always-visible toggle above
+                  the tabs (#261) — it's a Units-tab concern (starting/ending
+                  deployment to manage reserve placement), not a page-wide
+                  one. */}
+              <div className="sidebar-deploy-row">
+                <button
+                  type="button"
+                  className={`sidebar-deploy-toggle ${deploymentPhase ? '' : 'ghost'}`}
+                  disabled={!deploymentZonesValid}
+                  onClick={() => setDeploymentPhase((current) => !current)}
+                >
+                  {deploymentPhase ? 'End deployment phase' : 'Deployment Phase'}
+                </button>
+                {!deploymentZonesValid && (
+                  <span className="unit-meta">
+                    Board needs at least 7 rows for deployment zones.
+                  </span>
+                )}
+              </div>
+              {unitsTabContent}
+            </div>
+          </div>
+        </div>
+      )}
+      {isMobile && (
+        <MobileTabBar activeTab={mobileTab} onSelectTab={setMobileTab} />
       )}
     </div>
   );

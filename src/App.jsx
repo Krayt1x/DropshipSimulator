@@ -233,15 +233,6 @@ function AppShell() {
           )}
         </div>
 
-        {/* BattlePage portals its TurnTracker in here (#136) so the turn
-            counter + End Turn button live in the menu bar instead of the
-            page body, without lifting all of BattlePage's turn state up.
-            Centered in the bar (#172) via absolute positioning so it stays
-            centered regardless of how wide the menus on either side are. */}
-        {page === 'battle' && (
-          <div id="topnav-turn-slot" className="topnav-turn-slot" />
-        )}
-
         <div className="topnav-right">
           <ConnectionBadge />
           <button

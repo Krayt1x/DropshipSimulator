@@ -14,21 +14,14 @@ import { sizeNumber, parseHeatRating } from '../lib/tokens.js';
 import { parseArmor, calculateDamage } from '../lib/combat.js';
 import { publish, subscribe } from '../lib/syncBus.js';
 
-// BattlePage portals its TurnTracker into a slot App.jsx normally renders in
-// the top menu bar (#136); standing this element in manually here since
-// these tests render BattlePage on its own, without App around it.
 beforeEach(() => {
   window.localStorage.clear();
-  const slot = document.createElement('div');
-  slot.id = 'topnav-turn-slot';
-  document.body.appendChild(slot);
 });
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
-  document.getElementById('topnav-turn-slot')?.remove();
 });
 
 // Deployment phase now defaults to on (#75), so tests that used to need
@@ -2686,10 +2679,17 @@ describe('BattlePage', () => {
     expect(a10Marker.querySelector('.peer-focus-ring')).toBeNull();
   });
 
-  it('shows a mobile tab bar and toggles which panel is active (#101)', () => {
+  it('shows a fixed bottom tab bar on mobile and toggles which panel is active (#101)', () => {
+    vi.stubGlobal('matchMedia', () => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
     const { container } = render(<BattlePage />);
 
-    expect(screen.getByRole('button', { name: 'Board' })).toBeDefined();
+    expect(
+      screen.getByRole('button', { name: 'Board' }).closest('.mobile-tab-bar-bottom'),
+    ).not.toBeNull();
     expect(screen.getByRole('button', { name: 'Units' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Dice' })).toBeDefined();
     // Dice and Log are combined into one tab now (#248) — no separate Log tab.
@@ -2711,43 +2711,48 @@ describe('BattlePage', () => {
     expect(boardPanel.classList.contains('mobile-tab-panel-active')).toBe(true);
   });
 
-  it('shows the tab bar as a top strip on desktop and a fixed bottom bar on mobile (#249)', () => {
-    const { unmount } = render(<BattlePage />);
-    expect(
-      screen.getByRole('button', { name: 'Board' }).closest('.mobile-tab-bar-top'),
-    ).not.toBeNull();
-    unmount();
-
-    vi.stubGlobal('matchMedia', () => ({
-      matches: true,
-      addEventListener: () => {},
-      removeEventListener: () => {},
-    }));
-
+  it('gives the board its own always-visible column and a Units/Dice sidebar on desktop, with no Board tab at all (#261)', () => {
     render(<BattlePage />);
-    expect(
-      screen
-        .getByRole('button', { name: 'Board' })
-        .closest('.mobile-tab-bar-bottom'),
-    ).not.toBeNull();
-  });
 
-  it('only ever shows one panel at a time on desktop too, matching mobile (#249)', () => {
-    render(<BattlePage />);
+    // No "Board" tab exists on desktop — the board is always on screen.
+    expect(screen.queryByRole('button', { name: 'Board' })).toBeNull();
+    const sidebarTabs = document.querySelector('.battle-sidebar-tabs');
+    expect(within(sidebarTabs).getByRole('button', { name: 'Units' })).toBeDefined();
+    expect(within(sidebarTabs).getByRole('button', { name: 'Dice' })).toBeDefined();
 
     const boardPanel = document.querySelector('.battle-board-column');
-    expect(boardPanel.classList.contains('mobile-tab-panel-active')).toBe(
-      false,
-    );
+    expect(boardPanel.classList.contains('mobile-tab-panel')).toBe(false);
+    // Switching the sidebar to Dice doesn't touch the board column at all.
+    fireEvent.click(within(sidebarTabs).getByRole('button', { name: 'Dice' }));
+    expect(document.querySelector('.battle-board-column')).not.toBeNull();
+  });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Board' }));
-    expect(boardPanel.classList.contains('mobile-tab-panel-active')).toBe(
+  it('only shows one of the desktop sidebar\'s Units/Dice panels at a time (#261)', () => {
+    render(<BattlePage />);
+    importA10ToReserve();
+
+    const unitsPanel = screen
+      .getByText('Reserve (1)')
+      .closest('.mobile-tab-panel');
+    const dicePanel = screen.getByText('Game log').closest('.mobile-tab-panel');
+    expect(unitsPanel.classList.contains('mobile-tab-panel-active')).toBe(
       true,
     );
-
-    const dicePanel = screen.getByText('Game log').closest('.mobile-tab-panel');
     expect(dicePanel.classList.contains('mobile-tab-panel-active')).toBe(
       false,
+    );
+
+    fireEvent.click(
+      within(document.querySelector('.battle-sidebar-tabs')).getByRole(
+        'button',
+        { name: 'Dice' },
+      ),
+    );
+    expect(unitsPanel.classList.contains('mobile-tab-panel-active')).toBe(
+      false,
+    );
+    expect(dicePanel.classList.contains('mobile-tab-panel-active')).toBe(
+      true,
     );
   });
 
@@ -2826,6 +2831,11 @@ describe('BattlePage', () => {
   });
 
   it('deploys a reserve token via its own Deploy to board button, jumping straight to the Board tab (#142)', () => {
+    vi.stubGlobal('matchMedia', () => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
     render(<BattlePage />);
     startDeploymentPhase();
     importA10ToReserve();
@@ -2854,6 +2864,11 @@ describe('BattlePage', () => {
   });
 
   it('returns to the Units tab after deploying, but only while another reserve unit is left to place (#201)', () => {
+    vi.stubGlobal('matchMedia', () => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
     render(<BattlePage />);
     startDeploymentPhase();
 

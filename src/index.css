@@ -1584,6 +1584,26 @@ button.danger:hover {
   grid-template-columns: repeat(3, 1fr);
 }
 
+/* 3 columns is too narrow to fit inside the wizard on a phone screen — tiles
+   overflow its bounds (#296). Matches .wizard-body .home-tile-grid's own
+   specificity so this actually wins inside the media query instead of
+   losing to the unconditional 3-column rule above. */
+@media (max-width: 700px) {
+  .wizard-body .home-tile-grid.map-grid-3col {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  /* MapThumbnail renders at a fixed pixel width (#226) that doesn't shrink
+     to a grid track on its own — same overflow this project already fixed
+     for .two-col-mobile-grid (#234), reapplied here since map-grid-3col is
+     its own separate class. */
+  .map-grid-3col .map-thumbnail {
+    width: 100%;
+    height: auto;
+  }
+}
+
 .home-tile {
   display: flex;
   flex-direction: column;

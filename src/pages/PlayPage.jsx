@@ -989,21 +989,14 @@ function PlayPage() {
         >
           Select map
         </button>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            marginTop: 8,
-          }}
-        >
+        <div style={{ marginTop: 8 }}>
           <MapThumbnail
             dimensions={selectedMap.dimensions}
             tileTypes={selectedMap.tileTypes}
             tiles={selectedMap.tiles}
-            size={64}
+            size="full"
           />
-          <p className="unit-meta" style={{ margin: 0 }}>
+          <p className="unit-meta" style={{ margin: '6px 0 0' }}>
             {mapChoice === 'current' ? 'Current map' : mapChoice}
           </p>
         </div>

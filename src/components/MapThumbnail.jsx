@@ -7,6 +7,9 @@ import { terrainAt } from '../lib/terrain.js';
 // and scaled down to icon size via the SVG viewBox.
 const THUMBNAIL_HEX_SIZE = 6;
 
+// Passing size="full" (#258) stretches the SVG to its container's width
+// instead of a fixed pixel size — the viewBox still preserves the map's
+// aspect ratio, so the rendered hexes never distort.
 function MapThumbnail({ dimensions, tileTypes, tiles, size = 120 }) {
   const { width, height } = boardPixelSize(
     dimensions.cols,
@@ -19,12 +22,13 @@ function MapThumbnail({ dimensions, tileTypes, tiles, size = 120 }) {
       hexes.push({ col, row });
     }
   }
+  const isFullWidth = size === 'full';
   return (
     <svg
-      className="map-thumbnail"
+      className={`map-thumbnail${isFullWidth ? ' map-thumbnail-full' : ''}`}
       viewBox={`0 0 ${width} ${height}`}
-      width={size}
-      height={(size * height) / width}
+      width={isFullWidth ? '100%' : size}
+      height={isFullWidth ? undefined : (size * height) / width}
     >
       {hexes.map(({ col, row }) => {
         const { x, y } = hexToPixel(col, row, THUMBNAIL_HEX_SIZE);

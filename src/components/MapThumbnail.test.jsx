@@ -30,4 +30,20 @@ describe('MapThumbnail (#226)', () => {
     expect(polygons[0].getAttribute('fill')).toBe('#3b82f6');
     expect(polygons[1].getAttribute('fill')).toBe('var(--bg-track)');
   });
+
+  it('stretches to its container width instead of a fixed pixel size when size="full" (#258)', () => {
+    const { container } = render(
+      <MapThumbnail
+        dimensions={{ cols: 3, rows: 2 }}
+        tileTypes={[{ id: 'plain', color: '#78716c' }]}
+        tiles={{}}
+        size="full"
+      />,
+    );
+
+    const svg = container.querySelector('svg');
+    expect(svg.getAttribute('width')).toBe('100%');
+    expect(svg.getAttribute('height')).toBeNull();
+    expect(svg.classList.contains('map-thumbnail-full')).toBe(true);
+  });
 });

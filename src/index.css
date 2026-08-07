@@ -1676,6 +1676,14 @@ button.danger:hover {
   border-radius: 4px;
 }
 
+/* The wizard's Map stage preview (#258) fills the body's width instead of a
+   small fixed-size icon, so the layout is actually readable before picking. */
+.map-thumbnail-full {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
 /* The Play page's Single Player picker grows downward one tile row per
    answer instead of swapping between separate step screens (#184) — each
    later stage nests under a thin rule so it still reads as "part of the

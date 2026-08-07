@@ -2689,24 +2689,15 @@ function BattlePage() {
                 onCancel={cancelAttack}
               />
             )}
-            {/* Groups the deployment-phase toggle with the token action
-                buttons in one bar (#143) — it used to live in its own row at
-                the top of the page, disconnected from the board actions it's
-                closely related to. Desktop gets its own equivalent below the
-                map instead (#270), since it never needs "End Deploy" here —
-                that lives in the sidebar's merged phase button (#269). */}
+            {/* The board toolbar used to carry its own "End Deploy" button
+                here (#143), but that direction is now merged into the
+                mobile turn tracker's End Turn button instead (#271), same
+                as desktop already does (#269) — one place per phase, not
+                two. Desktop gets its own equivalent below the map instead
+                (#270). */}
             {isMobile && (
               <>
                 <div className="mobile-action-toolbar">
-                  {deploymentPhase && (
-                    <button
-                      type="button"
-                      className="mobile-deploy-phase-btn"
-                      onClick={() => setDeploymentPhase(false)}
-                    >
-                      End Deploy
-                    </button>
-                  )}
                   {selectedToken &&
                     !selectedToken.destroyed &&
                     !selectedTokenWrecked &&
@@ -3054,12 +3045,20 @@ function BattlePage() {
       {/* On desktop the turn tracker moves out of the nav bar and into the
           sidebar instead, above the Units/Dice tabs (#261) — see
           .desktop-sidebar-turn below — so the nav's own slot's :empty rule
-          already hides it without any extra code here. */}
+          already hides it without any extra code here. Its End Turn button
+          is phase-aware here too now (#271), matching desktop's merged
+          button (#269) instead of mobile's own separate End Deploy. */}
       {isMobile && (
         <div className="mobile-turn-tracker">
           <TurnTracker
             turn={turn}
-            onEndTurn={endTurn}
+            onEndTurn={
+              deploymentPhase ? () => setDeploymentPhase(false) : endTurn
+            }
+            endTurnLabel={
+              deploymentPhase ? 'End deployment phase' : 'End Turn'
+            }
+            endTurnClassName={deploymentPhase ? 'deploy-stage' : ''}
             playerDice={playerDice}
             victoryPoints={victoryPoints}
             ownerLabel={ownerLabel}

@@ -1453,6 +1453,10 @@ button.danger:hover {
 
 .mobile-turn-tracker .turn-tracker-row {
   flex-wrap: wrap;
+  /* The End Turn button used to default-align to the row's shortest
+     content; stretching it to the split-tracker's height instead (#271)
+     matters once the tracker grows taller than one line (dice chips, VP). */
+  align-items: stretch;
 }
 
 .mobile-turn-tracker .split-tracker {
@@ -1462,6 +1466,12 @@ button.danger:hover {
 
 .mobile-turn-tracker .turn-segment {
   white-space: normal;
+}
+
+/* Matches the mobile deploy-phase button's color (#7c3aed), same merged
+   End Deployment Phase/End Turn button desktop already has (#269, #271). */
+.mobile-turn-tracker .turn-tracker-row button.deploy-stage {
+  background: #7c3aed;
 }
 
 .turn-tracker-row {
@@ -2503,10 +2513,6 @@ button.danger:hover {
   display: none;
 }
 
-.mobile-deploy-phase-btn {
-  display: none;
-}
-
 .mobile-attack-picker {
   display: none;
 }
@@ -2649,8 +2655,7 @@ button.danger:hover {
   }
 
   .mobile-move-fab,
-  .mobile-attack-fab,
-  .mobile-deploy-phase-btn {
+  .mobile-attack-fab {
     display: block;
     flex: 1 1 0;
     min-width: 0;
@@ -2670,20 +2675,10 @@ button.danger:hover {
     background: var(--accent);
   }
 
-  /* Sits between Deploy Phase and Move (#138, reordered by #143) — arms a
-     weapon without leaving the Board tab, so there's still a target to click
-     afterward. */
+  /* Sits next to Move (#138, reordered by #143) — arms a weapon without
+     leaving the Board tab, so there's still a target to click afterward. */
   .mobile-attack-fab {
     background: #b91c1c;
-  }
-
-  .mobile-deploy-phase-btn {
-    background: #7c3aed;
-  }
-
-  .mobile-deploy-phase-btn:disabled {
-    background: var(--bg-track);
-    color: var(--text-muted);
   }
 
   .mobile-attack-picker {

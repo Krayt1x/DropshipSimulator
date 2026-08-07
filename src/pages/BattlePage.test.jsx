@@ -2956,6 +2956,7 @@ describe('BattlePage', () => {
     }));
 
     render(<BattlePage />);
+    endDeploymentPhase();
 
     const tracker = document.querySelector('.mobile-turn-tracker');
     expect(tracker).not.toBeNull();
@@ -2975,7 +2976,7 @@ describe('BattlePage', () => {
     expect(screen.queryByText('Battle board')).toBeNull();
   });
 
-  it('moves End Deploy into the mobile action toolbar next to Move/Weapons (#143)', () => {
+  it('keeps only the token action buttons in the mobile toolbar, not a deploy-phase toggle (#143, #271)', () => {
     vi.stubGlobal('matchMedia', () => ({
       matches: true,
       addEventListener: () => {},
@@ -2989,19 +2990,16 @@ describe('BattlePage', () => {
     const toolbar = document.querySelector('.mobile-action-toolbar');
     expect(toolbar).not.toBeNull();
 
-    // Deployment phase starts active, so only "End Deploy" shows, inside the
-    // Board tab's toolbar; only one instance of it exists anywhere on screen
-    // — it's moved here, not duplicated alongside the desktop-only button.
-    expect(
-      within(toolbar).getByRole('button', { name: 'End Deploy' }),
-    ).toBeDefined();
+    // Ending deployment now lives on the turn tracker's merged button
+    // instead (#269, #271) — the toolbar only ever has the token FABs.
+    expect(within(toolbar).queryByText(/End deployment phase/i)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Deploy Phase' })).toBeNull();
     expect(
       within(toolbar).getByRole('button', { name: 'Deploy' }),
     ).toBeDefined();
   });
 
-  it('starts deployment from a button on the Units tab instead of the Board toolbar (#145)', () => {
+  it('starts deployment from a button on the Units tab, ends it from the turn tracker (#145, #271)', () => {
     vi.stubGlobal('matchMedia', () => ({
       matches: true,
       addEventListener: () => {},
@@ -3012,11 +3010,15 @@ describe('BattlePage', () => {
     importA10ToReserve();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'End Deploy' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'End deployment phase' }),
+    );
 
-    // Ending deployment removes the toolbar's toggle entirely; starting it
-    // again is only offered from the Units tab now, not the Board tab.
-    expect(screen.queryByRole('button', { name: 'End Deploy' })).toBeNull();
+    // Starting deployment again is only offered from the Units tab, not
+    // the Board tab's toolbar.
+    expect(
+      screen.queryByRole('button', { name: 'End deployment phase' }),
+    ).toBeNull();
 
     const startBtn = screen.getByRole('button', { name: 'Deploy Phase' });
     expect(startBtn.closest('.mobile-action-toolbar')).toBeNull();
@@ -3024,10 +3026,7 @@ describe('BattlePage', () => {
     fireEvent.click(startBtn);
 
     expect(
-      within(document.querySelector('.mobile-action-toolbar')).getByRole(
-        'button',
-        { name: 'End Deploy' },
-      ),
+      screen.getByRole('button', { name: 'End deployment phase' }),
     ).toBeDefined();
   });
 

@@ -2585,6 +2585,35 @@ describe('BattlePage', () => {
     ).toBe(`Range ${weapon.range}`);
   });
 
+  it('marks a broken weapon as BROKEN in the choose-a-weapon list (#298)', () => {
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:dicePool',
+      JSON.stringify([
+        { id: 'd-attack', label: 'Red', value: 'Attack', used: false },
+      ]),
+    );
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve(['  Right: Long Range Bolt']);
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Broken' }));
+
+    fireEvent.click(screen.getByRole('button', { name: /^Weapons/ }));
+    const picker = screen
+      .getByText('Choose a weapon')
+      .closest('.mobile-attack-picker');
+    const weaponBtn = within(picker).getByRole('button', {
+      name: /^Long Range Bolt/,
+    });
+    expect(within(weaponBtn).getByText('BROKEN')).toBeDefined();
+    expect(weaponBtn.disabled).toBe(true);
+  });
+
   it('disables Attack and Move once a model reaches 0 chassis HP (#160)', () => {
     // Seed the pool directly with one Attack die and one Move die rather
     // than rolling for real (#162, #237 — Action dice no longer cover
@@ -3448,11 +3477,14 @@ describe('BattlePage', () => {
   });
 
   it('shows the bot difficulty on the victory page in vs-computer mode, but not in sandbox (#169)', () => {
-    // In vs-computer mode the bot owns and manages Player 2's roster itself
-    // (it auto-imports on mount), so this only drives Player 1's own side —
-    // Player 2 never gets a model onto the board within this synchronous
-    // test, which is enough to reach the same "no models left" win state
-    // the display feature only needs to be checked against.
+    // Board state injected directly (same pattern as the drop-pod test right
+    // below) rather than played out through deployment — a drop pod doesn't
+    // count as defending the board (#159), so Player 2 (the bot) having only
+    // one reaches the same "no models left" win state this display feature
+    // needs to be checked against, without depending on the bot's own
+    // (now turn-order-gated, #297) auto-deployment timing.
+    const deliveryCapsule = units.find((u) => u.name === 'Delivery Capsule');
+    const a10 = units.find((u) => u.name === 'A10');
     window.localStorage.setItem(
       'dropshipsimulator:gameMode',
       JSON.stringify('vs-computer'),
@@ -3465,31 +3497,39 @@ describe('BattlePage', () => {
       'dropshipsimulator:myPlayer',
       JSON.stringify('p1'),
     );
-    render(<BattlePage />);
-    startDeploymentPhase();
-
-    // Drone (Corp B) rather than A10 — the bot's own default roster (Corp
-    // A) already contains two A10s, which would collide by name.
-    expandRosterImport();
-    fireEvent.change(screen.getByLabelText('Roster export'), {
-      target: {
-        value: [
-          'Test List (Corp B)',
-          'Weight: 10t / 100t',
-          '',
-          'Drone - 10t',
-        ].join('\n'),
-      },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Preview import' }));
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:deploymentPhase',
+      JSON.stringify(false),
     );
-    endDeploymentPhase();
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:tokens',
+      JSON.stringify([
+        {
+          id: 'p1-token',
+          unitId: a10.id,
+          owner: 'p1',
+          position: { col: 5, row: 5 },
+          facing: 0,
+          currentHp: a10.hp,
+          equippedIds: [],
+          weaponState: {},
+          destroyed: false,
+        },
+        {
+          id: 'p2-pod',
+          unitId: deliveryCapsule.id,
+          owner: 'p2',
+          position: { col: 6, row: 5 },
+          facing: 0,
+          currentHp: deliveryCapsule.hp,
+          equippedIds: [],
+          weaponState: {},
+          destroyed: false,
+        },
+      ]),
+    );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Drone' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
-    fireEvent.click(screen.getByTestId('hex-5,5'));
+    render(<BattlePage />);
 
     // "Player 1"/"Player 2" only makes sense with two humans — in vs-CPU
     // mode it reads as "Player"/"CPU" instead (#239).
@@ -3719,6 +3759,104 @@ describe('BattlePage', () => {
     expect(heatSpan.style.color).toBe('rgb(245, 158, 11)');
   });
 
+  it('deploys immediately when set to go first, without waiting on the player (#297)', async () => {
+    window.localStorage.setItem(
+      'dropshipsimulator:gameMode',
+      JSON.stringify('vs-computer'),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:botDifficulty',
+      JSON.stringify('simple'),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:myPlayer',
+      JSON.stringify('p1'),
+    );
+    // The bot (p2) is set to go first (#239).
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:turn',
+      JSON.stringify({ number: 1, active: 'p2' }),
+    );
+
+    render(<BattlePage />);
+
+    await vi.waitFor(
+      () => {
+        const currentTokens = JSON.parse(
+          window.localStorage.getItem('dropshipsimulator:battle:tokens') ??
+            '[]',
+        );
+        const botTokens = currentTokens.filter((t) => t.owner === 'p2');
+        const nonPodBotTokens = botTokens.filter((t) => {
+          const unit = units.find((u) => Number(u.id) === Number(t.unitId));
+          return unit?.size !== 'Drop Pod';
+        });
+        expect(nonPodBotTokens.length).toBeGreaterThan(0);
+        expect(nonPodBotTokens.every((t) => t.position)).toBe(true);
+      },
+      { timeout: 15000, interval: 100 },
+    );
+
+    // Deployment phase stays open — the human still needs to place their
+    // own reserve afterward.
+    expect(
+      JSON.parse(
+        window.localStorage.getItem(
+          'dropshipsimulator:battle:deploymentPhase',
+        ) ?? 'false',
+      ),
+    ).toBe(true);
+  });
+
+  it('does not deploy until the player ends their own deployment, when the bot goes second (#297)', async () => {
+    window.localStorage.setItem(
+      'dropshipsimulator:gameMode',
+      JSON.stringify('vs-computer'),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:botDifficulty',
+      JSON.stringify('simple'),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:myPlayer',
+      JSON.stringify('p1'),
+    );
+    // The player (p1) is set to go first (#239).
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:turn',
+      JSON.stringify({ number: 1, active: 'p1' }),
+    );
+
+    render(<BattlePage />);
+
+    // Give the bot's effects a chance to (incorrectly) fire before checking.
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(
+      JSON.parse(
+        window.localStorage.getItem('dropshipsimulator:battle:tokens') ?? '[]',
+      ).filter((t) => t.owner === 'p2'),
+    ).toHaveLength(0);
+
+    endDeploymentPhase();
+
+    await vi.waitFor(
+      () => {
+        const currentTokens = JSON.parse(
+          window.localStorage.getItem('dropshipsimulator:battle:tokens') ??
+            '[]',
+        );
+        const nonPodBotTokens = currentTokens.filter((t) => {
+          if (t.owner !== 'p2') return false;
+          const unit = units.find((u) => Number(u.id) === Number(t.unitId));
+          return unit?.size !== 'Drop Pod';
+        });
+        expect(nonPodBotTokens.length).toBeGreaterThan(0);
+        expect(nonPodBotTokens.every((t) => t.position)).toBe(true);
+      },
+      { timeout: 15000, interval: 100 },
+    );
+  });
+
   it('deploys itself and takes a full turn automatically in vs-computer mode', async () => {
     window.localStorage.setItem(
       'dropshipsimulator:gameMode',
@@ -3735,9 +3873,19 @@ describe('BattlePage', () => {
 
     render(<BattlePage />);
 
-    // The bot equips and deploys its own roster without any input — except
-    // its drop pods (Delivery Capsule), which stay in reserve until played
-    // in with an Action die during the game (#157).
+    // The human (p1) goes first by default here (no explicit turn order set
+    // on localStorage) — the bot doesn't deploy a single model until the
+    // human ends their own deployment first (#297).
+    const botTokensBeforeEnding = JSON.parse(
+      window.localStorage.getItem('dropshipsimulator:battle:tokens') ?? '[]',
+    ).filter((t) => t.owner === 'p2');
+    expect(botTokensBeforeEnding).toHaveLength(0);
+
+    endDeploymentPhase();
+
+    // The bot equips and deploys its own roster without any further input —
+    // except its drop pods (Delivery Capsule), which stay in reserve until
+    // played in with an Action die during the game (#157).
     await vi.waitFor(
       () => {
         const currentTokens = JSON.parse(
@@ -3763,7 +3911,21 @@ describe('BattlePage', () => {
       { timeout: 15000, interval: 100 },
     );
 
-    endDeploymentPhase();
+    // Deployment phase itself ends automatically once the bot finishes,
+    // since the human already asked to move on (#297).
+    await vi.waitFor(
+      () => {
+        expect(
+          JSON.parse(
+            window.localStorage.getItem(
+              'dropshipsimulator:battle:deploymentPhase',
+            ) ?? 'true',
+          ),
+        ).toBe(false);
+      },
+      { timeout: 15000, interval: 100 },
+    );
+
     fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
 
     // The bot rolls its Dice Pool, takes whatever actions it can (which
@@ -3813,6 +3975,9 @@ describe('BattlePage', () => {
     );
 
     render(<BattlePage />);
+    // Human goes first by default (#297) — bot deploys once they end their
+    // own deployment.
+    endDeploymentPhase();
 
     // Flame Chicken Spam is all A10s (plus a Delivery Capsule) — unlike the
     // default roster, it has no A30 or A20.

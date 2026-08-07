@@ -2372,8 +2372,15 @@ function BattlePage() {
   }, [turn, deploymentPhase]);
 
   const botDeployStartedRef = useRef(false);
-  async function runBotDeployment() {
-    if (botDeployStartedRef.current || !deploymentZonesValid) return;
+  // Set once the human has clicked "End deployment phase" while the bot
+  // still hadn't deployed (it's going second, #297) — runBotDeployment
+  // reads this once at call time to know it should also flip deploymentPhase
+  // off itself once it's done, since the human already asked to move on.
+  async function runBotDeployment(endDeploymentAfter) {
+    if (botDeployStartedRef.current || !deploymentZonesValid) {
+      if (endDeploymentAfter) setDeploymentPhase(false);
+      return;
+    }
     botDeployStartedRef.current = true;
 
     const hasBotTokens = stateRef.current.tokens.some(
@@ -2416,7 +2423,10 @@ function BattlePage() {
         !t.destroyed &&
         !isDropPodToken(t),
     );
-    if (reserveBotTokens.length === 0) return;
+    if (reserveBotTokens.length === 0) {
+      if (endDeploymentAfter) setDeploymentPhase(false);
+      return;
+    }
 
     const zoneRows =
       botOwner === 'p1'
@@ -2447,12 +2457,30 @@ function BattlePage() {
       animateMove(freshToken, hex.col, hex.row);
       await sleep(300);
     }
+    if (endDeploymentAfter) setDeploymentPhase(false);
   }
 
+  // Whoever's set to go first (#239) deploys first: the bot deploys the
+  // instant deployment phase starts if that's it, otherwise it waits for
+  // the human to click "End deployment phase" first (#297) — tracked here
+  // rather than as a ref since a click needs to trigger this effect.
+  const [humanDoneDeploying, setHumanDoneDeploying] = useState(false);
   useEffect(() => {
     if (gameMode !== 'vs-computer' || !botOwner || !deploymentPhase) return;
-    runBotDeployment();
-  }, [gameMode, botOwner, deploymentPhase]);
+    if (turn.active !== botOwner && !humanDoneDeploying) return;
+    runBotDeployment(humanDoneDeploying);
+  }, [gameMode, botOwner, deploymentPhase, turn.active, humanDoneDeploying]);
+
+  // The "End deployment phase" button's handler in vs-computer mode: ends
+  // it immediately if the bot already deployed (or was always going to
+  // deploy first), otherwise defers to the bot deploying first (#297).
+  function handleEndDeploymentPhase() {
+    if (gameMode === 'vs-computer' && botOwner && turn.active !== botOwner) {
+      setHumanDoneDeploying(true);
+      return;
+    }
+    setDeploymentPhase(false);
+  }
   // --------------------------------------------------------------------
 
   // Pre-fills the human's reserve from the list they picked on PlayPage
@@ -2574,7 +2602,14 @@ function BattlePage() {
               setAttackPickerOpen(false);
             }}
           >
-            {item.name}
+            <span
+              style={
+                state.broken ? { textDecoration: 'line-through' } : undefined
+              }
+            >
+              {item.name}
+            </span>
+            {state.broken && <span className="badge-broken">BROKEN</span>}
             {overheated && (
               <span className="badge-overheated">OVERHEATED</span>
             )}
@@ -3126,7 +3161,7 @@ function BattlePage() {
           <TurnTracker
             turn={turn}
             onEndTurn={
-              deploymentPhase ? () => setDeploymentPhase(false) : confirmEndTurn
+              deploymentPhase ? handleEndDeploymentPhase : confirmEndTurn
             }
             endTurnLabel={
               deploymentPhase ? 'End deployment phase' : 'End Turn'
@@ -3187,9 +3222,7 @@ function BattlePage() {
               <TurnTracker
                 turn={turn}
                 onEndTurn={
-                  deploymentPhase
-                    ? () => setDeploymentPhase(false)
-                    : confirmEndTurn
+                  deploymentPhase ? handleEndDeploymentPhase : confirmEndTurn
                 }
                 endTurnLabel={
                   deploymentPhase ? 'End deployment phase' : 'End Turn'

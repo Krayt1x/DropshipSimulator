@@ -3,7 +3,13 @@
 // answer "what would the bot do next" without touching React state at all.
 // The actual state mutation happens in BattlePage.jsx, which calls these in
 // a loop and applies whatever they return.
-import { hexDistance, isInWeaponArc, neighborHex, visibleSides } from './hex.js';
+import {
+  hexDistance,
+  isInWeaponArc,
+  neighborHex,
+  tileKey,
+  visibleSides,
+} from './hex.js';
 import {
   parseWeaponRange,
   parseHeatRating,
@@ -393,30 +399,58 @@ function findDropPodAction({ tokens, units, botOwner, dicePool, enemyTokens }) {
   return { type: 'dropPod', dieId: actionDie.id, tokenId: podToken.id, aim };
 }
 
-// Greedy hex walk from `from` toward `to`, taking at most `maxSteps`,
-// stopping once within `stopDistance` of the goal instead of always closing
-// all the way in — lets the tactical bot hold its weapon's range band rather
-// than walking into melee. No pathfinding exists elsewhere in the repo to
-// reuse (movement is otherwise unenforced, see BattlePage.jsx's moveRange).
+// Hex walk from `from` toward `to`, taking at most `maxSteps`, stopping once
+// within `stopDistance` of the goal instead of always closing all the way in
+// — lets the tactical bot hold its weapon's range band rather than walking
+// into melee.
+//
+// `to` itself is frequently a hex `isBlocked` rejects (the enemy token being
+// chased occupies it), so this can't just delegate to hex.js's hexPath/
+// reachableHexes with `to` as the destination — nothing would ever be
+// "reachable" at the actual target. Instead it runs its own step-by-step BFS
+// outward from `from`, tracking (per step level) the closest any newly-
+// visited hex gets to `to`, so a detour around a blocking hex (a wrecked
+// model, a live one, terrain) is found even when the single neighbor that
+// most directly reduces distance is blocked and no other neighbor does
+// either — the case a naive greedy single-step lookahead can never escape,
+// since it only ever compares this step's immediate neighbors and gives up
+// the moment none of them individually improve on the current hex (#299).
 export function stepToward(from, to, maxSteps, stopDistance, isBlocked) {
-  let current = from;
-  for (let i = 0; i < maxSteps; i++) {
-    if (hexDistance(current, to) <= stopDistance) break;
-    let best = null;
-    let bestDist = hexDistance(current, to);
-    for (let dir = 0; dir < 6; dir++) {
-      const candidate = neighborHex(current.col, current.row, dir);
-      if (isBlocked?.(candidate)) continue;
-      const d = hexDistance(candidate, to);
-      if (d < bestDist) {
-        bestDist = d;
-        best = candidate;
+  const startDist = hexDistance(from, to);
+  if (startDist <= stopDistance) return from;
+
+  const visited = new Set([tileKey(from.col, from.row)]);
+  let frontier = [from];
+  let closest = { hex: from, dist: startDist };
+
+  for (let step = 0; step < maxSteps && frontier.length > 0; step++) {
+    const next = [];
+    // Among this level's newly-reached hexes, prefer whichever lands closest
+    // to (but still within) stopDistance — the least overshoot past the
+    // range band the bot is trying to hold — rather than the first one
+    // found, so kiting behavior doesn't depend on direction-scan order.
+    let reachedStop = null;
+    for (const hex of frontier) {
+      for (let dir = 0; dir < 6; dir++) {
+        const candidate = neighborHex(hex.col, hex.row, dir);
+        const key = tileKey(candidate.col, candidate.row);
+        if (visited.has(key) || isBlocked?.(candidate)) continue;
+        visited.add(key);
+        next.push(candidate);
+        const d = hexDistance(candidate, to);
+        if (d < closest.dist) closest = { hex: candidate, dist: d };
+        if (d <= stopDistance && (!reachedStop || d > reachedStop.dist)) {
+          reachedStop = { hex: candidate, dist: d };
+        }
       }
     }
-    if (!best) break;
-    current = best;
+    if (reachedStop) return reachedStop.hex;
+    frontier = next;
   }
-  return current;
+  // Couldn't get within stopDistance inside the step budget — settle for
+  // whatever reachable hex got closest, same "best effort" fallback the old
+  // greedy walk gave when it ran out of maxSteps before closing the gap.
+  return closest.hex;
 }
 
 // Objective hexes (#178) the bot doesn't already have uncontested — same
@@ -456,8 +490,20 @@ function computeMoveCandidate({
   const allMyTokens = tokens.filter(
     (t) => t.owner === botOwner && t.position && !t.destroyed,
   );
+  // A wrecked (0 HP) enemy isn't a real target to move toward any more than
+  // it's a real target to shoot at (#182 excluded it from findAttackOptions
+  // the same way) — without this, a token whose nearest "enemy" happens to
+  // be a corpse it's already standing next to fixates on it forever (it's
+  // already as close as it can get to an occupied hex, so there's nothing
+  // left to do), never advancing on the actually-threatening enemies farther
+  // off. Reported as the bot's other units "seemingly stuck" around a 0 HP
+  // model on the board (#299).
   const enemyTokens = tokens.filter(
-    (t) => t.owner !== botOwner && t.position && !t.destroyed,
+    (t) =>
+      t.owner !== botOwner &&
+      t.position &&
+      !t.destroyed &&
+      (t.currentHp ?? 0) > 0,
   );
   if (enemyTokens.length === 0) return null;
 

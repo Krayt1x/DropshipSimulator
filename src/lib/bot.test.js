@@ -255,6 +255,52 @@ describe('stepToward', () => {
     const result = stepToward(from, to, 5, 0, () => true);
     expect(result).toEqual(from);
   });
+
+  // (#299) Reproduces "CPU not moving around 0hp unit": a single blocked hex
+  // sits exactly on the one neighbor that most directly reduces distance to
+  // the target, but a valid detour exists a step or two sideways. The old
+  // greedy single-step-lookahead walk only ever compared its 6 immediate
+  // neighbors each step; when none of them individually beat the current
+  // distance (because the only one that does is blocked), it gave up
+  // immediately instead of trying a hex that requires briefly not improving
+  // distance before it can resume closing in.
+  it('routes around a single blocking hex directly in its path instead of giving up (#299)', () => {
+    const from = { col: 0, row: 0 };
+    const to = { col: 0, row: 5 };
+    // (0,1) is the only neighbor of (0,0) whose distance to (0,5) is less
+    // than (0,0)'s own distance — block it and confirm a real detour (e.g.
+    // through (1,0)/(1,1)) is still found rather than stalling in place.
+    const isBlocked = (hex) => hex.col === 0 && hex.row === 1;
+    const result = stepToward(from, to, 6, 0, isBlocked);
+    expect(result).not.toEqual(from);
+    expect(hexDistance(result, to)).toBeLessThan(hexDistance(from, to));
+  });
+
+  it('still respects maxSteps when the only route around an obstacle is longer (#299)', () => {
+    const from = { col: 0, row: 0 };
+    const to = { col: 0, row: 5 };
+    const isBlocked = (hex) => hex.col === 0 && hex.row === 1;
+    // Only 1 step allowed — not enough to complete the 2-step detour around
+    // the blocked hex, so the model should still end up somewhere reachable
+    // in a single step, never further than 1 hex from where it started.
+    const result = stepToward(from, to, 1, 0, isBlocked);
+    expect(hexDistance(from, result)).toBeLessThanOrEqual(1);
+  });
+
+  it('still stops at stopDistance even when routing around an obstacle (#299)', () => {
+    const from = { col: 0, row: 0 };
+    const to = { col: 0, row: 5 };
+    const isBlocked = (hex) => hex.col === 0 && hex.row === 1;
+    const result = stepToward(from, to, 10, 3, isBlocked);
+    expect(hexDistance(result, to)).toBeGreaterThanOrEqual(3);
+  });
+
+  it('does not move at all when already within stopDistance, even with a detour available', () => {
+    const from = { col: 0, row: 0 };
+    const to = { col: 0, row: 2 };
+    const result = stepToward(from, to, 10, 5, () => false);
+    expect(result).toEqual(from);
+  });
 });
 
 describe('pickDeploymentHexes', () => {
@@ -1084,7 +1130,7 @@ describe('chooseBotAction', () => {
     expect(result).toMatchObject({ type: 'attack', targetId: 'enemy1' });
   });
 
-  it('water blocks a non-flying model from moving through it (#178, #265)', () => {
+  it('water blocks a non-flying model from moving through it when no route around exists (#178, #265)', () => {
     const bot = makeToken({
       id: 'bot1',
       unitId: 1,
@@ -1098,8 +1144,16 @@ describe('chooseBotAction', () => {
       owner: 'p1',
       position: { col: 0, row: 2 },
     });
-    // (0,1) is the only neighbor of (0,0) that makes progress toward (0,2).
-    const tiles = { '0,1': 'water' };
+    // Every neighbor of (0,0) is water, so there's truly nowhere to step —
+    // unlike the single-tile case below, no detour exists at all.
+    const tiles = {
+      '0,-1': 'water',
+      '1,-1': 'water',
+      '1,0': 'water',
+      '0,1': 'water',
+      '-1,0': 'water',
+      '-1,-1': 'water',
+    };
     const result = chooseBotAction({
       tokens: [bot, enemy],
       units,
@@ -1111,6 +1165,43 @@ describe('chooseBotAction', () => {
       terrainTypes,
     });
     expect(result).toBeNull();
+  });
+
+  it('a non-flying model routes around a single blocking water tile instead of stalling (#299)', () => {
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 0, row: 0 },
+      equippedIds: [11], // Chicken Legs, no flying tag
+    });
+    const enemy = makeToken({
+      id: 'enemy1',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 0, row: 2 },
+    });
+    // (0,1) is the only neighbor of (0,0) that makes direct progress toward
+    // (0,2), but a two-step detour around it (e.g. via (1,0)) exists within
+    // the model's move range — the bot should take it rather than sit still
+    // just because the single "obviously best" step is blocked (#299).
+    const tiles = { '0,1': 'water' };
+    const result = chooseBotAction({
+      tokens: [bot, enemy],
+      units,
+      equipment,
+      botOwner: 'p2',
+      dicePool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+      difficulty: 'simple',
+      tiles,
+      terrainTypes,
+    });
+    expect(result).toMatchObject({ type: 'move', tokenId: 'bot1' });
+    expect(result.destination).not.toEqual(bot.position);
+    expect(result.destination).not.toEqual({ col: 0, row: 1 });
+    expect(hexDistance(result.destination, enemy.position)).toBeLessThan(
+      hexDistance(bot.position, enemy.position),
+    );
   });
 
   it('a flying model can move over water (#265)', () => {
@@ -1140,6 +1231,91 @@ describe('chooseBotAction', () => {
     });
     expect(result).toMatchObject({ type: 'move', tokenId: 'bot1' });
     expect(result.destination).not.toEqual(bot.position);
+  });
+
+  it('routes around an enemy 0 HP wreck blocking the path to a live enemy instead of stalling (#299)', () => {
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 0, row: 0 },
+      equippedIds: [11], // Chicken Legs, no flying tag
+    });
+    // An enemy-owned wreck — 0 HP but not yet marked `destroyed` (its owner
+    // hasn't clicked "Model Destroyed" yet, which only that player's client
+    // can do — the bot only auto-cleans its own wrecks) — sitting on the one
+    // hex that most directly closes distance to the live enemy beyond it.
+    // `occupied` (computeMoveCandidate) treats a 0 HP token exactly like a
+    // live one for pathing purposes, so it blocks movement the same way a
+    // live model would, even though it's excluded as a move/attack target
+    // itself (#182, and the matching enemyTokens filter added for #299).
+    const wreck = makeToken({
+      id: 'wreck1',
+      unitId: 3,
+      owner: 'p1',
+      position: { col: 0, row: 1 },
+      currentHp: 0,
+    });
+    const enemy = makeToken({
+      id: 'enemy1',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 0, row: 2 },
+    });
+    const result = chooseBotAction({
+      tokens: [bot, wreck, enemy],
+      units,
+      equipment,
+      botOwner: 'p2',
+      dicePool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+      difficulty: 'simple',
+    });
+    expect(result).toMatchObject({ type: 'move', tokenId: 'bot1' });
+    expect(result.destination).not.toEqual(bot.position);
+    expect(result.destination).not.toEqual(wreck.position);
+    expect(hexDistance(result.destination, enemy.position)).toBeLessThan(
+      hexDistance(bot.position, enemy.position),
+    );
+  });
+
+  it('does not fixate on a nearby 0 HP wreck as a move target while a live enemy sits farther off (#299)', () => {
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 5, row: 5 },
+      equippedIds: [11], // Chicken Legs, no flying tag
+    });
+    // Adjacent already — nothing productive to do toward a corpse, but the
+    // old unfiltered enemyTokens list would have made this the bot's
+    // "nearest enemy" anyway, and since it's already as close as an occupied
+    // hex allows, the token would sit idle forever instead of ever
+    // considering the real, live enemy two tiles farther out (#299).
+    const wreck = makeToken({
+      id: 'wreck1',
+      unitId: 3,
+      owner: 'p1',
+      position: { col: 5, row: 6 },
+      currentHp: 0,
+    });
+    const enemy = makeToken({
+      id: 'enemy1',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 5, row: 8 },
+    });
+    const result = chooseBotAction({
+      tokens: [bot, wreck, enemy],
+      units,
+      equipment,
+      botOwner: 'p2',
+      dicePool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+      difficulty: 'simple',
+    });
+    expect(result).toMatchObject({ type: 'move', tokenId: 'bot1' });
+    expect(hexDistance(result.destination, enemy.position)).toBeLessThan(
+      hexDistance(bot.position, enemy.position),
+    );
   });
 
   it('does not target an enemy model already at 0 HP (#182)', () => {

@@ -120,6 +120,27 @@ describe('BattlePage', () => {
     expect(screen.getByText(`${a10Hp} / ${a10Hp}`)).toBeDefined();
   });
 
+  it("refuses to deploy a model outside the player's own deployment zone (#262)", () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+    importA10ToReserve();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy to board' }));
+    // p1's zone is the top-tinted band (rows 0-2 on the default 24-row
+    // board) — row 10 is well outside it, in no-man's-land.
+    fireEvent.click(screen.getByTestId('hex-5,10'));
+
+    expect(screen.queryByText(/deployed A10 at/)).toBeNull();
+    expect(screen.getByText('Reserve (1)')).toBeDefined();
+
+    // Placing inside the correct zone still works.
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy to board' }));
+    fireEvent.click(screen.getByTestId('hex-5,1'));
+
+    expect(screen.getByText('Player 1 deployed A10 at (5, 1)')).toBeDefined();
+    expect(screen.getByText('Reserve (0)')).toBeDefined();
+  });
+
   it('rotates facing clockwise from the left button and counter-clockwise from the right (#197)', () => {
     render(<BattlePage />);
     startDeploymentPhase();
@@ -2826,7 +2847,9 @@ describe('BattlePage', () => {
     ).toBe(false);
 
     fireEvent.click(screen.getByRole('button', { name: 'Deploy to board' }));
-    fireEvent.click(screen.getByTestId('hex-0,4'));
+    // Row 4 is outside p1's deployment zone (#262) — row 1 is still empty
+    // and inside it.
+    fireEvent.click(screen.getByTestId('hex-1,0'));
 
     // Nothing left in reserve, so it stays put on the Board tab.
     expect(

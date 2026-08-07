@@ -1357,6 +1357,16 @@ function BattlePage() {
       ? { topBoundaryRow, bottomBoundaryRow }
       : null;
 
+  // p1 deploys in the top-tinted band, everyone else in the bottom-tinted
+  // one (#262) — same split BattleBoard already tints blue/red and
+  // runBotDeployment already restricts the bot to, just never enforced
+  // against a human's own initial placement until now. A too-small board
+  // (deploymentZonesValid false) has no real zones to violate.
+  function isInOwnDeploymentZone(owner, row) {
+    if (!deploymentZonesValid) return true;
+    return owner === 'p1' ? row <= topBoundaryRow : row > bottomBoundaryRow;
+  }
+
   function tokenAt(key) {
     return tokens.find(
       (t) => t.position && `${t.position.col},${t.position.row}` === key,
@@ -1566,7 +1576,10 @@ function BattlePage() {
             useDicePoolDie(die.id);
             animateMove(movingToken, col, row, die.id);
           }
-        } else if (!tokenAt(key)) {
+        } else if (
+          !tokenAt(key) &&
+          (!deploymentPhase || isInOwnDeploymentZone(movingToken.owner, row))
+        ) {
           animateMove(movingToken, col, row);
           // Jumps back to the Units tab so the next reserve unit can be
           // picked without a manual tab switch (#201) — but only if one is
@@ -1617,6 +1630,7 @@ function BattlePage() {
       useDicePoolDie(die.id);
       animateMove(token, col, row, die.id);
     } else {
+      if (deploymentPhase && !isInOwnDeploymentZone(token.owner, row)) return;
       animateMove(token, col, row);
     }
     setSelectedTokenId(tokenId);

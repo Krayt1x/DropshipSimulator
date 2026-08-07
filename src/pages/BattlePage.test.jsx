@@ -1462,6 +1462,45 @@ describe('BattlePage', () => {
     expect(screen.getByText(/Heat 0 \/ 1/)).toBeDefined();
   });
 
+  it('repositions an on-board token instantly and without heating its movement gear during deployment (#263)', () => {
+    const { container } = render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve(['  Movement: Chicken Legs']);
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy to board' }));
+    // Row 1 is inside p1's deployment zone (#262).
+    fireEvent.click(screen.getByTestId('hex-5,1'));
+
+    // A reposition still spends a Move die (#162); mock so red's "Move" face
+    // wins. Rolling is available during deployment the same as any other
+    // time (the DiceRoller panel isn't itself phase-gated).
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    expandDiceRoller();
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
+
+    const tokenMarker = container.querySelector('[data-testid^="token-"]');
+    const targetHex = screen.getByTestId('hex-8,1');
+    const originalElementFromPoint = document.elementFromPoint;
+    document.elementFromPoint = () => targetHex;
+
+    fireEvent.pointerDown(tokenMarker, { pointerId: 1 });
+    fireEvent.pointerUp(tokenMarker, { pointerId: 1 });
+    document.elementFromPoint = originalElementFromPoint;
+
+    // No animation to wait out — the reposition applies immediately. The
+    // token detail panel that would normally show "Heat x / y" is itself
+    // hidden during deployment, so check the underlying state directly:
+    // moved, but its Movement gear's heat is untouched.
+    expect(screen.getByText('Player 1 moved A10 to (8, 1)')).toBeDefined();
+    const [token] = JSON.parse(
+      window.localStorage.getItem('dropshipsimulator:battle:tokens'),
+    );
+    expect(token.position).toEqual({ col: 8, row: 1 });
+    expect(
+      Object.values(token.weaponState).every((s) => (s?.heat ?? 0) === 0),
+    ).toBe(true);
+  });
+
   it('runs the automated attack workflow: arc target, side pick, roll, and damage application (#103)', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     // Derived from the live data files rather than hardcoded, since both are

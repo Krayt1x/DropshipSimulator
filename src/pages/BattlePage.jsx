@@ -1419,7 +1419,12 @@ function BattlePage() {
       appendLog(
         `${ownerLabel(token.owner)} moved ${unitName(token)} to (${col}, ${row})`,
       );
-      const weaponState = bumpMovementHeat(token);
+      // Repositioning during deployment is setup, not a real move — it
+      // shouldn't heat up the mover's Movement gear the way an in-game move
+      // does (#263).
+      const weaponState = deploymentPhase
+        ? token.weaponState
+        : bumpMovementHeat(token);
       setTokens((current) =>
         current.map((t) =>
           t.id === token.id
@@ -1443,7 +1448,10 @@ function BattlePage() {
   function animateMove(token, col, row, dieId) {
     moveTimeoutsRef.current.forEach(clearTimeout);
     moveTimeoutsRef.current = [];
-    if (!token.position) {
+    // Repositioning during deployment is instant (#263) — the step-by-step
+    // walk is meant to sell an in-game move actually taking time, which
+    // doesn't apply to setting up the board before the match starts.
+    if (!token.position || deploymentPhase) {
       moveTokenTo(token, col, row, dieId);
       return;
     }

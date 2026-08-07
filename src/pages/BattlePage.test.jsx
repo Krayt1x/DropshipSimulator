@@ -2395,8 +2395,9 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
     fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
     // A20 defaults to facing north (p2), so sitting directly north of it
-    // (A10's spot) puts the attacker in A20's front-left visibility cone —
-    // Front and Left should be pickable, Right and Rear should not (#126).
+    // (A10's spot) puts the attacker dead-center in A20's front quadrant —
+    // an exact tie between Left and Right, so both are pickable alongside
+    // Front; only Rear should stay blocked (#126, #276).
     fireEvent.click(screen.getByTestId('hex-5,6'));
 
     fireEvent.click(screen.getByTestId('hex-5,5'));
@@ -2405,7 +2406,7 @@ describe('BattlePage', () => {
 
     expect(screen.getByRole('button', { name: 'Front' }).disabled).toBe(false);
     expect(screen.getByRole('button', { name: 'Left' }).disabled).toBe(false);
-    expect(screen.getByRole('button', { name: 'Right' }).disabled).toBe(true);
+    expect(screen.getByRole('button', { name: 'Right' }).disabled).toBe(false);
     expect(screen.getByRole('button', { name: 'Rear' }).disabled).toBe(true);
   });
 

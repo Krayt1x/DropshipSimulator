@@ -277,10 +277,14 @@ export function nearestSide(target, facing, from, size = hexSize()) {
   return sideQuadrant(rel).side;
 }
 
-// The 1-2 sides of `target` visible from `from`'s position (#126): the
+// The 1-3 sides of `target` visible from `from`'s position (#126): the
 // nearest side, plus whichever of its two neighbors `from` leans toward
 // within that side's own 90° quadrant — a ~180° visibility cone rather than
 // either "only the exact nearest side" or "everything but the far side".
+// Dead center in a quadrant (e.g. directly in front) is equidistant from
+// both neighbors, so both count as visible instead of arbitrarily picking
+// one (#276 — this used to always resolve the tie toward the same neighbor,
+// so a dead-center attacker could never see the side on the other side).
 export function visibleSides(target, facing, from, size = hexSize()) {
   const t = hexToPixel(target.col, target.row, size);
   const f = hexToPixel(from.col, from.row, size);
@@ -294,7 +298,8 @@ export function visibleSides(target, facing, from, size = hexSize()) {
   const cwNeighbor = SIDES_CW[(idx + 1) % 4];
   const distLo = r - quadrant.lo;
   const distHi = quadrant.hi - r;
-  const leaning = distLo <= distHi ? ccwNeighbor : cwNeighbor;
+  if (distLo === distHi) return [quadrant.side, ccwNeighbor, cwNeighbor];
+  const leaning = distLo < distHi ? ccwNeighbor : cwNeighbor;
   return [quadrant.side, leaning];
 }
 

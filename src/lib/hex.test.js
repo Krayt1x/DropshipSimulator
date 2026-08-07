@@ -165,13 +165,32 @@ describe('hex', () => {
       });
     });
 
-    it('returns exactly 2 distinct sides for every direction', () => {
+    it('returns exactly 2 distinct sides off-center, 3 on a dead-center tie', () => {
       [0, 1, 2, 3, 4, 5].forEach((dir) => {
         const from = neighborHex(target.col, target.row, dir);
         const sides = visibleSides(target, facing, from);
-        expect(sides).toHaveLength(2);
-        expect(new Set(sides).size).toBe(2);
+        // dir 0 sits dead-center in front (and dir 3 dead-center in rear) —
+        // an exact tie between both neighboring sides (#276).
+        const expected = dir === 0 || dir === 3 ? 3 : 2;
+        expect(sides).toHaveLength(expected);
+        expect(new Set(sides).size).toBe(expected);
       });
+    });
+
+    it('shows both neighboring sides on an exact dead-center tie instead of favoring one (#276)', () => {
+      const front = visibleSides(
+        target,
+        facing,
+        neighborHex(target.col, target.row, 0),
+      );
+      expect([...front].sort()).toEqual(['front', 'left', 'right']);
+
+      const rear = visibleSides(
+        target,
+        facing,
+        neighborHex(target.col, target.row, 3),
+      );
+      expect([...rear].sort()).toEqual(['left', 'rear', 'right']);
     });
 
     it('leans toward whichever neighbor is angularly closer within the nearest quadrant', () => {

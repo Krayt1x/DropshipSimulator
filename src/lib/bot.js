@@ -476,10 +476,10 @@ function computeMoveCandidate({
   const untried = allMyTokens.filter((t) => !movedTokenIds?.has(t.id));
   const myTokens = untried.length > 0 ? untried : allMyTokens;
 
-  // The "First to 11" scenario (#232) is won by holding objectives, not by
-  // wiping out the enemy — without this the bot just kept fighting toward
-  // the nearest enemy regardless of scenario and never went near an
-  // objective (#233).
+  // The "Scenario Control" scenario (#232, renamed/rebalanced #259) is won
+  // by holding objectives, not by wiping out the enemy — without this the
+  // bot just kept fighting toward the nearest enemy regardless of scenario
+  // and never went near an objective (#233).
   const objectiveHexes =
     scenario === 'first-to-11' && tiles && terrainTypes
       ? objectiveHexesFrom(tiles, terrainTypes)

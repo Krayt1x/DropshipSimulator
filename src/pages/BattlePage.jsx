@@ -662,17 +662,18 @@ function BattlePage() {
       : p2ModelsRemaining === 0 && p1ModelsRemaining > 0
         ? 'p1'
         : null;
-  // Alternative win condition (#232): whoever reaches the scenario's victory
-  // point target first wins, checked alongside annihilation rather than
-  // instead of it — annihilation always takes priority if both are somehow
-  // true at once.
-  const scenarioVpTarget = scenario === 'first-to-11' ? 11 : null;
+  // Alternative win condition (#232, rebalanced #259): once the first
+  // player's third turn arrives, whoever is ahead by 3 or more scenario
+  // points wins outright — checked alongside annihilation rather than
+  // instead of it, though annihilation always takes priority if both are
+  // somehow true at once.
+  const SCENARIO_CONTROL_LEAD = 3;
   const scenarioWinner =
-    scenarioVpTarget == null
+    scenario !== 'first-to-11' || turn.number < 3
       ? null
-      : (victoryPoints.p1 ?? 0) >= scenarioVpTarget
+      : (victoryPoints.p1 ?? 0) - (victoryPoints.p2 ?? 0) >= SCENARIO_CONTROL_LEAD
         ? 'p1'
-        : (victoryPoints.p2 ?? 0) >= scenarioVpTarget
+        : (victoryPoints.p2 ?? 0) - (victoryPoints.p1 ?? 0) >= SCENARIO_CONTROL_LEAD
           ? 'p2'
           : null;
   const winner =
@@ -2417,7 +2418,7 @@ function BattlePage() {
             <p className="unit-meta winner-reason">
               {wonByAnnihilation
                 ? `${ownerLabel(loser)} has no models left on the board.`
-                : `${ownerLabel(winner)} reached ${scenarioVpTarget} victory points first.`}
+                : `${ownerLabel(winner)} leads by ${SCENARIO_CONTROL_LEAD}+ scenario points.`}
             </p>
             {gameMode === 'vs-computer' && (
               <p className="unit-meta winner-difficulty">

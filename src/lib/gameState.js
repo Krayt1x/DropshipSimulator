@@ -41,7 +41,8 @@ export function resetActiveGame() {
     // mode and auto-deploys a bot opponent nobody asked for this time.
     'dropshipsimulator:gameMode': 'sandbox',
     // Same reasoning for the win-condition scenario (#232) — a stale/direct
-    // visit shouldn't silently resume "First to 11" nobody chose this time.
+    // visit shouldn't silently resume "Scenario Control" nobody chose this
+    // time.
     'dropshipsimulator:gameScenario': DEFAULT_SCENARIO,
   });
 }

@@ -21,13 +21,14 @@ const DIFFICULTIES = [
 const SCENARIOS = [
   {
     id: 'annihilation',
-    label: 'Annihilation',
+    label: 'Destruction',
     description: 'Wipe out every enemy model.',
   },
   {
     id: 'first-to-11',
-    label: 'First to 11',
-    description: 'First player to reach 11 victory points wins.',
+    label: 'Scenario Control',
+    description:
+      "Starting the first player's third turn, leading by 3 or more scenario points wins.",
   },
 ];
 

@@ -763,7 +763,7 @@ describe('BattlePage', () => {
     expect(screen.getByText('🏆 2')).toBeDefined();
   });
 
-  it('declares a winner once a side reaches 11 victory points in the "First to 11" scenario (#232)', () => {
+  it('declares a winner once a side leads by 3+ scenario points from the first player\'s third turn on (#232, #259)', () => {
     const a10 = units.find((u) => u.name === 'A10');
     window.localStorage.setItem(
       'dropshipsimulator:gameScenario',
@@ -777,9 +777,15 @@ describe('BattlePage', () => {
       'dropshipsimulator:battle:deploymentPhase',
       JSON.stringify(false),
     );
+    // Turn 2 — still before the first player's third turn (turn number 3),
+    // so a 5-point lead here shouldn't end the game yet.
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:turn',
+      JSON.stringify({ number: 2, active: 'p2' }),
+    );
     window.localStorage.setItem(
       'dropshipsimulator:battle:victoryPoints',
-      JSON.stringify({ p1: 9, p2: 0 }),
+      JSON.stringify({ p1: 5, p2: 0 }),
     );
     window.localStorage.setItem(
       'dropshipsimulator:battle:tokens',
@@ -795,7 +801,7 @@ describe('BattlePage', () => {
           weaponState: {},
           destroyed: false,
         },
-        // A living enemy model so this only wins via the VP threshold, not
+        // A living enemy model so this only wins via the scenario lead, not
         // by annihilation (which would otherwise fire immediately since
         // this side has zero models on the board).
         {
@@ -811,28 +817,76 @@ describe('BattlePage', () => {
         },
       ]),
     );
-    // (1,0) is adjacent to (0,0) and already an objective tile (#178).
-    window.localStorage.setItem(
-      'dropshipsimulator:mapEditor:tiles',
-      JSON.stringify({ '1,0': 'objective' }),
-    );
 
     render(<BattlePage />);
-    // Scored immediately at the start of Player 1's turn 1 (#246): 9 -> 10.
-    expect(screen.getByText('🏆 10')).toBeDefined();
     expect(screen.queryByText(/Wins!/)).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'End Turn' })); // p1 -> p2
-    fireEvent.click(screen.getByRole('button', { name: 'End Turn' })); // p2 -> p1 turn 2, scores again
+    // p2 ends their turn 2 -> turn 3, active p1. The 5-point lead now
+    // qualifies, and turn 3 is the first player's (p1's) third turn.
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
 
-    expect(screen.getByText('🏆 11')).toBeDefined();
     expect(screen.getByText('Player 1 Wins!')).toBeDefined();
     expect(
-      screen.getByText('Player 1 reached 11 victory points first.'),
+      screen.getByText('Player 1 leads by 3+ scenario points.'),
     ).toBeDefined();
   });
 
-  it('does not end the game at 11 victory points under the default Annihilation scenario', () => {
+  it('does not end the game on a 3+ point lead before the first player\'s third turn (#259)', () => {
+    const a10 = units.find((u) => u.name === 'A10');
+    window.localStorage.setItem(
+      'dropshipsimulator:gameScenario',
+      JSON.stringify('first-to-11'),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:myPlayer',
+      JSON.stringify('p1'),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:deploymentPhase',
+      JSON.stringify(false),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:turn',
+      JSON.stringify({ number: 2, active: 'p1' }),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:victoryPoints',
+      JSON.stringify({ p1: 5, p2: 0 }),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:tokens',
+      JSON.stringify([
+        {
+          id: 'token-1',
+          unitId: a10.id,
+          owner: 'p1',
+          position: { col: 0, row: 0 },
+          facing: 0,
+          currentHp: a10.hp,
+          equippedIds: [],
+          weaponState: {},
+          destroyed: false,
+        },
+        {
+          id: 'token-2',
+          unitId: a10.id,
+          owner: 'p2',
+          position: { col: 9, row: 9 },
+          facing: 0,
+          currentHp: a10.hp,
+          equippedIds: [],
+          weaponState: {},
+          destroyed: false,
+        },
+      ]),
+    );
+
+    render(<BattlePage />);
+
+    expect(screen.queryByText(/Wins!/)).toBeNull();
+  });
+
+  it('does not end the game at a 3+ point lead under the default Destruction scenario', () => {
     const a10 = units.find((u) => u.name === 'A10');
     window.localStorage.setItem(
       'dropshipsimulator:myPlayer',

@@ -2635,7 +2635,16 @@ function BattlePage() {
           </div>
           <div
             className="battle-board-viewport"
-            style={backgroundContainerStyle(background)}
+            style={{
+              ...backgroundContainerStyle(background),
+              // Caps the viewport's height the same way its 1000px width
+              // already caps horizontally, so zooming in clips the extra
+              // content instead of growing the box (and the page under it)
+              // taller (#264) — content still hugs its natural height below
+              // this cap, exactly as the width already only clips once the
+              // board is wider than 1000px.
+              maxHeight: availableHeight,
+            }}
             onPointerDown={handleBoardPointerDown}
             onPointerMove={handleBoardPointerMove}
             onPointerUp={endBoardPan}

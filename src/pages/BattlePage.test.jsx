@@ -775,10 +775,17 @@ describe('BattlePage', () => {
       'dropshipsimulator:battle:deploymentPhase',
       JSON.stringify(false),
     );
+    // Turn 2, not 1 — the very first turn never scores (#282), so this test
+    // starts one turn in to isolate the "start, not end, of turn" behavior
+    // it's actually about.
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:turn',
+      JSON.stringify({ number: 2, active: 'p1' }),
+    );
 
     render(<BattlePage />);
 
-    // Scored immediately — Player 1's turn 1 is already starting the moment
+    // Scored immediately — Player 1's turn is already starting the moment
     // the battle begins, and their model is already holding the objective.
     expect(screen.getByText('🏆 1')).toBeDefined();
     expect(screen.getByText(/scored 1 victory point/)).toBeDefined();
@@ -794,7 +801,42 @@ describe('BattlePage', () => {
     expect(screen.getByText('🏆 2')).toBeDefined();
   });
 
-  it('declares a winner once a side leads by 3+ scenario points from the first player\'s third turn on (#232, #259)', () => {
+  it('does not score victory points on the very first turn (#282)', () => {
+    const a10 = units.find((u) => u.name === 'A10');
+    const token = {
+      id: 'token-1',
+      unitId: a10.id,
+      manufacturer: a10.manufacturer,
+      owner: 'p1',
+      position: { col: 0, row: 0 },
+      facing: 0,
+      currentHp: a10.hp,
+      equippedIds: [],
+      weaponState: {},
+      destroyed: false,
+      label: null,
+    };
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:tokens',
+      JSON.stringify([token]),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:mapEditor:tiles',
+      JSON.stringify({ '1,0': 'objective' }),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:deploymentPhase',
+      JSON.stringify(false),
+    );
+    // Defaults to turn 1 when unset.
+
+    render(<BattlePage />);
+
+    expect(screen.queryByText(/scored .* victory point/)).toBeNull();
+    expect(screen.getAllByText('🏆 0').length).toBeGreaterThan(0);
+  });
+
+  it('declares a winner once a side has more than 5 points and leads by 3+ from the first player\'s third turn on (#232, #259, #282)', () => {
     const a10 = units.find((u) => u.name === 'A10');
     window.localStorage.setItem(
       'dropshipsimulator:gameScenario',
@@ -814,9 +856,11 @@ describe('BattlePage', () => {
       'dropshipsimulator:battle:turn',
       JSON.stringify({ number: 2, active: 'p2' }),
     );
+    // 6 points and a 6-point lead — satisfies both the "more than 5 points"
+    // and "3+ point lead" halves of the win condition (#282).
     window.localStorage.setItem(
       'dropshipsimulator:battle:victoryPoints',
-      JSON.stringify({ p1: 5, p2: 0 }),
+      JSON.stringify({ p1: 6, p2: 0 }),
     );
     window.localStorage.setItem(
       'dropshipsimulator:battle:tokens',
@@ -915,6 +959,75 @@ describe('BattlePage', () => {
     render(<BattlePage />);
 
     expect(screen.queryByText(/Wins!/)).toBeNull();
+  });
+
+  it('dismisses the winner overlay without ending the game when "View Game" is clicked (#281)', () => {
+    const a10 = units.find((u) => u.name === 'A10');
+    window.localStorage.setItem(
+      'dropshipsimulator:gameScenario',
+      JSON.stringify('first-to-11'),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:myPlayer',
+      JSON.stringify('p1'),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:deploymentPhase',
+      JSON.stringify(false),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:turn',
+      JSON.stringify({ number: 3, active: 'p1' }),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:victoryPoints',
+      JSON.stringify({ p1: 6, p2: 0 }),
+    );
+    const tokens = [
+      {
+        id: 'token-1',
+        unitId: a10.id,
+        owner: 'p1',
+        position: { col: 0, row: 0 },
+        facing: 0,
+        currentHp: a10.hp,
+        equippedIds: [],
+        weaponState: {},
+        destroyed: false,
+      },
+      {
+        id: 'token-2',
+        unitId: a10.id,
+        owner: 'p2',
+        position: { col: 9, row: 9 },
+        facing: 0,
+        currentHp: a10.hp,
+        equippedIds: [],
+        weaponState: {},
+        destroyed: false,
+      },
+    ];
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:tokens',
+      JSON.stringify(tokens),
+    );
+
+    render(<BattlePage />);
+    expect(screen.getByText('Player 1 Wins!')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'View Game' }));
+
+    // The overlay is gone, but nothing about the match itself was reset —
+    // unlike Play Again/Return Home, the board and score are untouched.
+    expect(screen.queryByText(/Wins!/)).toBeNull();
+    expect(
+      JSON.parse(window.localStorage.getItem('dropshipsimulator:battle:tokens')),
+    ).toEqual(tokens);
+    expect(
+      JSON.parse(
+        window.localStorage.getItem('dropshipsimulator:battle:victoryPoints'),
+      ),
+    ).toEqual({ p1: 6, p2: 0 });
   });
 
   it('does not end the game at a 3+ point lead under the default Destruction scenario', () => {

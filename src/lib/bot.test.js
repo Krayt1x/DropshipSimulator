@@ -1360,5 +1360,94 @@ describe('chooseBotAction', () => {
       });
       expect(result).toBeNull();
     });
+
+    it('exchanges a spare die into Move for an idle token instead of into another Attack, when both are possible (#277, #280)', () => {
+      // shooter already has a live target and no Move die to spend anyway
+      // (no movement gear) — it's never a move candidate either way.
+      const shooter = makeToken({
+        id: 'shooter1',
+        unitId: 1,
+        owner: 'p2',
+        position: { col: 5, row: 5 },
+        equippedIds: [10],
+        weaponState: { 0: { heat: 0, broken: false } },
+      });
+      // mover has nothing to shoot with, but somewhere to go — with no Move
+      // die in the pool, it needs the exchange the shooter would otherwise
+      // have claimed for one more Attack.
+      const mover = makeToken({
+        id: 'mover1',
+        unitId: 1,
+        owner: 'p2',
+        position: { col: 0, row: 0 },
+        equippedIds: [11],
+      });
+      const enemyNear = makeToken({
+        id: 'enemyNear',
+        unitId: 2,
+        owner: 'p1',
+        position: { col: 5, row: 6 },
+      });
+      const enemyFar = makeToken({
+        id: 'enemyFar',
+        unitId: 2,
+        owner: 'p1',
+        position: { col: 0, row: 10 },
+      });
+      const result = chooseBotAction({
+        tokens: [shooter, mover, enemyNear, enemyFar],
+        units,
+        equipment,
+        botOwner: 'p2',
+        // Neither die is currently Attack or Move, but both Red and Yellow
+        // can become either — old code always grabbed these for a bonus
+        // Attack (shooter's target never runs out), starving mover's need.
+        dicePool: [
+          { id: 'd1', label: 'Red', value: 'Action', used: false },
+          { id: 'd2', label: 'Yellow', value: 'Action', used: false },
+        ],
+        difficulty: 'simple',
+      });
+      expect(result).toEqual({
+        type: 'exchange',
+        spendId: 'd2',
+        targetId: 'd1',
+        newValue: 'Move',
+      });
+    });
+  });
+
+  it('does not credit a token with "already in range" when its only nearby target is out of arc, and moves it instead (#277, #280)', () => {
+    // The weapon (id 10) is right-mounted only (see equipment fixture below);
+    // the enemy sits behind the token, in raw range but outside any arc, so
+    // there is no real shot even though the old distance-only check thought
+    // there was.
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 5, row: 5 },
+      facing: 0,
+      equippedIds: [10, 11],
+      weaponState: { 0: { side: 'right', heat: 0, broken: false } },
+    });
+    const enemy = makeToken({
+      id: 'enemy1',
+      unitId: 2,
+      owner: 'p1',
+      position: { col: 5, row: 9 },
+    });
+    const result = chooseBotAction({
+      tokens: [bot, enemy],
+      units,
+      equipment,
+      botOwner: 'p2',
+      dicePool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+      difficulty: 'simple',
+    });
+    expect(result).toMatchObject({ type: 'move', tokenId: 'bot1' });
+    expect(
+      hexDistance(result.destination, enemy.position),
+    ).toBeLessThan(hexDistance(bot.position, enemy.position));
   });
 });

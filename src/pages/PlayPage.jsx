@@ -28,7 +28,7 @@ const SCENARIOS = [
     id: 'first-to-11',
     label: 'Scenario Control',
     description:
-      "Starting the first player's third turn, leading by 3 or more scenario points wins.",
+      "No scoring on the first turn. Starting the first player's third turn, having more than 5 points and leading by 3 or more wins.",
   },
 ];
 

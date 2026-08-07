@@ -658,24 +658,35 @@ function BattlePage() {
       : p2ModelsRemaining === 0 && p1ModelsRemaining > 0
         ? 'p1'
         : null;
-  // Alternative win condition (#232, rebalanced #259): once the first
-  // player's third turn arrives, whoever is ahead by 3 or more scenario
-  // points wins outright — checked alongside annihilation rather than
-  // instead of it, though annihilation always takes priority if both are
-  // somehow true at once.
+  // Alternative win condition (#232, rebalanced #259, #282): once the first
+  // player's third turn arrives, whoever has more than 5 scenario points
+  // *and* leads by 3 or more wins outright — checked alongside annihilation
+  // rather than instead of it, though annihilation always takes priority if
+  // both are somehow true at once.
   const SCENARIO_CONTROL_LEAD = 3;
+  const SCENARIO_CONTROL_MIN = 5;
   const scenarioWinner =
     scenario !== 'first-to-11' || turn.number < 3
       ? null
-      : (victoryPoints.p1 ?? 0) - (victoryPoints.p2 ?? 0) >= SCENARIO_CONTROL_LEAD
+      : (victoryPoints.p1 ?? 0) > SCENARIO_CONTROL_MIN &&
+          (victoryPoints.p1 ?? 0) - (victoryPoints.p2 ?? 0) >= SCENARIO_CONTROL_LEAD
         ? 'p1'
-        : (victoryPoints.p2 ?? 0) - (victoryPoints.p1 ?? 0) >= SCENARIO_CONTROL_LEAD
+        : (victoryPoints.p2 ?? 0) > SCENARIO_CONTROL_MIN &&
+            (victoryPoints.p2 ?? 0) - (victoryPoints.p1 ?? 0) >= SCENARIO_CONTROL_LEAD
           ? 'p2'
           : null;
   const winner =
     deploymentPhase || !myPlayer ? null : (annihilationWinner ?? scenarioWinner);
   const loser = winner === 'p1' ? 'p2' : winner === 'p2' ? 'p1' : null;
   const wonByAnnihilation = winner != null && winner === annihilationWinner;
+  // "View Game" (#281) hides the winner overlay without resetting anything,
+  // so the match itself is untouched — re-arms the moment `winner` clears
+  // (a rematch via Play Again resets deploymentPhase, which clears it too),
+  // so the next win still shows its own overlay instead of staying dismissed.
+  const [dismissedWinner, setDismissedWinner] = useState(false);
+  useEffect(() => {
+    if (!winner) setDismissedWinner(false);
+  }, [winner]);
 
   // Highlights for the winner screen (#193): every mech that dealt damage
   // and/or scored a kill this match, ranked by damage dealt. Built off
@@ -2270,6 +2281,9 @@ function BattlePage() {
     const key = `${turn.active}:${turn.number}`;
     if (vpTurnKeyRef.current === key) return;
     vpTurnKeyRef.current = key;
+    // No scoring on the very first turn (#282) — nobody's had a chance to
+    // contest an objective against the other player yet.
+    if (turn.number === 1) return;
     const gainedVp = computeObjectiveVp({
       tokens,
       tiles,
@@ -2955,7 +2969,7 @@ function BattlePage() {
   return (
     <div className="container-wide battle-page">
       <TurnNotificationToast notice={turnNotice} myPlayer={myPlayer} />
-      {winner && (
+      {winner && !dismissedWinner && (
         <div className="winner-overlay">
           <div className="card winner-modal">
             <div className="winner-trophy">🏆</div>
@@ -3026,6 +3040,13 @@ function BattlePage() {
             <div className="winner-actions">
               <button type="button" onClick={playAgain}>
                 Play Again
+              </button>
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => setDismissedWinner(true)}
+              >
+                View Game
               </button>
               <button type="button" className="ghost" onClick={returnHome}>
                 Return Home

@@ -451,6 +451,7 @@ function computeMoveCandidate({
   terrainTypes,
   scenario,
   movedTokenIds,
+  attackOptions,
 }) {
   const allMyTokens = tokens.filter(
     (t) => t.owner === botOwner && t.position && !t.destroyed,
@@ -525,8 +526,14 @@ function computeMoveCandidate({
     } else {
       moveTarget = chooseMoveTarget(token.position, enemyTokens, difficulty);
       if (!moveTarget) continue;
-      const currentDist = hexDistance(token.position, moveTarget.position);
-      if (bestRange > 0 && currentDist <= bestRange) continue;
+      // Whether this token already has something worth shooting right now —
+      // checked against the real attack options (arc + line-of-sight aware),
+      // not just raw hex distance to its longest weapon's range. Distance
+      // alone used to let a token sit idle forever believing it was "close
+      // enough" when its facing or blocking terrain meant it could never
+      // actually land a shot from there (#277, #280).
+      const hasValidShot = attackOptions?.some((o) => o.attackerId === token.id);
+      if (hasValidShot) continue;
       stopDistance = difficulty !== 'simple' && bestRange > 0 ? bestRange : 0;
     }
 
@@ -605,10 +612,6 @@ export function chooseBotAction({
     tiles,
     terrainTypes,
   });
-  if (!attackDie && options.length > 0) {
-    const exchange = findExchangeAction(dicePool, 'Attack');
-    if (exchange) return exchange;
-  }
   if (attackDie) {
     // Expert avoids breaking a weapon on a shot that isn't worth the risk —
     // it only considers an overheating option when nothing safer is on the
@@ -668,6 +671,7 @@ export function chooseBotAction({
     terrainTypes,
     scenario,
     movedTokenIds,
+    attackOptions: options,
   };
   const moveAction = findMoveAction(moveArgs);
   if (moveAction) return moveAction;
@@ -682,9 +686,19 @@ export function chooseBotAction({
   if (dropPodAction) return dropPodAction;
 
   // No Move (or Action) die to spend, but exchanging into one would let a
-  // token that actually wants to move do so this turn (#200).
+  // token that actually wants to move do so this turn (#200). Checked before
+  // exchanging for a bonus Attack below — a model that's never moved (or
+  // never reached an objective) needs that die more than a model that can
+  // already shoot does need one more shot (#277, #280).
   if (!pickDie(dicePool, 'Move') && computeMoveCandidate(moveArgs)) {
     return findExchangeAction(dicePool, 'Move');
+  }
+
+  // Only once nothing needs a Move die is a spare die worth exchanging into
+  // one more Attack.
+  if (!attackDie && options.length > 0) {
+    const exchange = findExchangeAction(dicePool, 'Attack');
+    if (exchange) return exchange;
   }
   return null;
 }

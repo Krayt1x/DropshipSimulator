@@ -83,10 +83,10 @@ function pickRoster(column, manufacturer, listName) {
 // The Map stage no longer defaults to "Current map" — Continue stays
 // disabled until something's explicitly picked (#278), so every test that
 // used to skip past this stage with a bare Continue now needs this first.
+// Every map is shown inline as a grid (#283) — no "Select map" button or
+// popup to open first.
 function pickCurrentMap() {
-  click(screen.getByRole('button', { name: 'Select map' }));
-  const modal = screen.getByText('Choose a map').closest('.map-picker-modal');
-  click(within(modal).getByRole('button', { name: /Current map/ }));
+  click(screen.getByRole('button', { name: /Current map/ }));
 }
 
 // Reaches the Map stage of a Vs CPU game with both sides given a random
@@ -412,13 +412,7 @@ describe('PlayPage', () => {
     );
     render(<PlayPage />);
     pickSandbox();
-    click(screen.getByRole('button', { name: 'Select map' }));
-    click(
-      within(screen.getByText('Choose a map').closest('.map-picker-modal')).getByRole(
-        'button',
-        { name: /Blank/ },
-      ),
-    );
+    click(screen.getByRole('button', { name: /Blank/ }));
     expect(screen.getByText('Review & start')).toBeDefined();
     click(screen.getByRole('button', { name: 'Start Game' }));
 
@@ -428,16 +422,13 @@ describe('PlayPage', () => {
     ).toEqual({});
   });
 
-  it('lists every pre-existing map in the picker modal, not just Blank (#222)', () => {
+  it('lists every pre-existing map in the wizard grid, not just Blank (#222, #283)', () => {
     render(<PlayPage />);
     pickSandbox();
-    click(screen.getByRole('button', { name: 'Select map' }));
 
-    const modal = screen.getByText('Choose a map').closest('.map-picker-modal');
-    click(within(modal).getByRole('button', { name: /Map 1/ }));
-    // The picker closes and picking a map auto-advances straight to Review
-    // (#247), which shows the chosen map in its own summary line (#228).
-    expect(screen.queryByText('Choose a map')).toBeNull();
+    click(screen.getByRole('button', { name: /Map 1/ }));
+    // Picking a map auto-advances straight to Review (#247), which shows
+    // the chosen map in its own summary line (#228).
     expect(screen.getByText('Review & start')).toBeDefined();
     expect(screen.getAllByText('Map 1').length).toBeGreaterThan(0);
 
@@ -470,19 +461,11 @@ describe('PlayPage', () => {
     reachMapStageCpu('Tactical');
     expect(screen.getByText('Which map do you want to play?')).toBeDefined();
 
-    click(screen.getByRole('button', { name: 'Select map' }));
-    const mapPickerModal = screen
-      .getByText('Choose a map')
-      .closest('.map-picker-modal');
     expect(
-      within(mapPickerModal).getByRole('button', { name: /Current map/ }),
+      screen.getByRole('button', { name: /Current map/ }),
     ).toBeDefined();
-    expect(
-      within(mapPickerModal).getByRole('button', { name: /Blank/ }),
-    ).toBeDefined();
-    expect(
-      within(mapPickerModal).queryByRole('button', { name: /Import/ }),
-    ).toBeNull();
+    expect(screen.getByRole('button', { name: /Blank/ })).toBeDefined();
+    expect(screen.queryByRole('button', { name: /Import/ })).toBeNull();
     expect(screen.queryByLabelText('Map export')).toBeNull();
   });
 
@@ -679,15 +662,15 @@ describe('PlayPage scenario picker (#232, #242)', () => {
   });
 });
 
-describe('PlayPage map picker grid on mobile (#234)', () => {
-  it('marks the map picker grid so it stays a grid on mobile instead of stacking', () => {
+describe('PlayPage map picker grid on mobile (#234, #283)', () => {
+  it('marks the map grid so it stays a 3-column grid on mobile instead of stacking', () => {
     render(<PlayPage />);
     pickSandbox();
-    click(screen.getByRole('button', { name: 'Select map' }));
 
-    const modal = screen.getByText('Choose a map').closest('.map-picker-modal');
-    const grid = within(modal).getByRole('button', { name: /Current map/ }).closest('.home-tile-grid');
-    expect(grid.className).toContain('two-col-mobile-grid');
+    const grid = screen
+      .getByRole('button', { name: /Current map/ })
+      .closest('.home-tile-grid');
+    expect(grid.className).toContain('map-grid-3col');
   });
 });
 
@@ -749,9 +732,11 @@ describe('PlayPage wizard (#247, #251)', () => {
     pickSandbox();
 
     expect(screen.getByText('Which map do you want to play?')).toBeDefined();
-    // Neither a thumbnail nor a name shows until something's actually
-    // picked — the step doesn't look pre-answered.
-    expect(screen.queryByText('Current map')).toBeNull();
+    // Every map is shown as a tile up front (#283), but none is
+    // pre-selected — the step doesn't look pre-answered.
+    expect(
+      screen.getByRole('button', { name: /Current map/ }).className,
+    ).not.toContain('selected');
     expect(screen.getByRole('button', { name: 'Continue' }).disabled).toBe(
       true,
     );

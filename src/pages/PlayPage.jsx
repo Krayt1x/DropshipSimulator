@@ -159,7 +159,6 @@ function PlayPage() {
   // look already-answered before the player has actually picked anything
   // (#278) — Continue stays disabled until it's set (isWizardStepDone).
   const [mapChoice, setMapChoice] = useState(null);
-  const [mapPickerOpen, setMapPickerOpen] = useState(false);
   // Which win condition this match uses (#232) — committed to storage only
   // once Start Game is pressed, same as the map choice above. Also starts
   // unset for the same reason (#278); Sandbox mode (which skips this step
@@ -199,7 +198,6 @@ function PlayPage() {
     setPlayerImportText('');
     setPlayerImportPreview(null);
     setMapChoice(null);
-    setMapPickerOpen(false);
     setScenario(null);
     clearTimeout(firstPlayerTimeoutRef.current);
     setFirstPlayer(null);
@@ -367,7 +365,6 @@ function PlayPage() {
 
   function pickMap(choice) {
     setMapChoice(choice);
-    setMapPickerOpen(false);
     advanceWizardStep(mode === 'cpu' ? 'scenario' : 'review');
   }
 
@@ -403,20 +400,6 @@ function PlayPage() {
   // The human also picks their own list before the map (#202), same as the
   // bot's.
   const rosterReady = botRosterReady && Boolean(chosenPlayerRoster);
-  // A render of whichever map is currently chosen (#243) — either the one
-  // already saved in the Map Editor, or a DEFAULT_MAPS entry by name.
-  const selectedMap =
-    mapChoice === 'current'
-      ? {
-          dimensions: currentMapDimensions,
-          tileTypes: currentMapTileTypes,
-          tiles: currentMapTiles,
-        }
-      : (DEFAULT_MAPS.find((m) => m.name === mapChoice) ?? {
-          dimensions: currentMapDimensions,
-          tileTypes: currentMapTileTypes,
-          tiles: currentMapTiles,
-        });
   const readyToStart =
     mode === 'sandbox' || (Boolean(firstPlayer) && !firstPlayerRolling);
   // Once mp.role is set (past the idle phase), the actual handshake already
@@ -989,31 +972,47 @@ function PlayPage() {
   }
 
   function renderMapOptions() {
+    // Every map shown at once as a 3-column grid (#283) — picking a tile
+    // advances the wizard immediately, same as every other tile-pick step,
+    // so there's no separate "Select map" button/modal to open first.
     return (
       <>
         <p className="stage-label">Which map do you want to play?</p>
-        <button
-          type="button"
-          className="ghost"
-          onClick={() => setMapPickerOpen(true)}
-        >
-          Select map
-        </button>
-        {/* No preview until an explicit pick is made (#278) — showing one
-            beforehand looked like a choice had already been made. */}
-        {mapChoice && (
-          <div style={{ marginTop: 8 }}>
+        <div className="home-tile-grid map-grid-3col">
+          <button
+            type="button"
+            className={`home-tile ${mapChoice === 'current' ? 'selected' : ''}`}
+            onClick={() => pickMap('current')}
+          >
             <MapThumbnail
-              dimensions={selectedMap.dimensions}
-              tileTypes={selectedMap.tileTypes}
-              tiles={selectedMap.tiles}
-              size="full"
+              dimensions={currentMapDimensions}
+              tileTypes={currentMapTileTypes}
+              tiles={currentMapTiles}
             />
-            <p className="unit-meta" style={{ margin: '6px 0 0' }}>
-              {mapChoice === 'current' ? 'Current map' : mapChoice}
-            </p>
-          </div>
-        )}
+            <span className="home-tile-title">Current map</span>
+            <span className="home-tile-description">
+              Whatever's already saved in the Map Editor.
+            </span>
+          </button>
+          {DEFAULT_MAPS.map((m) => (
+            <button
+              key={m.name}
+              type="button"
+              className={`home-tile ${mapChoice === m.name ? 'selected' : ''}`}
+              onClick={() => pickMap(m.name)}
+            >
+              <MapThumbnail
+                dimensions={m.dimensions}
+                tileTypes={m.tileTypes}
+                tiles={m.tiles}
+              />
+              <span className="home-tile-title">{m.name}</span>
+              <span className="home-tile-description">
+                {m.dimensions.cols} × {m.dimensions.rows}
+              </span>
+            </button>
+          ))}
+        </div>
       </>
     );
   }
@@ -1227,59 +1226,6 @@ function PlayPage() {
         </div>
       )}
 
-      {mapPickerOpen && (
-        <div
-          className="map-picker-overlay"
-          onClick={() => setMapPickerOpen(false)}
-        >
-          <div className="card map-picker-modal" onClick={(e) => e.stopPropagation()}>
-            <p className="unit-name">Choose a map</p>
-            <div className="home-tile-grid two-col-mobile-grid">
-              <button
-                type="button"
-                className={`home-tile ${mapChoice === 'current' ? 'selected' : ''}`}
-                onClick={() => pickMap('current')}
-              >
-                <MapThumbnail
-                  dimensions={currentMapDimensions}
-                  tileTypes={currentMapTileTypes}
-                  tiles={currentMapTiles}
-                />
-                <span className="home-tile-title">Current map</span>
-                <span className="home-tile-description">
-                  Whatever's already saved in the Map Editor.
-                </span>
-              </button>
-              {DEFAULT_MAPS.map((m) => (
-                <button
-                  key={m.name}
-                  type="button"
-                  className={`home-tile ${mapChoice === m.name ? 'selected' : ''}`}
-                  onClick={() => pickMap(m.name)}
-                >
-                  <MapThumbnail
-                    dimensions={m.dimensions}
-                    tileTypes={m.tileTypes}
-                    tiles={m.tiles}
-                  />
-                  <span className="home-tile-title">{m.name}</span>
-                  <span className="home-tile-description">
-                    {m.dimensions.cols} × {m.dimensions.rows}
-                  </span>
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              className="ghost"
-              style={{ marginTop: 16 }}
-              onClick={() => setMapPickerOpen(false)}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

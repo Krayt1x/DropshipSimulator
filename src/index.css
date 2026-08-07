@@ -429,11 +429,18 @@ button.danger:hover {
   align-items: start;
 }
 
+/* Sticky and independently scrollable (#291) — a long unit card (lots of
+   equipped items) used to push the whole page down with it, scrolling the
+   battle map itself out of view instead of just the sidebar's own content. */
 .battle-sidebar {
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-width: 0;
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
 }
 
 /* TurnTracker's own row lays the split-tracker and End Turn button side by
@@ -1057,64 +1064,6 @@ button.danger:hover {
   margin-left: auto;
 }
 
-/* Attack workflow (#103): arms a weapon's arc for target-picking on the
-   board, then walks through side/roll/damage in a modal. Sits in its
-   weapon's heat-controls row as a real button, not a tiny inline pill
-   (#166). */
-.attack-btn {
-  background: #dc2626;
-  border: none;
-  border-radius: 6px;
-  padding: 4px 12px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #fff;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.attack-btn:hover {
-  background: #b91c1c;
-}
-
-.attack-btn.active {
-  background: #7f1d1d;
-}
-
-.attack-btn:disabled {
-  background: var(--border);
-  color: var(--text-muted);
-  cursor: not-allowed;
-}
-
-/* Move/Place-on-board (#166): sits in its movement gear's heat-controls
-   row, mirroring .attack-btn's treatment for weapons. */
-.move-action-btn {
-  background: var(--accent);
-  border: none;
-  border-radius: 6px;
-  padding: 4px 12px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #fff;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.move-action-btn:hover {
-  background: var(--accent-hover);
-}
-
-.move-action-btn.active {
-  background: var(--accent-hover);
-}
-
-.move-action-btn:disabled {
-  background: var(--border);
-  color: var(--text-muted);
-  cursor: not-allowed;
-}
-
 .attack-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -1626,6 +1575,13 @@ button.danger:hover {
   .wizard-body .home-tile-grid.play-difficulty-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+}
+
+/* Every map shown at once as a fixed 3-column grid (#283), replacing the
+   old "Select map" button + popup modal — kept 3-wide at every width like
+   that modal was, rather than falling back to auto-fit/1-column. */
+.wizard-body .home-tile-grid.map-grid-3col {
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .home-tile {
@@ -2554,8 +2510,12 @@ button.danger:hover {
   white-space: nowrap;
 }
 
+/* Was var(--nav-bg), which is the exact same color as this strip's own
+   var(--accent) background in light mode — the button was effectively
+   invisible against it (#289). A fixed color that's nowhere near --accent
+   in either theme avoids that regardless of what the theme's accent is. */
 .board-move-btn {
-  background: var(--nav-bg);
+  background: #16a34a;
 }
 
 .board-attack-btn {
@@ -2575,7 +2535,9 @@ button.danger:hover {
 .board-attack-picker {
   position: absolute;
   left: 12px;
-  right: 12px;
+  /* A fixed width instead of stretching edge-to-edge (#287) — the list
+     itself is only ever a handful of short weapon names wide. */
+  width: min(280px, calc(100% - 24px));
   bottom: 12px;
   z-index: 6;
   display: flex;

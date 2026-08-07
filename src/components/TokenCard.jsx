@@ -19,22 +19,17 @@ function TokenCard({
   activeRangeIndex,
   onAdjustHp,
   onRotate,
-  onArmMove,
   onSetHeat,
   onSetWeaponHp,
   onToggleBroken,
   onRollHitDice,
   onToggleRange,
-  onStartAttack,
-  activeAttackIndex,
   onDestroy,
   onReturnToReserve,
   onDeselect,
   deploymentPhase,
   hasActionDie,
   onArmDropPod,
-  hasMoveDie,
-  hasAttackDie,
   hasRepairTag,
   repairTargets = [],
   onRepair,
@@ -59,16 +54,6 @@ function TokenCard({
   const weapons = grouped.Weapon ?? [];
   const movementItems = grouped.Movement ?? [];
   const augments = grouped.Augment ?? [];
-  // Mirrors weapons' broken/overheated gate on Attack (#127) — a model can't
-  // move on legs that are broken or too hot to use (#153).
-  const movementBlocked = movementItems.some((item) => {
-    const { max } = parseHeatRating(item.heat_rating);
-    const state = token.weaponState[item.instanceIndex] ?? {
-      heat: 0,
-      broken: false,
-    };
-    return state.broken || (Boolean(max) && state.heat > max);
-  });
   // A model at 0 chassis HP is a wreck — it can't move or attack until
   // someone clicks "Model Destroyed" (#160).
   const wrecked = token.currentHp <= 0;
@@ -107,14 +92,13 @@ function TokenCard({
     setArmed(false);
   }
 
-  function renderGearRow(item, { showRange, showMoveButton }) {
+  function renderGearRow(item, { showRange }) {
     const { max } = parseHeatRating(item.heat_rating);
     const state = token.weaponState[item.instanceIndex] ?? {
       heat: 0,
       broken: false,
     };
     const rangeActive = showRange && activeRangeIndex === item.instanceIndex;
-    const attackActive = showRange && activeAttackIndex === item.instanceIndex;
     const overheated = Boolean(max) && state.heat > max;
     const maxHp = Number(item.hp) || 0;
     const hp = state.hp ?? maxHp;
@@ -215,59 +199,6 @@ function TokenCard({
             />
             Broken
           </label>
-          {showRange && item.hit_dice && (
-            <button
-              type="button"
-              className={`attack-btn ${attackActive ? 'active' : ''}`}
-              style={{ marginLeft: 'auto' }}
-              title={
-                wrecked
-                  ? 'Destroyed — this model can no longer attack'
-                  : overheated
-                    ? 'Overheated — let it cool down before firing again'
-                    : !hasAttackDie
-                      ? 'No Attack dice left in the dice pool'
-                      : "Show this weapon's arc and pick a target to attack"
-              }
-              disabled={
-                state.broken || overheated || wrecked || !hasAttackDie
-              }
-              onClick={() => onStartAttack(item.instanceIndex, item)}
-            >
-              {attackActive ? 'Attacking…' : 'Attack'}
-            </button>
-          )}
-          {!token.destroyed && showMoveButton && (
-            <button
-              type="button"
-              className={`move-action-btn ${moving ? 'active' : ''}`}
-              style={{ marginLeft: 'auto' }}
-              disabled={
-                !canControl ||
-                movementBlocked ||
-                wrecked ||
-                (token.position && !hasMoveDie)
-              }
-              title={
-                !canControl
-                  ? "This unit belongs to another player — you can't move or deploy it."
-                  : wrecked
-                    ? 'Destroyed — this model can no longer move'
-                    : movementBlocked
-                      ? 'Overheated — let it cool down before moving again'
-                      : token.position && !hasMoveDie
-                        ? 'No Move dice left in the dice pool'
-                        : undefined
-              }
-              onClick={onArmMove}
-            >
-              {moving
-                ? 'Click a hex to place'
-                : token.position
-                  ? 'Move'
-                  : 'Place on board'}
-            </button>
-          )}
         </div>
         {maxHp > 0 && (
           <>
@@ -454,11 +385,8 @@ function TokenCard({
           {movementItems.length > 0 && (
             <>
               <p className="equipment-subheader">Movement</p>
-              {movementItems.map((item, index) =>
-                renderGearRow(item, {
-                  showRange: false,
-                  showMoveButton: index === 0,
-                }),
+              {movementItems.map((item) =>
+                renderGearRow(item, { showRange: false }),
               )}
             </>
           )}
@@ -538,48 +466,7 @@ function TokenCard({
             </button>
           )}
         </div>
-      ) : (
-        // A unit with movement gear gets its Move button inline in that
-        // gear's row instead (#166); this fallback only covers a unit with
-        // no movement equipment at all (still needs somewhere to deploy).
-        !token.destroyed &&
-        movementItems.length === 0 && (
-          <div className="token-card-section">
-            {!canControl && (
-              <p className="unit-meta">
-                This unit belongs to another player — you can't move or
-                deploy it.
-              </p>
-            )}
-            {wrecked && (
-              <p className="unit-meta">
-                Destroyed — this model can no longer move.
-              </p>
-            )}
-            <button
-              type="button"
-              className={moving ? '' : 'ghost'}
-              disabled={
-                !canControl || wrecked || (token.position && !hasMoveDie)
-              }
-              title={
-                wrecked
-                  ? 'Destroyed — this model can no longer move'
-                  : token.position && !hasMoveDie
-                    ? 'No Move dice left in the dice pool'
-                    : undefined
-              }
-              onClick={onArmMove}
-            >
-              {moving
-                ? 'Click a hex to place'
-                : token.position
-                  ? 'Move'
-                  : 'Place on board'}
-            </button>
-          </div>
-        )
-      )}
+      ) : null}
 
       <button
         type="button"

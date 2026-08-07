@@ -36,7 +36,7 @@ describe('resolveDropPod', () => {
     expect(result.hex).toEqual({ col: 5, row: 5 });
   });
 
-  it('clamps at the board edge instead of going out of bounds', () => {
+  it('clamps at the board edge instead of going out of bounds when no reroll is offered', () => {
     const result = resolveDropPod({
       aim: { col: 1, row: 1 },
       d4Roll: 4,
@@ -46,6 +46,47 @@ describe('resolveDropPod', () => {
     });
     expect(result.hex.row).toBeGreaterThanOrEqual(0);
     expect(result.hex.col).toBeGreaterThanOrEqual(0);
+  });
+
+  it('rerolls the direction instead of clamping when the landing spot would be off the map (#292)', () => {
+    // Aimed one hex from the north edge with a 3-hex throw north — would
+    // clamp to row 0 under the old behavior. South (d6Roll 4) stays on the
+    // board the whole way, so the reroll should pick that up.
+    const rolls = [4]; // one reroll needed
+    const rerollD6 = () => rolls.shift();
+    const result = resolveDropPod({
+      aim: { col: 5, row: 1 },
+      d4Roll: 4,
+      d6Roll: 1, // North — would go off the top edge
+      dimensions: { cols: 20, rows: 20 },
+      findTokenAt: () => null,
+      rerollD6,
+    });
+    expect(result.direction).toBe(3); // South
+    expect(result.hex).toEqual({ col: 5, row: 4 });
+  });
+
+  it('falls back to clamping if every rerolled direction still goes off the map', () => {
+    // Aimed at a corner with a big throw — every direction eventually
+    // leaves this tiny board, so it should still terminate rather than
+    // looping forever.
+    let call = 0;
+    const rerollD6 = () => {
+      call += 1;
+      return (call % 6) + 1;
+    };
+    const result = resolveDropPod({
+      aim: { col: 0, row: 0 },
+      d4Roll: 4,
+      d6Roll: 1,
+      dimensions: { cols: 2, rows: 2 },
+      findTokenAt: () => null,
+      rerollD6,
+    });
+    expect(result.hex.col).toBeGreaterThanOrEqual(0);
+    expect(result.hex.row).toBeGreaterThanOrEqual(0);
+    expect(result.hex.col).toBeLessThan(2);
+    expect(result.hex.row).toBeLessThan(2);
   });
 
   it('hits an occupying model and deviates one further hex in the same direction', () => {

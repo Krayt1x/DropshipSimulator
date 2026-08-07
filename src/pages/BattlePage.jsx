@@ -1695,6 +1695,9 @@ function BattlePage() {
             t.position.col === h.col &&
             t.position.row === h.row,
         ),
+      // A direction that would carry the pod off the board gets rerolled
+      // instead of clamping it to the edge (#292).
+      rerollD6: () => rollDie(DIE_TYPES.find((d) => d.id === 'd6')),
     });
 
     hits.forEach(({ token: hitToken }) => {
@@ -2134,6 +2137,9 @@ function BattlePage() {
             t.position.col === h.col &&
             t.position.row === h.row,
         ),
+      // A direction that would carry the pod off the board gets rerolled
+      // instead of clamping it to the edge (#292).
+      rerollD6: () => rollDie(DIE_TYPES.find((d) => d.id === 'd6')),
     });
 
     hits.forEach(({ token: hitToken }) => {
@@ -2498,6 +2504,7 @@ function BattlePage() {
               state.broken || overheated || selectedTokenWrecked || !hasAttackDie
             }
             className="mobile-attack-picker-item"
+            title={`Range ${item.range || '—'}`}
             onClick={() => {
               startAttack(item.instanceIndex, item);
               setAttackPickerOpen(false);
@@ -2898,11 +2905,6 @@ function BattlePage() {
               canControl={canControl(selectedToken)}
               onAdjustHp={adjustHp}
               onRotate={rotate}
-              onArmMove={() =>
-                setMovingTokenId((current) =>
-                  current === selectedToken.id ? null : selectedToken.id,
-                )
-              }
               onSetHeat={setHeat}
               onSetWeaponHp={setWeaponHp}
               onToggleBroken={toggleBroken}
@@ -2913,20 +2915,12 @@ function BattlePage() {
                   : null
               }
               onToggleRange={toggleWeaponRange}
-              onStartAttack={startAttack}
-              activeAttackIndex={
-                attackWeapon?.tokenId === selectedToken.id
-                  ? attackWeapon.instanceIndex
-                  : null
-              }
               onDestroy={destroySelected}
               onReturnToReserve={returnSelectedToReserve}
               onDeselect={() => setSelectedTokenId(null)}
               deploymentPhase={deploymentPhase}
               hasActionDie={hasUnusedActionDie()}
               onArmDropPod={() => armDropPod(selectedToken.id)}
-              hasMoveDie={hasMoveDie}
-              hasAttackDie={hasAttackDie}
               hasRepairTag={tokenHasUsableTag(selectedToken, equipment, 'repair')}
               repairTargets={repairTargetsFor(selectedToken)}
               onRepair={(targetTokenId, slot) =>

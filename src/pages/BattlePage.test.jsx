@@ -47,6 +47,20 @@ function expandDiceRoller() {
   if (expandBtn) fireEvent.click(expandBtn);
 }
 
+// Arms an attack via the board-level Weapons trigger (#288 removed the
+// per-weapon Attack button from the unit card, folding it into the same
+// board toolbar Move already used) — opens the weapon picker, then picks
+// the named weapon from the list, same as clicking the old per-row button.
+function armAttack(weaponName = 'Long Range Bolt') {
+  fireEvent.click(screen.getByRole('button', { name: /^Weapons/ }));
+  // Scoped to the picker itself — the card header's own weapon-name button
+  // (which toggles showing its range) has the exact same accessible name.
+  const picker = screen
+    .getByText('Choose a weapon')
+    .closest('.mobile-attack-picker');
+  fireEvent.click(within(picker).getByRole('button', { name: weaponName }));
+}
+
 function collapseDiceRoller() {
   const header = screen.getByText('Dice roller').closest('.reserve-header');
   const collapseBtn = within(header).queryByRole('button', {
@@ -118,7 +132,7 @@ describe('BattlePage', () => {
     importA10ToReserve();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
     const a10Hp = units.find((u) => u.name === 'A10').hp;
@@ -154,7 +168,7 @@ describe('BattlePage', () => {
     importA10ToReserve();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
     // p1's default facing is 4/6 (#facing convention: p1 faces "south",
@@ -219,7 +233,7 @@ describe('BattlePage', () => {
     importA10ToReserve();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
     const a10Hp = units.find((u) => u.name === 'A10').hp;
@@ -235,7 +249,7 @@ describe('BattlePage', () => {
     importA10ToReserve();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
     // A real move spends a Move die (#162) — the turn-start auto-roll (#164)
     // ran before this token was deployed and came up empty, so roll manually.
@@ -244,7 +258,7 @@ describe('BattlePage', () => {
     expandDiceRoller();
     fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Move/ }));
     fireEvent.click(screen.getByTestId('hex-3,3'));
     finishMoveAnimation();
 
@@ -259,7 +273,7 @@ describe('BattlePage', () => {
     importA10ToReserve();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
     // p1 defaults to facing 4/6 (south, toward p2's side) — moving
@@ -269,7 +283,7 @@ describe('BattlePage', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     expandDiceRoller();
     fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Move/ }));
     fireEvent.click(screen.getByTestId('hex-1,0'));
     finishMoveAnimation();
 
@@ -288,7 +302,7 @@ describe('BattlePage', () => {
     importA10ToReserve();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
     // A real move spends a Move die (#162); mock so red's "Move" face wins.
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
@@ -327,13 +341,13 @@ describe('BattlePage', () => {
     importA10ToReserve(['  Movement: Chicken Legs']);
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     expandDiceRoller();
     fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Move/ }));
     fireEvent.click(screen.getByTestId('hex-0,4'));
     finishMoveAnimation();
 
@@ -368,11 +382,11 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-0,4'));
 
     // Try to move the A10 (still at 0,0) straight onto the A20 at (0,4).
@@ -380,7 +394,7 @@ describe('BattlePage', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     expandDiceRoller();
     fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Move/ }));
     fireEvent.click(screen.getByTestId('hex-0,4'));
     finishMoveAnimation();
 
@@ -413,20 +427,20 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
     // A20 sits directly between (0,0) and (0,8) on the straight line, but
     // there's open space on either side of it to detour through.
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-0,4'));
 
     fireEvent.click(screen.getByTestId('hex-0,0'));
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     expandDiceRoller();
     fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Move/ }));
     fireEvent.click(screen.getByTestId('hex-0,8'));
     finishMoveAnimation();
 
@@ -472,7 +486,7 @@ describe('BattlePage', () => {
 
     const placeAt = (col, row) => {
       fireEvent.click(screen.getAllByRole('button', { name: 'A10' })[0]);
-      fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
       fireEvent.click(screen.getByTestId(`hex-${col},${row}`));
     };
 
@@ -485,7 +499,7 @@ describe('BattlePage', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     expandDiceRoller();
     fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Move/ }));
     fireEvent.click(screen.getByTestId('hex-0,2'));
     finishMoveAnimation();
 
@@ -506,13 +520,13 @@ describe('BattlePage', () => {
     importA10ToReserve(['  Movement: Legs']);
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
     fireEvent.click(screen.getByTestId('hex-0,0'));
     expandDiceRoller();
     fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Move/ }));
 
     const highlighted = (col, row) => {
       const group = container
@@ -544,7 +558,7 @@ describe('BattlePage', () => {
     importA10ToReserve();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
     expect(screen.getByText('A10', { selector: 'p.unit-name' })).toBeDefined();
 
@@ -586,7 +600,7 @@ describe('BattlePage', () => {
     importA10ToReserve();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
 
     const tokenMarker = container.querySelector('[data-testid^="token-"]');
@@ -613,7 +627,7 @@ describe('BattlePage', () => {
     importA10ToReserve();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
     expect(
@@ -625,7 +639,7 @@ describe('BattlePage', () => {
     expandDiceRoller();
     fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Move/ }));
     fireEvent.click(screen.getByTestId('hex-3,3'));
     finishMoveAnimation();
 
@@ -690,7 +704,7 @@ describe('BattlePage', () => {
     importA10ToReserve();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
     // A10 has 2 red dice; vary the mock slightly per call (still within
     // red's "Move" face bucket) so the two dice don't collide on the same
@@ -707,7 +721,7 @@ describe('BattlePage', () => {
     // Adjacent hex -> the move completes synchronously (no animation),
     // exercising the same-tick race between useDicePoolDie and
     // moveTokenTo's own lastAction write.
-    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Move/ }));
     fireEvent.click(screen.getByTestId('hex-0,1'));
     finishMoveAnimation();
 
@@ -721,7 +735,7 @@ describe('BattlePage', () => {
 
     // Now a distant hex -> the move completes later, on a timeout.
     fireEvent.click(screen.getByTestId('hex-0,0'));
-    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Move/ }));
     fireEvent.click(screen.getByTestId('hex-3,3'));
     finishMoveAnimation();
 
@@ -1102,7 +1116,7 @@ describe('BattlePage', () => {
     expect(screen.getByText('Reserve (1)')).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-1,1'));
 
     expect(screen.queryByText('Reserve (1)')).toBeNull();
@@ -1184,11 +1198,11 @@ describe('BattlePage', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
     // This token belongs to Player 2 (the locked owner), so it's controllable.
-    expect(screen.getByRole('button', { name: 'Move' }).disabled).toBe(false);
+    expect(screen.getByRole('button', { name: /^Move/ }).disabled).toBe(false);
   });
 
   it('disables move/destroy for a token belonging to the other player', () => {
@@ -1197,7 +1211,7 @@ describe('BattlePage', () => {
     importA10ToReserve();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
 
@@ -1209,7 +1223,10 @@ describe('BattlePage', () => {
     render(<BattlePage />);
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
-    expect(screen.getByRole('button', { name: 'Move' }).disabled).toBe(true);
+    // The board toolbar (Move/Weapons) only ever renders for a token this
+    // player controls (#288 moved it off the unit card onto a toolbar that
+    // hides entirely rather than showing disabled for someone else's model).
+    expect(screen.queryByRole('button', { name: /^Move/ })).toBeNull();
     expect(
       screen.getByRole('button', { name: 'Model Destroyed' }).disabled,
     ).toBe(true);
@@ -1221,7 +1238,7 @@ describe('BattlePage', () => {
     importA10ToReserve();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
     // First press arms the button (#206); the second opens the die picker.
@@ -1241,7 +1258,7 @@ describe('BattlePage', () => {
     importA10ToReserve();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
     fireEvent.click(screen.getByRole('button', { name: 'Model Destroyed' }));
     fireEvent.click(screen.getByRole('button', { name: 'Model Destroyed' }));
@@ -1260,7 +1277,7 @@ describe('BattlePage', () => {
     importA10ToReserve();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
     // At full HP, the button starts neutral and the first press only arms
@@ -1299,7 +1316,7 @@ describe('BattlePage', () => {
     importA10ToReserve();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
     fireEvent.click(screen.getByRole('button', { name: 'Return to reserve' }));
@@ -1362,7 +1379,7 @@ describe('BattlePage', () => {
     importA10ToReserve();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
     expect(screen.getByText(/deployed A10 at \(0, 0\)/)).toBeDefined();
@@ -1372,7 +1389,7 @@ describe('BattlePage', () => {
     expandDiceRoller();
     fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Move/ }));
     fireEvent.click(screen.getByTestId('hex-3,3'));
     finishMoveAnimation();
     expect(screen.getByText(/moved A10 to \(3, 3\)/)).toBeDefined();
@@ -1426,7 +1443,7 @@ describe('BattlePage', () => {
     importA10ToReserve();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
 
     expandDiceRoller();
@@ -1466,7 +1483,7 @@ describe('BattlePage', () => {
     importA10ToReserve();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
 
     // Deploying after deployment phase already ended doesn't itself trigger
@@ -1507,7 +1524,7 @@ describe('BattlePage', () => {
     importA10ToReserve(['  Right: Long Range Bolt']);
     endDeploymentPhase();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
 
     fireEvent.click(screen.getByRole('button', { name: 'Long Range Bolt' }));
@@ -1531,7 +1548,7 @@ describe('BattlePage', () => {
     importA10ToReserve(['  Weapon: Long Range Bolt']);
     endDeploymentPhase();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
 
     fireEvent.click(screen.getByRole('button', { name: 'Long Range Bolt' }));
@@ -1561,25 +1578,30 @@ describe('BattlePage', () => {
     importA10ToReserve(['  Movement: Chicken Legs']);
     endDeploymentPhase();
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
 
-    expect(screen.getByText(/Heat 0 \/ 1/)).toBeDefined();
+    // Scoped to the detailed gear row (not the card header's equipment
+    // summary, which shows the same current-heat text since #295) so the
+    // query stays unambiguous.
+    const gearRow = () =>
+      screen.getByText('Chicken Legs').closest('.token-weapon-row');
+    expect(within(gearRow()).getByText(/Heat 0 \/ 1/)).toBeDefined();
 
     // A real move spends a Move die (#162); mock so red's "Move" face wins.
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     expandDiceRoller();
     fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Move/ }));
     fireEvent.click(screen.getByTestId('hex-8,8'));
     finishMoveAnimation();
 
-    expect(screen.getByText(/Heat 1 \/ 1/)).toBeDefined();
+    expect(within(gearRow()).getByText(/Heat 1 \/ 1/)).toBeDefined();
 
     fireEvent.click(screen.getByRole('button', { name: 'Undo last move' }));
 
-    expect(screen.getByText(/Heat 0 \/ 1/)).toBeDefined();
+    expect(within(gearRow()).getByText(/Heat 0 \/ 1/)).toBeDefined();
   });
 
   it('repositions an on-board token instantly and without heating its movement gear during deployment (#263)', () => {
@@ -1666,7 +1688,7 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
     // A10's attack spends an Attack (or Action) die (#162); Math.random is
     // already mocked to 0 above, so this manual roll produces "Attack" too.
@@ -1674,12 +1696,12 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-4,6'));
 
     // Re-select A10 (the attacker) and arm its weapon.
     fireEvent.click(screen.getByTestId('hex-5,5'));
-    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    armAttack();
 
     // A20 sits directly in the arc at distance 1 — a valid target.
     fireEvent.click(screen.getByTestId('hex-4,6'));
@@ -1714,12 +1736,19 @@ describe('BattlePage', () => {
     expect(screen.queryByText(/Which side are you hitting/)).toBeNull();
 
     // The attacker's own weapon heated up by its heat_rating's generate
-    // amount from the roll (#124), not a flat 1.
+    // amount from the roll (#124), not a flat 1. Scoped to the detailed
+    // weapon row (not the card header's equipment summary, which shows the
+    // same current-heat text since #295) so the query stays unambiguous.
     const { generate: heatGenerate, max: heatMax } = parseHeatRating(
       weapon.heat_rating,
     );
+    const attackerWeaponRow = screen
+      .getByText('Long Range Bolt')
+      .closest('.token-weapon-row');
     expect(
-      screen.getByText(new RegExp(`Heat ${heatGenerate} / ${heatMax}`)),
+      within(attackerWeaponRow).getByText(
+        new RegExp(`Heat ${heatGenerate} / ${heatMax}`),
+      ),
     ).toBeDefined();
 
     // The target's right-slot weapon took the computed damage on its 5 HP
@@ -1774,13 +1803,13 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
     expandDiceRoller();
     fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-4,6'));
 
     // Claims a seat (#216) now that both sides are on the board — a winner
@@ -1802,7 +1831,7 @@ describe('BattlePage', () => {
     // Now land the finishing blow with a real attack, targeting the bare
     // front (no equipment there to complicate the damage-to-HP mapping).
     fireEvent.click(screen.getByTestId('hex-5,5'));
-    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    armAttack();
     fireEvent.click(screen.getByTestId('hex-4,6'));
     fireEvent.click(screen.getByRole('button', { name: 'Front' }));
     fireEvent.click(screen.getByRole('button', { name: 'Roll to Hit' }));
@@ -1860,17 +1889,17 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
     expandDiceRoller();
     fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-4,6'));
 
     fireEvent.click(screen.getByTestId('hex-5,5'));
-    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    armAttack();
     fireEvent.click(screen.getByTestId('hex-4,6'));
     fireEvent.click(screen.getByRole('button', { name: 'Right' }));
     fireEvent.click(screen.getByRole('button', { name: 'Roll to Hit' }));
@@ -1920,19 +1949,19 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
     expandDiceRoller();
     fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-4,6'));
 
     expect(container.querySelectorAll('.token-hit-shake')).toHaveLength(0);
 
     fireEvent.click(screen.getByTestId('hex-5,5'));
-    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    armAttack();
     fireEvent.click(screen.getByTestId('hex-4,6'));
     fireEvent.click(screen.getByRole('button', { name: 'Right' }));
     fireEvent.click(screen.getByRole('button', { name: 'Roll to Hit' }));
@@ -1977,17 +2006,17 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
     expandDiceRoller();
     fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-4,6'));
 
     fireEvent.click(screen.getByTestId('hex-5,5'));
-    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    armAttack('Flame Thrower');
     fireEvent.click(screen.getByTestId('hex-4,6'));
     fireEvent.click(screen.getByRole('button', { name: 'Right' }));
     fireEvent.click(screen.getByRole('button', { name: 'Roll to Hit' }));
@@ -2026,7 +2055,7 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
     // A10's attack spends an Attack (or Action) die (#162). Both of A10's
     // red dice need to land on "Attack" here, but a single constant mock
@@ -2042,11 +2071,11 @@ describe('BattlePage', () => {
     poolRollSpy.mockRestore();
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-4,6'));
 
     fireEvent.click(screen.getByTestId('hex-5,5'));
-    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    armAttack();
     fireEvent.click(screen.getByTestId('hex-4,6'));
     fireEvent.click(screen.getByRole('button', { name: 'Right' }));
 
@@ -2065,7 +2094,7 @@ describe('BattlePage', () => {
     );
 
     // Re-arm the same attack and roll again, this time landing a hit.
-    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    armAttack();
     fireEvent.click(screen.getByTestId('hex-4,6'));
     fireEvent.click(screen.getByRole('button', { name: 'Right' }));
     // Math.random mocked to 0 -> both dice roll a 1, always <= the target
@@ -2086,20 +2115,25 @@ describe('BattlePage', () => {
     importA10ToReserve(['  Right: Long Range Bolt']);
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
 
     // Order in the card: chassis HP +, weapon heat +, weapon HP + — the
-    // weapon's heat button is the second "+" on the page.
+    // weapon's heat button is the second "+" on the page. Scoped to the
+    // detailed weapon row (not the card header's equipment summary, which
+    // shows the same current-heat text since #295) so the query stays
+    // unambiguous.
     const heatPlusButton = () =>
       screen.getAllByRole('button', { name: '+' })[1];
+    const weaponRow = () =>
+      screen.getByText('Long Range Bolt').closest('.token-weapon-row');
     fireEvent.click(heatPlusButton());
     fireEvent.click(heatPlusButton());
-    expect(screen.getByText(/Heat 2/)).toBeDefined();
+    expect(within(weaponRow()).getByText(/Heat 2/)).toBeDefined();
 
     fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
 
-    expect(screen.getByText(/Heat 1/)).toBeDefined();
+    expect(within(weaponRow()).getByText(/Heat 1/)).toBeDefined();
   });
 
   it('pulls 1 point of heat into a Heat Sink from another item in the same slot, after the normal cooldown (#245)', () => {
@@ -2112,7 +2146,7 @@ describe('BattlePage', () => {
     ]);
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
 
     const boltRow = screen.getByText('Long Range Bolt').closest('.token-weapon-row');
@@ -2279,7 +2313,7 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
     // A10's attack spends an Attack (or Action) die (#162); Math.random is
     // already mocked to 0 above, so this manual roll produces "Attack" too.
@@ -2287,11 +2321,11 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-4,6'));
 
     fireEvent.click(screen.getByTestId('hex-5,5'));
-    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    armAttack();
     fireEvent.click(screen.getByTestId('hex-4,6'));
     fireEvent.click(screen.getByRole('button', { name: 'Right' }));
     fireEvent.click(screen.getByRole('button', { name: 'Roll to Hit' }));
@@ -2367,7 +2401,7 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
     // A10's attack spends an Attack (or Action) die (#162); Math.random is
     // already mocked to 0 above, so this manual roll produces "Attack" too.
@@ -2375,11 +2409,11 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-4,6'));
 
     fireEvent.click(screen.getByTestId('hex-5,5'));
-    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    armAttack('Flame Thrower');
     fireEvent.click(screen.getByTestId('hex-4,6'));
     fireEvent.click(screen.getByRole('button', { name: 'Right' }));
     fireEvent.click(screen.getByRole('button', { name: 'Roll to Hit' }));
@@ -2391,7 +2425,15 @@ describe('BattlePage', () => {
     ).toBeDefined();
 
     fireEvent.click(screen.getByTestId('hex-4,6'));
-    expect(screen.getByText(new RegExp(`Heat ${damage} /`))).toBeDefined();
+    // Scoped to the detailed weapon row (not the card header's equipment
+    // summary, which shows the same current-heat text since #295) so the
+    // query stays unambiguous.
+    const targetWeaponRow = screen
+      .getByText('Long Range Bolt')
+      .closest('.token-weapon-row');
+    expect(
+      within(targetWeaponRow).getByText(new RegExp(`Heat ${damage} /`)),
+    ).toBeDefined();
     expect(screen.queryByRole('checkbox').checked).toBe(false);
   });
 
@@ -2405,7 +2447,7 @@ describe('BattlePage', () => {
     importA10ToReserve(['  Right: Long Range Bolt']);
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
     // Attacking spends an Attack (or Action) die (#162); mock so red's
     // "Attack" face wins.
@@ -2413,8 +2455,19 @@ describe('BattlePage', () => {
     expandDiceRoller();
     fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
-    expect(screen.queryByText('OVERHEATED')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Attack' }).disabled).toBe(false);
+    // The weapon picker's own OVERHEATED badge/disabled state (not the
+    // aggregate "Weapons (N)" trigger, which only tracks dice, and not the
+    // card header's own weapon row, which shows the same badge — #288
+    // folded the old per-weapon Attack button into this board-level picker).
+    fireEvent.click(screen.getByRole('button', { name: /^Weapons/ }));
+    const picker = () =>
+      screen.getByText('Choose a weapon').closest('.mobile-attack-picker');
+
+    expect(within(picker()).queryByText('OVERHEATED')).toBeNull();
+    expect(
+      within(picker()).getByRole('button', { name: /^Long Range Bolt/ })
+        .disabled,
+    ).toBe(false);
 
     // Order in the card: chassis HP +, weapon heat +, weapon HP +.
     const heatPlusButton = () =>
@@ -2423,8 +2476,37 @@ describe('BattlePage', () => {
       fireEvent.click(heatPlusButton());
     }
 
-    expect(screen.getByText('OVERHEATED')).toBeDefined();
-    expect(screen.getByRole('button', { name: 'Attack' }).disabled).toBe(true);
+    expect(within(picker()).getByText('OVERHEATED')).toBeDefined();
+    expect(
+      within(picker()).getByRole('button', { name: /^Long Range Bolt/ })
+        .disabled,
+    ).toBe(true);
+  });
+
+  it("shows a weapon's range as a hover tooltip in the choose-a-weapon list (#290)", () => {
+    const weapon = equipment.find((e) => e.name === 'Long Range Bolt');
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:dicePool',
+      JSON.stringify([
+        { id: 'd-attack', label: 'Red', value: 'Attack', used: false },
+      ]),
+    );
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve(['  Right: Long Range Bolt']);
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    fireEvent.click(screen.getByRole('button', { name: /^Weapons/ }));
+    const picker = screen
+      .getByText('Choose a weapon')
+      .closest('.mobile-attack-picker');
+    expect(
+      within(picker).getByRole('button', { name: /^Long Range Bolt/ }).title,
+    ).toBe(`Range ${weapon.range}`);
   });
 
   it('disables Attack and Move once a model reaches 0 chassis HP (#160)', () => {
@@ -2446,11 +2528,13 @@ describe('BattlePage', () => {
     importA10ToReserve(['  Right: Long Range Bolt']);
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
 
-    expect(screen.getByRole('button', { name: 'Attack' }).disabled).toBe(false);
-    expect(screen.getByRole('button', { name: 'Move' }).disabled).toBe(false);
+    expect(screen.getByRole('button', { name: /^Weapons/ }).disabled).toBe(
+      false,
+    );
+    expect(screen.getByRole('button', { name: /^Move/ }).disabled).toBe(false);
 
     // Order in the card: chassis HP −, weapon heat −, weapon HP −.
     const chassisHpMinusButton = () =>
@@ -2459,11 +2543,12 @@ describe('BattlePage', () => {
       fireEvent.click(chassisHpMinusButton());
     }
 
-    expect(screen.getByRole('button', { name: 'Attack' }).disabled).toBe(true);
-    expect(screen.getByRole('button', { name: 'Move' }).disabled).toBe(true);
-    expect(
-      screen.getByText('Destroyed — this model can no longer move.'),
-    ).toBeDefined();
+    // Once wrecked, the whole board toolbar (Move/Weapons) disappears
+    // rather than merely disabling (#288 moved these off the unit card and
+    // onto a toolbar that's simply hidden for a model that can't act at
+    // all, instead of shown-but-disabled).
+    expect(screen.queryByRole('button', { name: /^Weapons/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Move/ })).toBeNull();
   });
 
   it('only allows picking sides visible to the attacker (#126)', () => {
@@ -2497,7 +2582,7 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
     // A10's attack spends an Attack (or Action) die (#162); mock so red's
     // "Attack" face wins.
@@ -2506,7 +2591,7 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     // A20 defaults to facing north (p2), so sitting directly north of it
     // (A10's spot) puts the attacker dead-center in A20's front quadrant —
     // an exact tie between Left and Right, so both are pickable alongside
@@ -2514,7 +2599,7 @@ describe('BattlePage', () => {
     fireEvent.click(screen.getByTestId('hex-5,6'));
 
     fireEvent.click(screen.getByTestId('hex-5,5'));
-    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    armAttack();
     fireEvent.click(screen.getByTestId('hex-5,6'));
 
     expect(screen.getByRole('button', { name: 'Front' }).disabled).toBe(false);
@@ -2563,7 +2648,7 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
     // A10's splash attack spends an Attack (or Action) die (#162); scoped
     // mock+restore (same id-collision concern as the later roll below) so
@@ -2576,18 +2661,18 @@ describe('BattlePage', () => {
     // Origin-tile model (5,9 — 4 hexes due south, within Artillery's 3-9
     // range and its right-mounted arc): its side must be picked manually.
     fireEvent.click(screen.getAllByRole('button', { name: 'A20' })[0]);
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,9'));
 
     // Neighbor-tile model (6,9, one of the origin's 6 splash neighbors):
     // its side is derived automatically from the blast's origin (#123),
     // and works out to 'left' for this geometry (verified in hex.test.js).
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-6,9'));
 
     fireEvent.click(screen.getByTestId('hex-5,5'));
-    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    armAttack('Artillery');
     fireEvent.click(screen.getByTestId('hex-5,9'));
 
     const modal = screen.getByText(/blast at/).closest('.attack-modal');
@@ -2675,7 +2760,7 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
     const dieRollSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
     expandDiceRoller();
@@ -2683,11 +2768,11 @@ describe('BattlePage', () => {
     dieRollSpy.mockRestore();
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,9'));
 
     fireEvent.click(screen.getByTestId('hex-5,5'));
-    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    armAttack('Artillery');
     fireEvent.click(screen.getByTestId('hex-5,9'));
 
     const modal = screen.getByText(/blast at/).closest('.attack-modal');
@@ -2775,11 +2860,11 @@ describe('BattlePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,6'));
 
     act(() => {
@@ -2964,7 +3049,7 @@ describe('BattlePage', () => {
     importA10ToReserve(['  Right: Long Range Bolt']);
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-0,0'));
 
     expect(screen.getByRole('button', { name: 'Move (1)' })).toBeDefined();
@@ -3233,11 +3318,11 @@ describe('BattlePage', () => {
     endDeploymentPhase();
 
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-6,5'));
 
     // Claims a seat (#216) now that both sides are on the board — a winner
@@ -3327,7 +3412,7 @@ describe('BattlePage', () => {
     endDeploymentPhase();
 
     fireEvent.click(screen.getByRole('button', { name: 'Drone' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
 
     // "Player 1"/"Player 2" only makes sense with two humans — in vs-CPU
@@ -3361,11 +3446,11 @@ describe('BattlePage', () => {
     endDeploymentPhase();
 
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
 
     fireEvent.click(screen.getByRole('button', { name: 'A20' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-6,5'));
 
     // Claims a seat (#216) — sandbox gameMode, but played as a real match
@@ -3487,7 +3572,7 @@ describe('BattlePage', () => {
     importA10ToReserve(['  Right: Long Range Bolt']);
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
-    fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
     fireEvent.click(screen.getByTestId('hex-5,5'));
     // Attacking spends an Attack (or Action) die (#162); mock so red's
     // "Attack" face wins.
@@ -3744,7 +3829,7 @@ describe('BattlePage', () => {
       importA10ToReserve(['  Right: Long Range Bolt']);
       fireEvent.click(screen.getByRole('button', { name: 'A10' }));
       endDeploymentPhase();
-      fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
       fireEvent.click(screen.getByTestId('hex-5,5'));
 
       expect(screen.queryByRole('button', { name: 'Repair' })).toBeNull();
@@ -3760,7 +3845,7 @@ describe('BattlePage', () => {
       importA10ToReserve(['  Head: Repair Module']);
       fireEvent.click(screen.getByRole('button', { name: 'A10' }));
       endDeploymentPhase();
-      fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
       fireEvent.click(screen.getByTestId('hex-5,5'));
 
       const repairBtn = screen.getByRole('button', { name: 'Repair' });
@@ -3778,7 +3863,7 @@ describe('BattlePage', () => {
       importA10ToReserve(['  Head: Repair Module']);
       fireEvent.click(screen.getByRole('button', { name: 'A10' }));
       endDeploymentPhase();
-      fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
       fireEvent.click(screen.getByTestId('hex-5,5'));
 
       const chassisHpMinusButton = () =>
@@ -3813,7 +3898,7 @@ describe('BattlePage', () => {
       ]);
       fireEvent.click(screen.getByRole('button', { name: 'A10' }));
       endDeploymentPhase();
-      fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
       fireEvent.click(screen.getByTestId('hex-5,5'));
 
       // Order in the card: chassis HP −, weapon heat −, weapon HP −.
@@ -3870,11 +3955,11 @@ describe('BattlePage', () => {
       endDeploymentPhase();
 
       fireEvent.click(screen.getByRole('button', { name: 'A10 (1)' }));
-      fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
       fireEvent.click(screen.getByTestId('hex-5,5'));
 
       fireEvent.click(screen.getByRole('button', { name: 'A10 (2)' }));
-      fireEvent.click(screen.getByRole('button', { name: 'Place on board' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
       // Adjacent to (5,5) on this odd-q grid.
       fireEvent.click(screen.getByTestId('hex-6,5'));
 

@@ -57,4 +57,37 @@ describe('UnitCardHeader', () => {
 
     expect(screen.getByText(/HP 2 \/ 5/)).toBeDefined();
   });
+
+  it("shows a weapon's current heat, not just its static generate/max rating (#295)", () => {
+    const unit = {
+      manufacturer: 'Corp A',
+      size: 'Medium',
+      armor: '2/2/2/1',
+      hp: 10,
+    };
+    const token = {
+      currentHp: 10,
+      weaponState: { 0: { heat: 4, broken: false } },
+    };
+    const equippedItems = [
+      {
+        id: 2,
+        instanceIndex: 0,
+        name: 'Long Range Bolt',
+        range: '9',
+        hit_dice: '2d8',
+        heat_rating: '2/6',
+      },
+    ];
+
+    render(
+      <UnitCardHeader
+        unit={unit}
+        token={token}
+        equippedItems={equippedItems}
+      />,
+    );
+
+    expect(screen.getByText(/Heat 4 \/ 6/)).toBeDefined();
+  });
 });

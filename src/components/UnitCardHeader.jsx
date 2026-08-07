@@ -1,5 +1,5 @@
 import DiceIcons from './DiceIcons.jsx';
-import { healthBarColor, sizeNumber } from '../lib/tokens.js';
+import { healthBarColor, sizeNumber, parseHeatRating } from '../lib/tokens.js';
 
 function UnitCardHeader({ unit, token, equippedItems }) {
   const maxHp = Number(unit.hp) || 1;
@@ -39,12 +39,19 @@ function UnitCardHeader({ unit, token, equippedItems }) {
             // taken lives in weaponState, not the static equipment stat.
             const currentItemHp =
               token.weaponState?.[item.instanceIndex]?.hp ?? maxItemHp;
+            // Same for heat (#295) — the static heat_rating stat is just the
+            // generate/max rule, not how hot this particular model's item
+            // actually is right now.
+            const { max: maxHeat } = parseHeatRating(item.heat_rating);
+            const currentHeat = token.weaponState?.[item.instanceIndex]?.heat ?? 0;
             return (
               <li key={item.instanceIndex ?? item.id ?? index}>
                 {item.name}
                 {item.range ? ` · Range ${item.range}` : ''}
                 {item.hit_dice ? ` · Hit ${item.hit_dice}` : ''}
-                {item.heat_rating ? ` · Heat ${item.heat_rating}` : ''}
+                {item.heat_rating
+                  ? ` · Heat ${currentHeat}${maxHeat ? ` / ${maxHeat}` : ''}`
+                  : ''}
                 {item.movement ? ` · ${item.movement} move` : ''}
                 {maxItemHp > 0 ? ` · HP ${currentItemHp} / ${maxItemHp}` : ''}
               </li>

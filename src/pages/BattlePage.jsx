@@ -93,8 +93,6 @@ const BOT_DIFFICULTY_LABELS = {
   tactical: 'Tactical',
   expert: 'Expert',
 };
-// Must match .battle-board-viewport's width in index.css.
-const BOARD_WIDTH = 1000;
 // .battle-board-viewport's own padding (1rem each side) + border (1px each
 // side) — subtracted so the board fits inside it without an unwanted
 // horizontal scrollbar at 100% zoom.
@@ -103,9 +101,14 @@ const BOARD_PADDING = 34;
 // page header, turn tracker, deployment controls, zoom controls) so the
 // auto-fit zoom keeps the whole board on screen without vertical scrolling.
 const BOARD_CHROME_HEIGHT = 300;
-// .container-wide's own 1.5rem padding on each side (#101) — the only other
-// horizontal chrome around the board once it's narrower than BOARD_WIDTH.
+// .container-wide's own 1.5rem padding on each side.
 const CONTAINER_PADDING = 48;
+// .battle-layout-desktop's fixed sidebar column (320px) plus its grid gap
+// (1.25rem) — the board's available width on desktop has to share the
+// viewport with this, unlike mobile where the board has it all to itself
+// (#274, letting the board actually use the room a wide screen has instead
+// of stopping at an old fixed 1000px cap).
+const DESKTOP_SIDEBAR_RESERVED_WIDTH = 340;
 const ZOOM_MIN = 0.5;
 // Raised from 2 so a zoomed-in board has real detail to look at (#187) — the
 // board is clipped (not scrolled) past this size, panned via click-and-drag
@@ -1283,12 +1286,13 @@ function BattlePage() {
     return !myPlayer || token.owner === myPlayer;
   }
 
-  // Capped at BOARD_WIDTH (desktop's fixed board width) but shrinks below
-  // that on a narrow phone screen instead of overflowing it (#101).
-  const availableWidth = Math.min(
-    BOARD_WIDTH,
-    viewportWidth - CONTAINER_PADDING,
-  );
+  // Grows with the viewport instead of stopping at an old fixed cap (#274)
+  // — desktop just has to leave room for the sidebar next to it, while
+  // mobile (no sidebar sharing the row) gets the full width (#101).
+  const availableWidth =
+    viewportWidth -
+    CONTAINER_PADDING -
+    (isMobile ? 0 : DESKTOP_SIDEBAR_RESERVED_WIDTH);
   const fitWidth =
     (availableWidth - BOARD_PADDING) / (1.5 * (dimensions.cols + 1));
   const availableHeight = Math.max(200, viewportHeight - BOARD_CHROME_HEIGHT);
@@ -2770,6 +2774,22 @@ function BattlePage() {
                 )}
               </>
             )}
+            {/* Overlays the bottom of the map itself, opening upward, same
+                as mobile's fixed picker (#275) — rather than pushing the
+                below-map strip down in the page flow. */}
+            {!isMobile && attackPickerOpen && selectedToken && (
+              <div className="mobile-attack-picker board-attack-picker">
+                <p className="mobile-attack-picker-title">Choose a weapon</p>
+                {attackPickerList}
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={() => setAttackPickerOpen(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
           {/* Desktop's equivalent of the mobile toolbar above, but anchored
               under the map instead of floating over it (#270) — folded into
@@ -2846,39 +2866,11 @@ function BattlePage() {
                 </div>
               )
             ))}
-          {!isMobile && attackPickerOpen && selectedToken && (
-            <div className="mobile-attack-picker board-attack-picker">
-              <p className="mobile-attack-picker-title">Choose a weapon</p>
-              {attackPickerList}
-              <button
-                type="button"
-                className="ghost"
-                onClick={() => setAttackPickerOpen(false)}
-              >
-                Cancel
-              </button>
-            </div>
-          )}
     </>
   );
 
   const unitsTabContent = (
     <>
-          {/* Starting deployment happens from here on mobile (#145) — it's
-              where Reserve units are managed, so it's the natural place to
-              re-open deployment for reinforcements. Ending it stays on the
-              Board tab (see the action toolbar below), since that's where
-              you're looking once everything's placed. */}
-          {isMobile && !deploymentPhase && (
-            <button
-              type="button"
-              className="mobile-deploy-phase-btn-units"
-              disabled={!deploymentZonesValid}
-              onClick={() => setDeploymentPhase(true)}
-            >
-              Deploy Phase
-            </button>
-          )}
           {selectedToken && !deploymentPhase && (
             <TokenCard
               key={selectedToken.id}
@@ -3059,6 +3051,7 @@ function BattlePage() {
               deploymentPhase ? 'End deployment phase' : 'End Turn'
             }
             endTurnClassName={deploymentPhase ? 'deploy-stage' : ''}
+            deploymentPhase={deploymentPhase}
             playerDice={playerDice}
             victoryPoints={victoryPoints}
             ownerLabel={ownerLabel}
@@ -3119,6 +3112,7 @@ function BattlePage() {
                   deploymentPhase ? 'End deployment phase' : 'End Turn'
                 }
                 endTurnClassName={deploymentPhase ? 'deploy-stage' : ''}
+                deploymentPhase={deploymentPhase}
                 playerDice={playerDice}
                 victoryPoints={victoryPoints}
                 ownerLabel={ownerLabel}
@@ -3153,30 +3147,6 @@ function BattlePage() {
             <div
               className={`mobile-tab-panel ${mobileTab !== 'dice' ? 'mobile-tab-panel-active' : ''}`}
             >
-              {/* Folded in from the page's old always-visible toggle above
-                  the tabs (#261) — it's a Units-tab concern (re-opening
-                  deployment to place reinforcements), not a page-wide one.
-                  Only the "start" direction lives here now — "end" merged
-                  into the sidebar's turn button instead (#269), same split
-                  mobile already uses between this button and its own board
-                  toolbar's End Deploy. */}
-              {!deploymentPhase && (
-                <div className="sidebar-deploy-row">
-                  <button
-                    type="button"
-                    className="sidebar-deploy-toggle"
-                    disabled={!deploymentZonesValid}
-                    onClick={() => setDeploymentPhase(true)}
-                  >
-                    Deployment Phase
-                  </button>
-                  {!deploymentZonesValid && (
-                    <span className="unit-meta">
-                      Board needs at least 7 rows for deployment zones.
-                    </span>
-                  )}
-                </div>
-              )}
               {unitsTabContent}
             </div>
           </div>

@@ -351,6 +351,19 @@ button:hover {
   background: var(--accent-hover);
 }
 
+/* A plain disabled button (the wizard's Continue, most often) otherwise
+   looks fully clickable — same solid fill as enabled — which reads as
+   broken rather than "not ready yet" once a stage requires an explicit
+   pick before it (#278). */
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button:disabled:hover {
+  background: var(--accent);
+}
+
 button.ghost {
   background: transparent;
   border: 1px solid var(--border-input);
@@ -478,31 +491,6 @@ button.danger:hover {
 .battle-sidebar-tabs button.active {
   color: var(--accent);
   border-bottom-color: var(--accent);
-}
-
-.sidebar-deploy-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 12px;
-}
-
-/* Matches the mobile deploy-phase button's color (#7c3aed) in both states,
-   rather than the plain accent blue that used to make it look like just
-   another action button (#267). */
-.sidebar-deploy-toggle {
-  width: 100%;
-  background: #7c3aed;
-  color: #fff;
-}
-
-.sidebar-deploy-toggle:hover {
-  background: #6d28d9;
-}
-
-.sidebar-deploy-toggle:disabled {
-  background: var(--bg-track);
-  color: var(--text-muted);
 }
 
 @media (max-width: 900px) {
@@ -726,15 +714,13 @@ button.danger:hover {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: 1000px;
-  max-width: 100%;
+  width: 100%;
   min-width: 0;
 }
 
 .battle-board-viewport {
   position: relative;
-  width: 1000px;
-  max-width: 100%;
+  width: 100%;
   min-width: 0;
   background-color: var(--bg-card);
   background-repeat: no-repeat;
@@ -759,17 +745,6 @@ button.danger:hover {
 
 .battle-board-viewport .hex-grid {
   max-width: none;
-}
-
-/* Their 1000px width above is a desktop preference; overridden here (after
-   that base rule, so source order lets it win with matching specificity)
-   since it would otherwise pressure the single-column mobile layout wider
-   than the actual viewport, overflowing a narrow phone screen (#101). */
-@media (max-width: 1100px) {
-  .battle-board-column,
-  .battle-board-viewport {
-    width: 100%;
-  }
 }
 
 /* Nested inside .battle-board-viewport and pinned to its corner (#268)
@@ -1386,27 +1361,6 @@ button.danger:hover {
   white-space: nowrap;
 }
 
-/* Starts deployment from the Units tab on mobile (#145) — ending it stays
-   on the Board tab's action toolbar instead, since that's a separate button
-   only mounted (via `isMobile`) rather than shown/hidden with CSS. */
-.mobile-deploy-phase-btn-units {
-  display: block;
-  width: 100%;
-  margin-bottom: 12px;
-  padding: 12px;
-  border-radius: 8px;
-  border: none;
-  background: #7c3aed;
-  color: #fff;
-  font-weight: 700;
-  font-size: 14px;
-}
-
-.mobile-deploy-phase-btn-units:disabled {
-  background: var(--bg-track);
-  color: var(--text-muted);
-}
-
 .deploy-hint-banner {
   display: flex;
   align-items: center;
@@ -1656,6 +1610,13 @@ button.danger:hover {
   .home-tile-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.home-version {
+  text-align: center;
+  margin-top: 32px;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 /* The wizard body is narrower than the full home page, so the difficulty
@@ -2607,17 +2568,26 @@ button.danger:hover {
   color: var(--text-muted);
 }
 
-/* Positioned in-flow right below the strip above, rather than the mobile
-   version's fixed overlay (#270). */
+/* Overlays the bottom of the map itself and opens upward (#275), same as
+   mobile's fixed picker — anchored to .battle-board-viewport (its
+   positioned ancestor) instead of pushing the below-map strip down the
+   page. */
 .board-attack-picker {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 6;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-top: 8px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
 }
 
 @media (max-width: 900px) {

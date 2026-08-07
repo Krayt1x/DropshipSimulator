@@ -11,6 +11,9 @@ export default [
       sourceType: 'module',
       globals: {
         ...globals.browser,
+        __APP_VERSION__: 'readonly',
+        __COMMIT_HASH__: 'readonly',
+        __COMMIT_DATE__: 'readonly',
       },
       parserOptions: {
         ecmaFeatures: { jsx: true },

@@ -80,6 +80,15 @@ function pickRoster(column, manufacturer, listName) {
   click(within(column).getByRole('button', { name: listName }));
 }
 
+// The Map stage no longer defaults to "Current map" — Continue stays
+// disabled until something's explicitly picked (#278), so every test that
+// used to skip past this stage with a bare Continue now needs this first.
+function pickCurrentMap() {
+  click(screen.getByRole('button', { name: 'Select map' }));
+  const modal = screen.getByText('Choose a map').closest('.map-picker-modal');
+  click(within(modal).getByRole('button', { name: /Current map/ }));
+}
+
 // Reaches the Map stage of a Vs CPU game with both sides given a random
 // roster from the same manufacturer.
 function reachMapStageCpu(difficultyName = 'Simple') {
@@ -89,12 +98,13 @@ function reachMapStageCpu(difficultyName = 'Simple') {
   pickRoster(playerColumn, 'Corp A', 'Random');
 }
 
-// Reaches the First player stage of a Vs CPU game, accepting the Scenario
-// stage's default (Destruction) via Continue along the way.
+// Reaches the First player stage of a Vs CPU game, explicitly picking
+// Current map and Destruction along the way — neither stage defaults to a
+// pick anymore (#278).
 function reachFirstPlayerStage(difficultyName = 'Simple') {
   reachMapStageCpu(difficultyName);
-  click(screen.getByRole('button', { name: 'Continue' }));
-  click(screen.getByRole('button', { name: 'Continue' }));
+  pickCurrentMap();
+  click(screen.getByRole('button', { name: /Destruction/ }));
 }
 
 describe('PlayPage', () => {
@@ -152,7 +162,7 @@ describe('PlayPage', () => {
     expect(screen.queryByText('Sandbox or Vs CPU?')).toBeNull();
     expect(screen.getByText('Which map do you want to play?')).toBeDefined();
 
-    click(screen.getByRole('button', { name: 'Continue' }));
+    pickCurrentMap();
     expect(screen.getByText('Review & start')).toBeDefined();
     click(screen.getByRole('button', { name: 'Start Game' }));
 
@@ -185,7 +195,7 @@ describe('PlayPage', () => {
 
     expect(window.location.hash).toBe('');
     expect(screen.getByText('Which map do you want to play?')).toBeDefined();
-    click(screen.getByRole('button', { name: 'Continue' }));
+    pickCurrentMap();
 
     expect(
       screen.getByText('Which scenario do you want to play?'),
@@ -287,7 +297,7 @@ describe('PlayPage', () => {
     it('does not gate reaching Start Game on a first-player pick in Sandbox mode', () => {
       render(<PlayPage />);
       pickSandbox();
-      click(screen.getByRole('button', { name: 'Continue' }));
+      pickCurrentMap();
 
       expect(screen.queryByText('Who plays first?')).toBeNull();
       expect(screen.getByRole('button', { name: 'Start Game' }).disabled).toBe(
@@ -342,8 +352,8 @@ describe('PlayPage', () => {
 
     pickRoster(playerColumn, 'Corp A', 'Default A Corp List');
 
-    click(screen.getByRole('button', { name: 'Continue' }));
-    click(screen.getByRole('button', { name: 'Continue' }));
+    pickCurrentMap();
+    click(screen.getByRole('button', { name: /Destruction/ }));
     click(screen.getByRole('button', { name: 'Player', exact: true }));
     click(screen.getByRole('button', { name: 'Start Game' }));
 
@@ -384,8 +394,8 @@ describe('PlayPage', () => {
 
     pickRoster(playerColumn, 'Corp A', 'Random');
 
-    click(screen.getByRole('button', { name: 'Continue' }));
-    click(screen.getByRole('button', { name: 'Continue' }));
+    pickCurrentMap();
+    click(screen.getByRole('button', { name: /Destruction/ }));
     click(screen.getByRole('button', { name: 'Player', exact: true }));
     click(screen.getByRole('button', { name: 'Start Game' }));
 
@@ -447,7 +457,7 @@ describe('PlayPage', () => {
     );
     render(<PlayPage />);
     pickSandbox();
-    click(screen.getByRole('button', { name: 'Continue' }));
+    pickCurrentMap();
     click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(
@@ -604,10 +614,10 @@ describe('PlayPage grid layout (#231)', () => {
 });
 
 describe('PlayPage scenario picker (#232, #242)', () => {
-  it('shows a scenario stage after the map stage in vs-computer mode, defaulting to Destruction (#260)', () => {
+  it('shows a scenario stage after the map stage in vs-computer mode, with neither option pre-selected (#278)', () => {
     render(<PlayPage />);
     reachMapStageCpu();
-    click(screen.getByRole('button', { name: 'Continue' }));
+    pickCurrentMap();
 
     const body = document.querySelector('.wizard-body');
     expect(
@@ -615,16 +625,19 @@ describe('PlayPage scenario picker (#232, #242)', () => {
     ).toBeDefined();
     expect(
       within(body).getByRole('button', { name: /Destruction/ }).className,
-    ).toContain('selected');
+    ).not.toContain('selected');
     expect(
       within(body).getByRole('button', { name: /Scenario Control/ }).className,
     ).not.toContain('selected');
+    expect(screen.getByRole('button', { name: 'Continue' }).disabled).toBe(
+      true,
+    );
   });
 
   it('commits the chosen scenario to storage when Start Game is pressed', () => {
     render(<PlayPage />);
     reachMapStageCpu();
-    click(screen.getByRole('button', { name: 'Continue' }));
+    pickCurrentMap();
 
     click(screen.getByRole('button', { name: /Scenario Control/ }));
     click(screen.getByRole('button', { name: 'Player', exact: true }));
@@ -636,7 +649,7 @@ describe('PlayPage scenario picker (#232, #242)', () => {
     ).toBe(JSON.stringify('first-to-11'));
   });
 
-  it("defaults to Destruction (stored as 'annihilation') when the scenario stage is never touched", () => {
+  it("commits Destruction (stored as 'annihilation') when explicitly picked", () => {
     render(<PlayPage />);
     reachFirstPlayerStage();
 
@@ -656,7 +669,7 @@ describe('PlayPage scenario picker (#232, #242)', () => {
       screen.queryByText('Which scenario do you want to play?'),
     ).toBeNull();
 
-    click(screen.getByRole('button', { name: 'Continue' }));
+    pickCurrentMap();
     click(screen.getByRole('button', { name: 'Start Game' }));
 
     expect(window.location.hash).toBe('#battle');
@@ -731,14 +744,25 @@ describe('PlayPage wizard (#247, #251)', () => {
     expect(screen.getByText('Which map do you want to play?')).toBeDefined();
   });
 
-  it("lets Continue accept a stage's default without an explicit pick", () => {
+  it('requires an explicit map pick before Continue is enabled, instead of defaulting to Current map (#278)', () => {
     render(<PlayPage />);
     pickSandbox();
 
     expect(screen.getByText('Which map do you want to play?')).toBeDefined();
-    click(screen.getByRole('button', { name: 'Continue' }));
+    // Neither a thumbnail nor a name shows until something's actually
+    // picked — the step doesn't look pre-answered.
+    expect(screen.queryByText('Current map')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Continue' }).disabled).toBe(
+      true,
+    );
 
+    pickCurrentMap();
+
+    // Picking auto-advances straight to Review, same as every other tile
+    // pick in the wizard — Continue was only ever the "accept the default"
+    // fallback, which no longer applies to this stage.
     expect(screen.getByText('Review & start')).toBeDefined();
+    expect(screen.getAllByText('Current map').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Start Game' }).disabled).toBe(
       false,
     );

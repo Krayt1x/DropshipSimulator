@@ -14,4 +14,13 @@ describe('HomePage (#235)', () => {
       screen.getByRole('link', { name: /Map editor/ }).closest('.home-tile-grid'),
     ).toBe(grid);
   });
+
+  it('shows the app version and commit hash at the bottom (#272)', () => {
+    render(<HomePage />);
+
+    expect(
+      screen.getByText(new RegExp(`v${__APP_VERSION__}`)),
+    ).toBeDefined();
+    expect(screen.getByText(new RegExp(__COMMIT_HASH__))).toBeDefined();
+  });
 });

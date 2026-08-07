@@ -32,6 +32,12 @@ function HomePage() {
           </a>
         ))}
       </div>
+      <p className="home-version">
+        v{__APP_VERSION__} · {__COMMIT_HASH__}
+        {__COMMIT_DATE__
+          ? ` · ${new Date(__COMMIT_DATE__).toLocaleString()}`
+          : ''}
+      </p>
     </div>
   );
 }

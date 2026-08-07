@@ -33,6 +33,7 @@ function TurnTracker({
   ownerLabel,
   endTurnLabel = 'End Turn',
   endTurnClassName = '',
+  deploymentPhase = false,
 }) {
   const [top, bottom] = OWNERS;
   const labelFor = (owner) => ownerLabel?.(owner.id) ?? owner.label;
@@ -56,10 +57,16 @@ function TurnTracker({
           <VpChip vp={victoryPoints?.[top.id]} />
         </span>
         <span className="turn-mid">
-          Turn {turn.number}
-          <span className="turn-mid-sub">
-            active: {turn.active === top.id ? 'top' : 'bottom'}
-          </span>
+          {/* Reads "Deployment" during the shared placement window instead
+              of a misleading "Turn 1" — deployment isn't really turn 1 yet,
+              and neither side is more "active" than the other while both
+              are still placing models (#279). */}
+          {deploymentPhase ? 'Deployment' : `Turn ${turn.number}`}
+          {!deploymentPhase && (
+            <span className="turn-mid-sub">
+              active: {turn.active === top.id ? 'top' : 'bottom'}
+            </span>
+          )}
         </span>
         <span
           className={`turn-segment ${turn.active === bottom.id ? 'active' : ''}`}

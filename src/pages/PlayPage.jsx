@@ -155,11 +155,16 @@ function PlayPage() {
   const [playerImportPreview, setPlayerImportPreview] = useState(null);
   // 'current', or a DEFAULT_MAPS entry's name (#222) — picked from a modal
   // listing every pre-existing map instead of a hardcoded Current/Blank pair.
-  const [mapChoice, setMapChoice] = useState('current');
+  // Starts unset rather than defaulting to 'current' so the step doesn't
+  // look already-answered before the player has actually picked anything
+  // (#278) — Continue stays disabled until it's set (isWizardStepDone).
+  const [mapChoice, setMapChoice] = useState(null);
   const [mapPickerOpen, setMapPickerOpen] = useState(false);
   // Which win condition this match uses (#232) — committed to storage only
-  // once Start Game is pressed, same as the map choice above.
-  const [scenario, setScenario] = useState(DEFAULT_SCENARIO);
+  // once Start Game is pressed, same as the map choice above. Also starts
+  // unset for the same reason (#278); Sandbox mode (which skips this step
+  // entirely) restores DEFAULT_SCENARIO for itself when picked, below.
+  const [scenario, setScenario] = useState(null);
   const [, setGameScenario] = useLocalStorageState(
     'dropshipsimulator:gameScenario',
     DEFAULT_SCENARIO,
@@ -193,9 +198,9 @@ function PlayPage() {
     setShowPlayerRosterImport(false);
     setPlayerImportText('');
     setPlayerImportPreview(null);
-    setMapChoice('current');
+    setMapChoice(null);
     setMapPickerOpen(false);
-    setScenario(DEFAULT_SCENARIO);
+    setScenario(null);
     clearTimeout(firstPlayerTimeoutRef.current);
     setFirstPlayer(null);
     setFirstPlayerRolling(false);
@@ -994,17 +999,21 @@ function PlayPage() {
         >
           Select map
         </button>
-        <div style={{ marginTop: 8 }}>
-          <MapThumbnail
-            dimensions={selectedMap.dimensions}
-            tileTypes={selectedMap.tileTypes}
-            tiles={selectedMap.tiles}
-            size="full"
-          />
-          <p className="unit-meta" style={{ margin: '6px 0 0' }}>
-            {mapChoice === 'current' ? 'Current map' : mapChoice}
-          </p>
-        </div>
+        {/* No preview until an explicit pick is made (#278) — showing one
+            beforehand looked like a choice had already been made. */}
+        {mapChoice && (
+          <div style={{ marginTop: 8 }}>
+            <MapThumbnail
+              dimensions={selectedMap.dimensions}
+              tileTypes={selectedMap.tileTypes}
+              tiles={selectedMap.tiles}
+              size="full"
+            />
+            <p className="unit-meta" style={{ margin: '6px 0 0' }}>
+              {mapChoice === 'current' ? 'Current map' : mapChoice}
+            </p>
+          </div>
+        )}
       </>
     );
   }

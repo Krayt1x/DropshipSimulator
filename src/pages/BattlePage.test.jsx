@@ -1207,6 +1207,8 @@ describe('BattlePage', () => {
       container.querySelectorAll('polygon[fill^="rgba(220"]'),
     ).toHaveLength(tintedPerZone);
 
+    // Ending deployment is one-way now — there's no button left to reopen
+    // it once the game has started (#273).
     fireEvent.click(
       screen.getByRole('button', { name: 'End deployment phase' }),
     );
@@ -1216,14 +1218,6 @@ describe('BattlePage', () => {
     expect(
       container.querySelectorAll('polygon[fill^="rgba(220"]'),
     ).toHaveLength(0);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Deployment Phase' }));
-    expect(container.querySelectorAll('polygon[fill^="rgba(37"]')).toHaveLength(
-      tintedPerZone,
-    );
-    expect(
-      container.querySelectorAll('polygon[fill^="rgba(220"]'),
-    ).toHaveLength(tintedPerZone);
   });
 
   it('deploys a reserve unit onto the board via drag and drop', () => {
@@ -2999,7 +2993,7 @@ describe('BattlePage', () => {
     ).toBeDefined();
   });
 
-  it('starts deployment from a button on the Units tab, ends it from the turn tracker (#145, #271)', () => {
+  it('ends deployment from the turn tracker with no way to reopen it once the game has started (#145, #271, #273)', () => {
     vi.stubGlobal('matchMedia', () => ({
       matches: true,
       addEventListener: () => {},
@@ -3014,20 +3008,14 @@ describe('BattlePage', () => {
       screen.getByRole('button', { name: 'End deployment phase' }),
     );
 
-    // Starting deployment again is only offered from the Units tab, not
-    // the Board tab's toolbar.
+    // No "Deploy Phase" button exists anywhere to reopen it (#273) — ending
+    // deployment is one-way once the game has started.
     expect(
       screen.queryByRole('button', { name: 'End deployment phase' }),
     ).toBeNull();
-
-    const startBtn = screen.getByRole('button', { name: 'Deploy Phase' });
-    expect(startBtn.closest('.mobile-action-toolbar')).toBeNull();
-
-    fireEvent.click(startBtn);
-
     expect(
-      screen.getByRole('button', { name: 'End deployment phase' }),
-    ).toBeDefined();
+      screen.queryByRole('button', { name: 'Deploy Phase' }),
+    ).toBeNull();
   });
 
   it('offers Import as a tab alongside Reserve/Roster on mobile, switching to Reserve once a unit lands (#146)', () => {

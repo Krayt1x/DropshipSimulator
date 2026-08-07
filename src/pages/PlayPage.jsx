@@ -749,49 +749,51 @@ function PlayPage() {
             </div>
             {playerRosterManufacturer && (
               <>
-                <div className="tile-palette-list" style={{ marginTop: 8 }}>
-                  <button
-                    type="button"
-                    className={`tile-swatch-btn ${chosenPlayerRoster === 'Random' ? 'selected' : ''}`}
-                    onClick={() =>
-                      choosePlayerRoster(
-                        { type: 'random', manufacturer: playerRosterManufacturer },
-                        'Random',
-                      )
-                    }
-                  >
-                    Random
-                  </button>
-                  {DEFAULT_ROSTERS.filter(
-                    (roster) => roster.manufacturer === playerRosterManufacturer,
-                  ).map((roster) => (
-                    <div key={roster.name} className="roster-accordion-item">
-                      <button
-                        type="button"
-                        className={`tile-swatch-btn ${chosenPlayerRoster === roster.name ? 'selected' : ''}`}
-                        onClick={() =>
-                          choosePlayerRoster(
-                            { type: 'specific', name: roster.name },
-                            roster.name,
-                          )
-                        }
-                      >
-                        {roster.name}
-                      </button>
-                      {chosenPlayerRoster === roster.name && (
-                        <pre className="roster-accordion-description">
-                          {roster.text}
-                        </pre>
-                      )}
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    className={`tile-swatch-btn ${showPlayerRosterImport ? 'selected' : ''}`}
-                    onClick={() => setShowPlayerRosterImport((v) => !v)}
-                  >
-                    Import…
-                  </button>
+                <div className="roster-list-box">
+                  <div className="tile-palette-list">
+                    <button
+                      type="button"
+                      className={`tile-swatch-btn ${chosenPlayerRoster === 'Random' ? 'selected' : ''}`}
+                      onClick={() =>
+                        choosePlayerRoster(
+                          { type: 'random', manufacturer: playerRosterManufacturer },
+                          'Random',
+                        )
+                      }
+                    >
+                      Random
+                    </button>
+                    {DEFAULT_ROSTERS.filter(
+                      (roster) => roster.manufacturer === playerRosterManufacturer,
+                    ).map((roster) => (
+                      <div key={roster.name} className="roster-accordion-item">
+                        <button
+                          type="button"
+                          className={`tile-swatch-btn ${chosenPlayerRoster === roster.name ? 'selected' : ''}`}
+                          onClick={() =>
+                            choosePlayerRoster(
+                              { type: 'specific', name: roster.name },
+                              roster.name,
+                            )
+                          }
+                        >
+                          {roster.name}
+                        </button>
+                        {chosenPlayerRoster === roster.name && (
+                          <pre className="roster-accordion-description">
+                            {roster.text}
+                          </pre>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className={`tile-swatch-btn ${showPlayerRosterImport ? 'selected' : ''}`}
+                      onClick={() => setShowPlayerRosterImport((v) => !v)}
+                    >
+                      Import…
+                    </button>
+                  </div>
                 </div>
                 {DEFAULT_ROSTERS.every(
                   (roster) => roster.manufacturer !== playerRosterManufacturer,
@@ -870,49 +872,51 @@ function PlayPage() {
             </div>
             {rosterManufacturer && (
               <>
-                <div className="tile-palette-list" style={{ marginTop: 8 }}>
-                  <button
-                    type="button"
-                    className={`tile-swatch-btn ${chosenRoster === 'Random' ? 'selected' : ''}`}
-                    onClick={() =>
-                      chooseRoster(
-                        { type: 'random', manufacturer: rosterManufacturer },
-                        'Random',
-                      )
-                    }
-                  >
-                    Random
-                  </button>
-                  {DEFAULT_ROSTERS.filter(
-                    (roster) => roster.manufacturer === rosterManufacturer,
-                  ).map((roster) => (
-                    <div key={roster.name} className="roster-accordion-item">
-                      <button
-                        type="button"
-                        className={`tile-swatch-btn ${chosenRoster === roster.name ? 'selected' : ''}`}
-                        onClick={() =>
-                          chooseRoster(
-                            { type: 'specific', name: roster.name },
-                            roster.name,
-                          )
-                        }
-                      >
-                        {roster.name}
-                      </button>
-                      {chosenRoster === roster.name && (
-                        <pre className="roster-accordion-description">
-                          {roster.text}
-                        </pre>
-                      )}
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    className={`tile-swatch-btn ${showRosterImport ? 'selected' : ''}`}
-                    onClick={() => setShowRosterImport((v) => !v)}
-                  >
-                    Import…
-                  </button>
+                <div className="roster-list-box">
+                  <div className="tile-palette-list">
+                    <button
+                      type="button"
+                      className={`tile-swatch-btn ${chosenRoster === 'Random' ? 'selected' : ''}`}
+                      onClick={() =>
+                        chooseRoster(
+                          { type: 'random', manufacturer: rosterManufacturer },
+                          'Random',
+                        )
+                      }
+                    >
+                      Random
+                    </button>
+                    {DEFAULT_ROSTERS.filter(
+                      (roster) => roster.manufacturer === rosterManufacturer,
+                    ).map((roster) => (
+                      <div key={roster.name} className="roster-accordion-item">
+                        <button
+                          type="button"
+                          className={`tile-swatch-btn ${chosenRoster === roster.name ? 'selected' : ''}`}
+                          onClick={() =>
+                            chooseRoster(
+                              { type: 'specific', name: roster.name },
+                              roster.name,
+                            )
+                          }
+                        >
+                          {roster.name}
+                        </button>
+                        {chosenRoster === roster.name && (
+                          <pre className="roster-accordion-description">
+                            {roster.text}
+                          </pre>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className={`tile-swatch-btn ${showRosterImport ? 'selected' : ''}`}
+                      onClick={() => setShowRosterImport((v) => !v)}
+                    >
+                      Import…
+                    </button>
+                  </div>
                 </div>
                 {DEFAULT_ROSTERS.every(
                   (roster) => roster.manufacturer !== rosterManufacturer,

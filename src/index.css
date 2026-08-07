@@ -1901,6 +1901,16 @@ button.danger:hover {
   margin: 0 0 6px;
 }
 
+/* Sets the list buttons apart from the manufacturer tiles above them (#257)
+   — without it the two rows ran together, cramped, with no visual break. */
+.roster-list-box {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--bg-container);
+  margin-top: 8px;
+}
+
 .roster-accordion-item {
   width: 100%;
 }

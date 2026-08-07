@@ -95,10 +95,22 @@ export const DEFAULT_ROSTERS = [
   },
 ];
 
-function RosterImport({ manufacturers, units, equipment, onImport, myPlayer }) {
+function RosterImport({
+  manufacturers,
+  units,
+  equipment,
+  onImport,
+  myPlayer,
+  collapsible = false,
+}) {
   const [text, setText] = useState('');
   const [owner, setOwner] = useState(myPlayer ?? OWNERS[0].id);
   const [result, setResult] = useState(null);
+  // Starts collapsed on desktop, where it now sits below the Reserve/Roster
+  // card as its own card (#266) — mobile instead embeds this as an "Import"
+  // sub-tab inside the Reserve/Roster card, whose own tab switcher already
+  // shows/hides it, so it opts out of this collapse behavior entirely.
+  const [collapsed, setCollapsed] = useState(collapsible);
   // Written by BuilderPage.jsx's "Use this list" button (#188) so a list
   // assembled in the in-app builder lands here the same way a pasted export
   // would, without round-tripping through text.
@@ -125,6 +137,13 @@ function RosterImport({ manufacturers, units, equipment, onImport, myPlayer }) {
     });
   }, [handoff]);
 
+  // Auto-opens once a preview is ready, so importing while collapsed (a
+  // handoff from the builder, a default roster, or Preview import) doesn't
+  // hide its own result (#266).
+  useEffect(() => {
+    if (collapsible && result) setCollapsed(false);
+  }, [collapsible, result]);
+
   function parse() {
     setResult(parseRosterExport(text, { manufacturers, units, equipment }));
   }
@@ -148,125 +167,140 @@ function RosterImport({ manufacturers, units, equipment, onImport, myPlayer }) {
     <div className="card token-form">
       <div className="reserve-header">
         <p className="unit-name">Import roster</p>
-        <a href="#builder" className="ghost">
-          Build a list
-        </a>
-      </div>
-      <p className="unit-meta">
-        Build a list right here, or paste the text from DropshipBuilder's
-        "Share" button on the list builder page.
-      </p>
-
-      <div className="field">
-        <label>Default rosters</label>
         <div className="token-owner-row">
-          {DEFAULT_ROSTERS.map((roster) => (
+          <a href="#builder" className="ghost">
+            Build a list
+          </a>
+          {collapsible && (
             <button
               type="button"
               className="ghost"
-              key={roster.name}
-              onClick={() => loadDefaultRoster(roster.text)}
+              onClick={() => setCollapsed((current) => !current)}
             >
-              {roster.name}
+              {collapsed ? 'Expand' : 'Collapse'}
             </button>
-          ))}
+          )}
         </div>
       </div>
+      {(!collapsible || !collapsed) && (
+        <>
+          <p className="unit-meta">
+            Build a list right here, or paste the text from DropshipBuilder's
+            "Share" button on the list builder page.
+          </p>
 
-      <div className="field">
-        <label htmlFor="roster-import-text">Roster export</label>
-        <textarea
-          id="roster-import-text"
-          rows={8}
-          placeholder="Paste your exported list here"
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            setResult(null);
-          }}
-        />
-      </div>
-
-      <button
-        type="button"
-        className="ghost"
-        disabled={!text.trim()}
-        onClick={parse}
-      >
-        Preview import
-      </button>
-
-      {result && (
-        <div className="token-card-section">
-          {result.entries.length > 0 && (
-            <>
-              <label>
-                {result.listName} ({result.manufacturer}) —{' '}
-                {result.entries.length} unit
-                {result.entries.length === 1 ? '' : 's'}
-              </label>
-              <ul className="roster-import-preview">
-                {result.entries.map((entry, i) => (
-                  <li key={`${entry.unit.id}-${i}`}>
-                    {entry.unit.name}
-                    {entry.label ? ` ${entry.label}` : ''}
-                    {entry.equippedIds.length > 0
-                      ? ` (${entry.equippedIds.length} item${entry.equippedIds.length === 1 ? '' : 's'})`
-                      : ''}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-          {result.warnings.length > 0 && (
-            <div className="roster-import-warnings">
-              {result.warnings.map((warning, i) => (
-                <p key={i} className="unit-meta">
-                  ⚠️ {warning}
-                </p>
+          <div className="field">
+            <label>Default rosters</label>
+            <div className="token-owner-row">
+              {DEFAULT_ROSTERS.map((roster) => (
+                <button
+                  type="button"
+                  className="ghost"
+                  key={roster.name}
+                  onClick={() => loadDefaultRoster(roster.text)}
+                >
+                  {roster.name}
+                </button>
               ))}
             </div>
-          )}
-        </div>
-      )}
-
-      {result && result.entries.length > 0 && (
-        <>
-          <div className="field">
-            <label>Owner</label>
-            {myPlayer && (
-              <p className="unit-meta">
-                You can only import units for yourself.
-              </p>
-            )}
-            <div className="token-owner-row">
-              {ownerOptions.map((o) => {
-                const selected = owner === o.id;
-                return (
-                  <button
-                    type="button"
-                    key={o.id}
-                    className={`token-owner-btn ${selected ? 'selected' : ''}`}
-                    style={{
-                      borderColor: o.color,
-                      background: selected ? o.color : undefined,
-                    }}
-                    onClick={() => setOwner(o.id)}
-                  >
-                    <span
-                      className="tile-swatch"
-                      style={{ background: o.color }}
-                    />
-                    {o.label}
-                  </button>
-                );
-              })}
-            </div>
           </div>
-          <button type="button" onClick={importRoster}>
-            Import {result.entries.length} unit
-            {result.entries.length === 1 ? '' : 's'} to reserve
+
+          <div className="field">
+            <label htmlFor="roster-import-text">Roster export</label>
+            <textarea
+              id="roster-import-text"
+              rows={8}
+              placeholder="Paste your exported list here"
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+                setResult(null);
+              }}
+            />
+          </div>
+
+          <button
+            type="button"
+            className="ghost"
+            disabled={!text.trim()}
+            onClick={parse}
+          >
+            Preview import
           </button>
+
+          {result && (
+            <div className="token-card-section">
+              {result.entries.length > 0 && (
+                <>
+                  <label>
+                    {result.listName} ({result.manufacturer}) —{' '}
+                    {result.entries.length} unit
+                    {result.entries.length === 1 ? '' : 's'}
+                  </label>
+                  <ul className="roster-import-preview">
+                    {result.entries.map((entry, i) => (
+                      <li key={`${entry.unit.id}-${i}`}>
+                        {entry.unit.name}
+                        {entry.label ? ` ${entry.label}` : ''}
+                        {entry.equippedIds.length > 0
+                          ? ` (${entry.equippedIds.length} item${entry.equippedIds.length === 1 ? '' : 's'})`
+                          : ''}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              {result.warnings.length > 0 && (
+                <div className="roster-import-warnings">
+                  {result.warnings.map((warning, i) => (
+                    <p key={i} className="unit-meta">
+                      ⚠️ {warning}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {result && result.entries.length > 0 && (
+            <>
+              <div className="field">
+                <label>Owner</label>
+                {myPlayer && (
+                  <p className="unit-meta">
+                    You can only import units for yourself.
+                  </p>
+                )}
+                <div className="token-owner-row">
+                  {ownerOptions.map((o) => {
+                    const selected = owner === o.id;
+                    return (
+                      <button
+                        type="button"
+                        key={o.id}
+                        className={`token-owner-btn ${selected ? 'selected' : ''}`}
+                        style={{
+                          borderColor: o.color,
+                          background: selected ? o.color : undefined,
+                        }}
+                        onClick={() => setOwner(o.id)}
+                      >
+                        <span
+                          className="tile-swatch"
+                          style={{ background: o.color }}
+                        />
+                        {o.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <button type="button" onClick={importRoster}>
+                Import {result.entries.length} unit
+                {result.entries.length === 1 ? '' : 's'} to reserve
+              </button>
+            </>
+          )}
         </>
       )}
     </div>

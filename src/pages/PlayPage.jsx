@@ -208,7 +208,7 @@ function PlayPage() {
   // stage is swapped out from under it, instead of the two happening in the
   // same instant.
   function advanceWizardStep(nextStep) {
-    setTimeout(() => setWizardStep(nextStep), 500);
+    setTimeout(() => setWizardStep(nextStep), 250);
   }
 
   function pickPlatform(p) {

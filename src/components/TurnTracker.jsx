@@ -25,7 +25,15 @@ function VpChip({ vp }) {
   );
 }
 
-function TurnTracker({ turn, onEndTurn, playerDice, victoryPoints, ownerLabel }) {
+function TurnTracker({
+  turn,
+  onEndTurn,
+  playerDice,
+  victoryPoints,
+  ownerLabel,
+  endTurnLabel = 'End Turn',
+  endTurnClassName = '',
+}) {
   const [top, bottom] = OWNERS;
   const labelFor = (owner) => ownerLabel?.(owner.id) ?? owner.label;
 
@@ -63,8 +71,8 @@ function TurnTracker({ turn, onEndTurn, playerDice, victoryPoints, ownerLabel })
           {turn.active === bottom.id ? ' ▼' : ''}
         </span>
       </div>
-      <button type="button" onClick={onEndTurn}>
-        End Turn
+      <button type="button" className={endTurnClassName} onClick={onEndTurn}>
+        {endTurnLabel}
       </button>
     </div>
   );

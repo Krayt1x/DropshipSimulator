@@ -41,6 +41,12 @@ describe('App', () => {
     render(<App />);
     openSettingsMenu();
 
+    // The Import roster card is collapsed by default on desktop now (#266).
+    fireEvent.click(
+      within(
+        screen.getByText('Import roster').closest('.reserve-header'),
+      ).getByRole('button', { name: 'Expand' }),
+    );
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: ['Test List (Corp A)', 'Weight: 6t / 100t', '', 'A10 - 6t'].join(
@@ -72,6 +78,12 @@ describe('App', () => {
     render(<App />);
     openSettingsMenu();
 
+    // The Import roster card is collapsed by default on desktop now (#266).
+    fireEvent.click(
+      within(
+        screen.getByText('Import roster').closest('.reserve-header'),
+      ).getByRole('button', { name: 'Expand' }),
+    );
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: ['Test List (Corp A)', 'Weight: 6t / 100t', '', 'A10 - 6t'].join(
@@ -199,7 +211,11 @@ describe('App', () => {
     const { container } = render(<App />);
 
     expect(container.querySelector('#topnav-turn-slot')).toBeNull();
-    // The turn tracker now lives in BattlePage's own desktop sidebar instead.
+    // The turn tracker now lives in BattlePage's own desktop sidebar instead
+    // — it reads "End deployment phase" until deployment ends (#269).
+    fireEvent.click(
+      screen.getByRole('button', { name: 'End deployment phase' }),
+    );
     expect(screen.getByRole('button', { name: 'End Turn' })).toBeDefined();
 
     expect(screen.queryByText(/Place units from the catalogue/)).toBeNull();

@@ -437,6 +437,17 @@ button.danger:hover {
   width: 100%;
 }
 
+/* Matches the mobile deploy-phase button's color (#7c3aed) so the merged
+   button (#269) reads as a distinct stage, the same visual cue Deployment
+   Phase already uses everywhere else. */
+.desktop-sidebar-turn .turn-tracker-row button.deploy-stage {
+  background: #7c3aed;
+}
+
+.desktop-sidebar-turn .turn-tracker-row button.deploy-stage:hover {
+  background: #6d28d9;
+}
+
 .battle-sidebar-tabs {
   display: flex;
   border: 1px solid var(--border);
@@ -476,8 +487,22 @@ button.danger:hover {
   margin-bottom: 12px;
 }
 
+/* Matches the mobile deploy-phase button's color (#7c3aed) in both states,
+   rather than the plain accent blue that used to make it look like just
+   another action button (#267). */
 .sidebar-deploy-toggle {
   width: 100%;
+  background: #7c3aed;
+  color: #fff;
+}
+
+.sidebar-deploy-toggle:hover {
+  background: #6d28d9;
+}
+
+.sidebar-deploy-toggle:disabled {
+  background: var(--bg-track);
+  color: var(--text-muted);
 }
 
 @media (max-width: 900px) {
@@ -707,6 +732,7 @@ button.danger:hover {
 }
 
 .battle-board-viewport {
+  position: relative;
   width: 1000px;
   max-width: 100%;
   min-width: 0;
@@ -746,17 +772,27 @@ button.danger:hover {
   }
 }
 
+/* Nested inside .battle-board-viewport and pinned to its corner (#268)
+   instead of sitting in its own row above the map. */
 .zoom-controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: flex-end;
   gap: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .zoom-controls button {
-  width: 36px;
-  padding: 6px 0;
+  width: 30px;
+  padding: 4px 0;
 }
 
 .zoom-level {
@@ -2475,6 +2511,109 @@ button.danger:hover {
   display: none;
 }
 
+/* Shared weapon-list styling for both mobile's fixed overlay and desktop's
+   below-map strip (#270) — only positioning differs between the two, so it
+   isn't repeated inside the mobile-only media query below. */
+.mobile-attack-picker-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin: 0 0 2px;
+}
+
+.mobile-attack-picker-item {
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--bg-track);
+  border: none;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mobile-attack-picker-meta {
+  display: block;
+  font-weight: 400;
+  margin-top: 2px;
+}
+
+.mobile-attack-picker-item:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* Desktop's below-map strip (#265, #270) — the deploy hint or the
+   selected token's Move/Weapons buttons, whichever is relevant, in a
+   single dark strip directly under the map instead of floating over it. */
+.board-below-strip {
+  margin-top: 10px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.board-below-strip-cancel {
+  background: rgba(255, 255, 255, 0.18);
+  border: none;
+  color: #fff;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.board-below-strip-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.board-move-btn,
+.board-attack-btn {
+  border: none;
+  border-radius: 20px;
+  padding: 8px 14px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.board-move-btn {
+  background: var(--nav-bg);
+}
+
+.board-attack-btn {
+  background: #b91c1c;
+}
+
+.board-move-btn:disabled,
+.board-attack-btn:disabled {
+  background: var(--bg-track);
+  color: var(--text-muted);
+}
+
+/* Positioned in-flow right below the strip above, rather than the mobile
+   version's fixed overlay (#270). */
+.board-attack-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+}
+
 @media (max-width: 900px) {
   .battle-page {
     padding-bottom: 130px;
@@ -2561,35 +2700,6 @@ button.danger:hover {
     border-radius: 10px;
     padding: 10px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  }
-
-  .mobile-attack-picker-title {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text-muted);
-    margin: 0 0 2px;
-  }
-
-  .mobile-attack-picker-item {
-    text-align: left;
-    padding: 8px 10px;
-    border-radius: 6px;
-    background: var(--bg-track);
-    border: none;
-    color: var(--text-primary);
-    font-size: 13px;
-    font-weight: 600;
-  }
-
-  .mobile-attack-picker-meta {
-    display: block;
-    font-weight: 400;
-    margin-top: 2px;
-  }
-
-  .mobile-attack-picker-item:disabled {
-    color: var(--text-muted);
-    cursor: not-allowed;
   }
 }
 

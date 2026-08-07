@@ -2409,9 +2409,9 @@ function BattlePage() {
   }, [gameMode, deploymentPhase, myPlayer, playerRoster, tokens]);
   // --------------------------------------------------------------------
 
-  // Built once and reused in two spots (#146): shown inline above the
-  // Reserve/Roster card on desktop, or as an "Import" tab inside it on
-  // mobile, instead of duplicating the JSX for each.
+  // Built once and reused in two spots (#146): a collapsed-by-default card
+  // below the Reserve/Roster card on desktop (#266), or as an "Import" tab
+  // inside it on mobile, instead of duplicating the JSX for each.
   const rosterImportPanel = deploymentPhase ? (
     <RosterImport
       manufacturers={manufacturers}
@@ -2419,6 +2419,7 @@ function BattlePage() {
       equipment={equipment}
       myPlayer={myPlayer}
       onImport={importRoster}
+      collapsible={!isMobile}
     />
   ) : null;
 
@@ -2460,9 +2461,74 @@ function BattlePage() {
     </>
   );
 
+  // Shared by mobile's fixed-overlay weapon picker and desktop's below-map
+  // one (#270) so the weapon list itself — slot, hit dice, heat coloring —
+  // isn't duplicated between the two containers.
+  const attackPickerList = selectedToken
+    ? selectedTokenWeapons.map((item) => {
+        const { max } = parseHeatRating(item.heat_rating);
+        const state = selectedToken.weaponState[item.instanceIndex] ?? {
+          heat: 0,
+          broken: false,
+        };
+        const overheated = Boolean(max) && state.heat > max;
+        return (
+          <button
+            type="button"
+            key={item.instanceIndex}
+            disabled={
+              state.broken || overheated || selectedTokenWrecked || !hasAttackDie
+            }
+            className="mobile-attack-picker-item"
+            onClick={() => {
+              startAttack(item.instanceIndex, item);
+              setAttackPickerOpen(false);
+            }}
+          >
+            {item.name}
+            {overheated && (
+              <span className="badge-overheated">OVERHEATED</span>
+            )}
+            {/* Hidden from the accessible name (#215's precedent) so
+                getByRole('button', { name: 'Long Range Bolt' })-style
+                queries stay exact. */}
+            <span
+              className="unit-meta mobile-attack-picker-meta"
+              aria-hidden="true"
+            >
+              Slot{' '}
+              {state.side === 'left'
+                ? 'Left'
+                : state.side === 'right'
+                  ? 'Right'
+                  : slotForType(item.type)}{' '}
+              · Hit {item.hit_dice || '—'}
+              {max ? (
+                <>
+                  {' '}
+                  · Heat{' '}
+                  <span
+                    style={
+                      state.heat > max
+                        ? { color: '#dc2626', fontWeight: 700 }
+                        : state.heat === max
+                          ? { color: '#f59e0b' }
+                          : undefined
+                    }
+                  >
+                    {state.heat}/{max}
+                  </span>
+                </>
+              ) : null}
+            </span>
+          </button>
+        );
+      })
+    : [];
+
   const boardTabContent = (
     <>
-          {deployingToken && (
+          {isMobile && deployingToken && (
             <div className="deploy-hint-banner">
               Tap a tile to deploy {unitName(deployingToken)}
               <button type="button" onClick={() => setMovingTokenId(null)}>
@@ -2470,27 +2536,6 @@ function BattlePage() {
               </button>
             </div>
           )}
-          <div className="zoom-controls">
-            <button
-              type="button"
-              className="ghost"
-              aria-label="Zoom out"
-              disabled={zoom <= ZOOM_MIN}
-              onClick={() => adjustZoom(-ZOOM_STEP)}
-            >
-              −
-            </button>
-            <span className="zoom-level">{Math.round(zoom * 100)}%</span>
-            <button
-              type="button"
-              className="ghost"
-              aria-label="Zoom in"
-              disabled={zoom >= ZOOM_MAX}
-              onClick={() => adjustZoom(ZOOM_STEP)}
-            >
-              +
-            </button>
-          </div>
           <div
             className="battle-board-viewport"
             style={{
@@ -2508,6 +2553,30 @@ function BattlePage() {
             onPointerUp={endBoardPan}
             onPointerLeave={endBoardPan}
           >
+            {/* Overlaid on the map itself (#268) instead of sitting in its
+                own row above it, so it reads as a control on the map rather
+                than a separate toolbar. */}
+            <div className="zoom-controls">
+              <button
+                type="button"
+                className="ghost"
+                aria-label="Zoom out"
+                disabled={zoom <= ZOOM_MIN}
+                onClick={() => adjustZoom(-ZOOM_STEP)}
+              >
+                −
+              </button>
+              <span className="zoom-level">{Math.round(zoom * 100)}%</span>
+              <button
+                type="button"
+                className="ghost"
+                aria-label="Zoom in"
+                disabled={zoom >= ZOOM_MAX}
+                onClick={() => adjustZoom(ZOOM_STEP)}
+              >
+                +
+              </button>
+            </div>
             <div
               className={`battle-board-pan ${isPanning ? 'panning' : ''}`}
               style={{
@@ -2623,146 +2692,182 @@ function BattlePage() {
             {/* Groups the deployment-phase toggle with the token action
                 buttons in one bar (#143) — it used to live in its own row at
                 the top of the page, disconnected from the board actions it's
-                closely related to. */}
-            <div className="mobile-action-toolbar">
-              {/* Only the "end" direction lives here — starting deployment
-                  happens from the Units tab instead (#145). */}
-              {isMobile && deploymentPhase && (
-                <button
-                  type="button"
-                  className="mobile-deploy-phase-btn"
-                  onClick={() => setDeploymentPhase(false)}
-                >
-                  End Deploy
-                </button>
-              )}
-              {selectedToken &&
-                !selectedToken.destroyed &&
-                !selectedTokenWrecked &&
-                canControl(selectedToken) && (
-                  <button
-                    type="button"
-                    className="mobile-move-fab"
-                    disabled={
-                      movingTokenId !== selectedToken.id &&
-                      selectedToken.position &&
-                      !hasMoveDie
-                    }
-                    onClick={() =>
-                      setMovingTokenId((current) =>
-                        current === selectedToken.id ? null : selectedToken.id,
-                      )
-                    }
-                  >
-                    {movingTokenId === selectedToken.id
-                      ? 'Cancel'
-                      : selectedToken.position
-                        ? `Move (${moveDieCount})`
-                        : 'Deploy'}
-                  </button>
-                )}
-              {selectedToken &&
-                selectedToken.position &&
-                !selectedToken.destroyed &&
-                !selectedTokenWrecked &&
-                canControl(selectedToken) &&
-                selectedTokenWeapons.length > 0 && (
-                  <button
-                    type="button"
-                    className="mobile-attack-fab"
-                    disabled={
-                      attackWeapon?.tokenId !== selectedToken.id &&
-                      !hasAttackDie
-                    }
-                    onClick={() => {
-                      if (attackWeapon?.tokenId === selectedToken.id) {
-                        cancelAttack();
-                        setAttackPickerOpen(false);
-                      } else {
-                        setAttackPickerOpen((current) => !current);
-                      }
-                    }}
-                  >
-                    {attackWeapon?.tokenId === selectedToken.id
-                      ? 'Cancel attack'
-                      : `Weapons (${attackDieCount})`}
-                  </button>
-                )}
-            </div>
-            {attackPickerOpen && selectedToken && (
-              <div className="mobile-attack-picker">
-                <p className="mobile-attack-picker-title">Choose a weapon</p>
-                {selectedTokenWeapons.map((item) => {
-                  const { max } = parseHeatRating(item.heat_rating);
-                  const state = selectedToken.weaponState[
-                    item.instanceIndex
-                  ] ?? { heat: 0, broken: false };
-                  const overheated = Boolean(max) && state.heat > max;
-                  return (
+                closely related to. Desktop gets its own equivalent below the
+                map instead (#270), since it never needs "End Deploy" here —
+                that lives in the sidebar's merged phase button (#269). */}
+            {isMobile && (
+              <>
+                <div className="mobile-action-toolbar">
+                  {deploymentPhase && (
                     <button
                       type="button"
-                      key={item.instanceIndex}
-                      disabled={
-                        state.broken ||
-                        overheated ||
-                        selectedTokenWrecked ||
-                        !hasAttackDie
-                      }
-                      className="mobile-attack-picker-item"
-                      onClick={() => {
-                        startAttack(item.instanceIndex, item);
-                        setAttackPickerOpen(false);
-                      }}
+                      className="mobile-deploy-phase-btn"
+                      onClick={() => setDeploymentPhase(false)}
                     >
-                      {item.name}
-                      {overheated && (
-                        <span className="badge-overheated">OVERHEATED</span>
-                      )}
-                      {/* Hidden from the accessible name (#215's
-                          precedent) so getByRole('button', { name:
-                          'Long Range Bolt' })-style queries stay exact. */}
-                      <span
-                        className="unit-meta mobile-attack-picker-meta"
-                        aria-hidden="true"
-                      >
-                        Slot{' '}
-                        {state.side === 'left'
-                          ? 'Left'
-                          : state.side === 'right'
-                            ? 'Right'
-                            : slotForType(item.type)}{' '}
-                        · Hit {item.hit_dice || '—'}
-                        {max ? (
-                          <>
-                            {' '}
-                            · Heat{' '}
-                            <span
-                              style={
-                                state.heat > max
-                                  ? { color: '#dc2626', fontWeight: 700 }
-                                  : state.heat === max
-                                    ? { color: '#f59e0b' }
-                                    : undefined
-                              }
-                            >
-                              {state.heat}/{max}
-                            </span>
-                          </>
-                        ) : null}
-                      </span>
+                      End Deploy
                     </button>
-                  );
-                })}
+                  )}
+                  {selectedToken &&
+                    !selectedToken.destroyed &&
+                    !selectedTokenWrecked &&
+                    canControl(selectedToken) && (
+                      <button
+                        type="button"
+                        className="mobile-move-fab"
+                        disabled={
+                          movingTokenId !== selectedToken.id &&
+                          selectedToken.position &&
+                          !hasMoveDie
+                        }
+                        onClick={() =>
+                          setMovingTokenId((current) =>
+                            current === selectedToken.id
+                              ? null
+                              : selectedToken.id,
+                          )
+                        }
+                      >
+                        {movingTokenId === selectedToken.id
+                          ? 'Cancel'
+                          : selectedToken.position
+                            ? `Move (${moveDieCount})`
+                            : 'Deploy'}
+                      </button>
+                    )}
+                  {selectedToken &&
+                    selectedToken.position &&
+                    !selectedToken.destroyed &&
+                    !selectedTokenWrecked &&
+                    canControl(selectedToken) &&
+                    selectedTokenWeapons.length > 0 && (
+                      <button
+                        type="button"
+                        className="mobile-attack-fab"
+                        disabled={
+                          attackWeapon?.tokenId !== selectedToken.id &&
+                          !hasAttackDie
+                        }
+                        onClick={() => {
+                          if (attackWeapon?.tokenId === selectedToken.id) {
+                            cancelAttack();
+                            setAttackPickerOpen(false);
+                          } else {
+                            setAttackPickerOpen((current) => !current);
+                          }
+                        }}
+                      >
+                        {attackWeapon?.tokenId === selectedToken.id
+                          ? 'Cancel attack'
+                          : `Weapons (${attackDieCount})`}
+                      </button>
+                    )}
+                </div>
+                {attackPickerOpen && selectedToken && (
+                  <div className="mobile-attack-picker">
+                    <p className="mobile-attack-picker-title">
+                      Choose a weapon
+                    </p>
+                    {attackPickerList}
+                    <button
+                      type="button"
+                      className="ghost"
+                      onClick={() => setAttackPickerOpen(false)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          {/* Desktop's equivalent of the mobile toolbar above, but anchored
+              under the map instead of floating over it (#270) — folded into
+              the same strip as the deploy hint (#265), since only one of the
+              two is ever relevant at once. */}
+          {!isMobile &&
+            (deployingToken ? (
+              <div className="board-below-strip">
+                <span>Tap a tile to deploy {unitName(deployingToken)}</span>
                 <button
                   type="button"
-                  className="ghost"
-                  onClick={() => setAttackPickerOpen(false)}
+                  className="board-below-strip-cancel"
+                  onClick={() => setMovingTokenId(null)}
                 >
                   Cancel
                 </button>
               </div>
-            )}
-          </div>
+            ) : (
+              selectedToken &&
+              !selectedToken.destroyed &&
+              !selectedTokenWrecked &&
+              canControl(selectedToken) && (
+                <div className="board-below-strip">
+                  <span className="board-below-strip-unit">
+                    {unitName(selectedToken)} selected
+                  </span>
+                  <div className="board-below-strip-actions">
+                    <button
+                      type="button"
+                      className="board-move-btn"
+                      disabled={
+                        movingTokenId !== selectedToken.id &&
+                        selectedToken.position &&
+                        !hasMoveDie
+                      }
+                      onClick={() =>
+                        setMovingTokenId((current) =>
+                          current === selectedToken.id
+                            ? null
+                            : selectedToken.id,
+                        )
+                      }
+                    >
+                      {movingTokenId === selectedToken.id
+                        ? 'Cancel'
+                        : selectedToken.position
+                          ? `Move (${moveDieCount})`
+                          : 'Deploy'}
+                    </button>
+                    {selectedToken.position &&
+                      selectedTokenWeapons.length > 0 && (
+                        <button
+                          type="button"
+                          className="board-attack-btn"
+                          disabled={
+                            attackWeapon?.tokenId !== selectedToken.id &&
+                            !hasAttackDie
+                          }
+                          onClick={() => {
+                            if (attackWeapon?.tokenId === selectedToken.id) {
+                              cancelAttack();
+                              setAttackPickerOpen(false);
+                            } else {
+                              setAttackPickerOpen((current) => !current);
+                            }
+                          }}
+                        >
+                          {attackWeapon?.tokenId === selectedToken.id
+                            ? 'Cancel attack'
+                            : `Weapons (${attackDieCount})`}
+                        </button>
+                      )}
+                  </div>
+                </div>
+              )
+            ))}
+          {!isMobile && attackPickerOpen && selectedToken && (
+            <div className="mobile-attack-picker board-attack-picker">
+              <p className="mobile-attack-picker-title">Choose a weapon</p>
+              {attackPickerList}
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => setAttackPickerOpen(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
     </>
   );
 
@@ -2783,10 +2888,6 @@ function BattlePage() {
               Deploy Phase
             </button>
           )}
-          {/* On mobile this instead becomes an "Import" tab inside the
-              Reserve/Roster card below (#146), rather than its own block
-              taking up space above it. */}
-          {!isMobile && rosterImportPanel}
           {selectedToken && !deploymentPhase && (
             <TokenCard
               key={selectedToken.id}
@@ -2851,6 +2952,11 @@ function BattlePage() {
             onDropPod={armDropPod}
             ownerLabel={ownerLabel}
           />
+          {/* On mobile this instead becomes an "Import" tab inside the
+              Reserve/Roster card above (#146). On desktop it's its own
+              collapsed-by-default card below Reserve/Roster now (#266),
+              rather than an always-expanded block above it. */}
+          {!isMobile && rosterImportPanel}
           <DestroyedList
             tokens={destroyedTokens}
             units={units}
@@ -3001,9 +3107,19 @@ function BattlePage() {
                 of TurnTracker's own side-by-side row, which only fit next to
                 the old nav menus. */}
             <div className="desktop-sidebar-turn">
+              {/* Merged with the Units tab's deployment toggle (#269) so
+                  there's one button whose label and action track the game's
+                  actual stage, instead of two buttons in different places
+                  doing the "advance" job at different times. */}
               <TurnTracker
                 turn={turn}
-                onEndTurn={endTurn}
+                onEndTurn={
+                  deploymentPhase ? () => setDeploymentPhase(false) : endTurn
+                }
+                endTurnLabel={
+                  deploymentPhase ? 'End deployment phase' : 'End Turn'
+                }
+                endTurnClassName={deploymentPhase ? 'deploy-stage' : ''}
                 playerDice={playerDice}
                 victoryPoints={victoryPoints}
                 ownerLabel={ownerLabel}
@@ -3039,24 +3155,29 @@ function BattlePage() {
               className={`mobile-tab-panel ${mobileTab !== 'dice' ? 'mobile-tab-panel-active' : ''}`}
             >
               {/* Folded in from the page's old always-visible toggle above
-                  the tabs (#261) — it's a Units-tab concern (starting/ending
-                  deployment to manage reserve placement), not a page-wide
-                  one. */}
-              <div className="sidebar-deploy-row">
-                <button
-                  type="button"
-                  className={`sidebar-deploy-toggle ${deploymentPhase ? '' : 'ghost'}`}
-                  disabled={!deploymentZonesValid}
-                  onClick={() => setDeploymentPhase((current) => !current)}
-                >
-                  {deploymentPhase ? 'End deployment phase' : 'Deployment Phase'}
-                </button>
-                {!deploymentZonesValid && (
-                  <span className="unit-meta">
-                    Board needs at least 7 rows for deployment zones.
-                  </span>
-                )}
-              </div>
+                  the tabs (#261) — it's a Units-tab concern (re-opening
+                  deployment to place reinforcements), not a page-wide one.
+                  Only the "start" direction lives here now — "end" merged
+                  into the sidebar's turn button instead (#269), same split
+                  mobile already uses between this button and its own board
+                  toolbar's End Deploy. */}
+              {!deploymentPhase && (
+                <div className="sidebar-deploy-row">
+                  <button
+                    type="button"
+                    className="sidebar-deploy-toggle"
+                    disabled={!deploymentZonesValid}
+                    onClick={() => setDeploymentPhase(true)}
+                  >
+                    Deployment Phase
+                  </button>
+                  {!deploymentZonesValid && (
+                    <span className="unit-meta">
+                      Board needs at least 7 rows for deployment zones.
+                    </span>
+                  )}
+                </div>
+              )}
               {unitsTabContent}
             </div>
           </div>

@@ -55,6 +55,18 @@ function collapseDiceRoller() {
   if (collapseBtn) fireEvent.click(collapseBtn);
 }
 
+// The Import roster card is collapsed by default on desktop now (#266) —
+// idempotent (a no-op on mobile, where it's an always-shown sub-tab instead)
+// so it's safe to call before every roster-export interaction.
+function expandRosterImport() {
+  const header = screen
+    .queryByText('Import roster')
+    ?.closest('.reserve-header');
+  if (!header) return;
+  const expandBtn = within(header).queryByRole('button', { name: 'Expand' });
+  if (expandBtn) fireEvent.click(expandBtn);
+}
+
 // A move now steps the token through each hex it crosses (#93) instead of
 // jumping straight there, so tests that check the post-move state need to
 // fast-forward past that animation first.
@@ -68,6 +80,7 @@ function finishMoveAnimation() {
 // removed the manual Add unit form, so every test that used to arm a
 // TokenForm draft now goes through the always-visible roster import panel).
 function importA10ToReserve(extraLines = []) {
+  expandRosterImport();
   fireEvent.change(screen.getByLabelText('Roster export'), {
     target: {
       value: [
@@ -336,6 +349,7 @@ describe('BattlePage', () => {
     render(<BattlePage />);
     startDeploymentPhase();
 
+    expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
@@ -380,6 +394,7 @@ describe('BattlePage', () => {
     render(<BattlePage />);
     startDeploymentPhase();
 
+    expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
@@ -434,6 +449,7 @@ describe('BattlePage', () => {
     // plus (1,1) and (1,0) closing off the only hexes that would otherwise
     // let it slip around that wall — so there's nowhere left to detour
     // through on the way to (0,2).
+    expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
@@ -716,6 +732,7 @@ describe('BattlePage', () => {
 
   it('advances the turn tracker as each player ends their turn', () => {
     render(<BattlePage />);
+    endDeploymentPhase();
 
     expect(screen.getByText('Turn 1')).toBeDefined();
     expect(screen.getByText('▲ Player 1')).toBeDefined();
@@ -950,6 +967,7 @@ describe('BattlePage', () => {
   it('shows a toast naming whose turn it now is, then auto-dismisses it (#131)', () => {
     vi.useFakeTimers();
     render(<BattlePage />);
+    endDeploymentPhase();
 
     expect(screen.queryByText(/turn/i, { selector: '.turn-toast' })).toBeNull();
 
@@ -982,6 +1000,7 @@ describe('BattlePage', () => {
     render(<BattlePage />);
     startDeploymentPhase();
 
+    expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: ['Test List (Corp A)', 'Weight: 6t / 100t', '', 'A10 - 6t'].join(
@@ -1033,6 +1052,7 @@ describe('BattlePage', () => {
     render(<BattlePage />);
     startDeploymentPhase();
 
+    expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: ['Test List (Corp A)', 'Weight: 6t / 100t', '', 'A10 - 6t'].join(
@@ -1514,6 +1534,7 @@ describe('BattlePage', () => {
 
     // Player 2: A20 (Large, size 4, armor 2/2/2/1) with the same weapon in
     // its right slot, so the attack has something to damage there.
+    expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
@@ -1625,6 +1646,7 @@ describe('BattlePage', () => {
     startDeploymentPhase();
 
     importA10ToReserve(['  Right: Long Range Bolt']);
+    expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: ['Test List (Corp A)', 'Weight: 20t / 100t', '', 'A20 - 20t'].join(
@@ -1706,6 +1728,7 @@ describe('BattlePage', () => {
 
     importA10ToReserve(['  Right: Long Range Bolt']);
 
+    expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
@@ -1765,6 +1788,7 @@ describe('BattlePage', () => {
     // Long Range Bolt is 2d8 and carries no fire tag, so this should draw
     // exactly 2 grey tracer bolts, never a flame.
     importA10ToReserve(['  Right: Long Range Bolt']);
+    expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
@@ -1821,6 +1845,7 @@ describe('BattlePage', () => {
     startDeploymentPhase();
 
     importA10ToReserve(['  Right: Flame Thrower']);
+    expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
@@ -1869,6 +1894,7 @@ describe('BattlePage', () => {
     startDeploymentPhase();
 
     importA10ToReserve(['  Right: Long Range Bolt']);
+    expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
@@ -2120,6 +2146,7 @@ describe('BattlePage', () => {
 
     importA10ToReserve(['  Right: Long Range Bolt']);
 
+    expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
@@ -2208,6 +2235,7 @@ describe('BattlePage', () => {
 
     importA10ToReserve(['  Right: Flame Thrower']);
 
+    expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
@@ -2337,6 +2365,7 @@ describe('BattlePage', () => {
 
     importA10ToReserve(['  Right: Long Range Bolt']);
 
+    expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
@@ -2398,6 +2427,7 @@ describe('BattlePage', () => {
 
     importA10ToReserve(['  Right: Artillery']);
 
+    expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
@@ -2516,6 +2546,7 @@ describe('BattlePage', () => {
 
     importA10ToReserve(['  Right: Artillery']);
 
+    expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: ['Test List (Corp A)', 'Weight: 20t / 100t', '', 'A20 - 20t'].join(
@@ -2575,6 +2606,7 @@ describe('BattlePage', () => {
       JSON.stringify('p2'),
     );
     render(<BattlePage />);
+    endDeploymentPhase();
     expandDiceRoller();
 
     // Turn 1 starts with Player 1 active, so Player 2 can't roll yet.
@@ -2611,6 +2643,7 @@ describe('BattlePage', () => {
     startDeploymentPhase();
 
     importA10ToReserve(['  Right: Long Range Bolt']);
+    expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
@@ -2872,6 +2905,7 @@ describe('BattlePage', () => {
     render(<BattlePage />);
     startDeploymentPhase();
 
+    expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
@@ -3022,9 +3056,16 @@ describe('BattlePage', () => {
     expect(screen.getByRole('button', { name: 'A10' })).toBeDefined();
   });
 
-  it('does not offer an Import tab on desktop — the roster panel stays above Reserve/Roster (#146)', () => {
+  it('does not offer an Import tab on desktop — the roster panel is its own collapsed-by-default card instead (#146, #266)', () => {
     render(<BattlePage />);
     expect(screen.queryByRole('button', { name: 'Import' })).toBeNull();
+
+    // Collapsed by default now (#266) — the form isn't reachable until
+    // expanded.
+    expect(screen.queryByLabelText('Roster export')).toBeNull();
+    expect(screen.getByText('Import roster')).toBeDefined();
+
+    expandRosterImport();
     expect(screen.getByLabelText('Roster export')).toBeDefined();
   });
 
@@ -3032,6 +3073,7 @@ describe('BattlePage', () => {
     render(<BattlePage />);
     startDeploymentPhase();
 
+    expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
@@ -3070,6 +3112,7 @@ describe('BattlePage', () => {
     importA10ToReserve();
 
     // Player 2's A20.
+    expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
@@ -3165,6 +3208,7 @@ describe('BattlePage', () => {
 
     // Drone (Corp B) rather than A10 — the bot's own default roster (Corp
     // A) already contains two A10s, which would collide by name.
+    expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
@@ -3196,6 +3240,7 @@ describe('BattlePage', () => {
     startDeploymentPhase();
 
     importA10ToReserve();
+    expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
@@ -3568,6 +3613,7 @@ describe('BattlePage', () => {
 
   it('does not run any bot logic in sandbox mode', async () => {
     render(<BattlePage />);
+    endDeploymentPhase();
 
     fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
     // Give any (incorrectly firing) bot effect a moment to have acted.
@@ -3702,6 +3748,7 @@ describe('BattlePage', () => {
       render(<BattlePage />);
       startDeploymentPhase();
 
+      expandRosterImport();
       fireEvent.change(screen.getByLabelText('Roster export'), {
         target: {
           value: [

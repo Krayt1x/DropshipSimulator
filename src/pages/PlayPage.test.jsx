@@ -21,7 +21,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-// Picking a wizard tile now waits half a second before advancing to the next
+// Picking a wizard tile waits a quarter second before advancing to the next
 // stage (#256), so every click in these tests needs to flush that timer
 // before asserting on what comes next — a plain fireEvent.click would leave
 // the previous stage still on screen. Advancing time is a no-op for clicks
@@ -30,7 +30,7 @@ afterEach(() => {
 function click(el) {
   fireEvent.click(el);
   act(() => {
-    vi.advanceTimersByTime(500);
+    vi.advanceTimersByTime(250);
   });
 }
 
@@ -707,7 +707,7 @@ describe('PlayPage wizard (#247, #251)', () => {
     expect(railTab('Mode').className).toContain('done');
   });
 
-  it('waits half a second after a pick before swapping in the next stage (#256)', () => {
+  it('waits a quarter second after a pick before swapping in the next stage (#256)', () => {
     render(<PlayPage />);
     pickSinglePlayer();
 
@@ -721,7 +721,7 @@ describe('PlayPage wizard (#247, #251)', () => {
     expect(screen.queryByText('Which map do you want to play?')).toBeNull();
 
     act(() => {
-      vi.advanceTimersByTime(499);
+      vi.advanceTimersByTime(249);
     });
     expect(screen.queryByText('Which map do you want to play?')).toBeNull();
 

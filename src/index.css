@@ -1554,6 +1554,15 @@ button.danger:hover {
   }
 }
 
+/* The wizard body is narrower than the full home page, so the difficulty
+   grid's three tiles fall under auto-fit's 220px minimum and wrap onto two
+   rows (#255) — force them onto one row instead. */
+@media (min-width: 701px) {
+  .wizard-body .home-tile-grid.play-difficulty-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 .home-tile {
   display: flex;
   flex-direction: column;

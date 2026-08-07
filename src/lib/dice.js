@@ -93,6 +93,23 @@ export function summarizeRollResults(rolled) {
   return { words, numbers };
 }
 
+// Summarizes what's still unused in the dice pool by value (Move/Attack/
+// Action), so a log entry for using or exchanging a single die also shows
+// what's left to work with, without switching to the Dice tab to check
+// (#286).
+export function summarizeDicePoolLine(dicePool) {
+  const unused = dicePool.filter((d) => !d.used);
+  if (unused.length === 0) return 'Dice Pool: nothing left unused';
+  const counts = {};
+  unused.forEach((d) => {
+    counts[d.value] = (counts[d.value] ?? 0) + 1;
+  });
+  const parts = WORD_ORDER.filter((word) => counts[word]).map(
+    (word) => `${counts[word]} ${word}`,
+  );
+  return `Dice Pool: ${parts.join(', ')} left unused`;
+}
+
 export function formatRollLogMessage(rolled) {
   const countLines = countRollsByLabel(rolled)
     .map(({ label, count }) =>

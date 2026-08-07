@@ -16,6 +16,10 @@ import { publish, subscribe } from '../lib/syncBus.js';
 
 beforeEach(() => {
   window.localStorage.clear();
+  // Most tests end a turn without caring about the "you still have unused
+  // dice" prompt (#285) — default it to "yes, end anyway" so only the tests
+  // actually about that prompt need to touch window.confirm themselves.
+  vi.spyOn(window, 'confirm').mockReturnValue(true);
 });
 afterEach(() => {
   cleanup();
@@ -1476,6 +1480,63 @@ describe('BattlePage', () => {
     expect(screen.getAllByText(/Rolled 2 red/i)).toHaveLength(2);
   });
 
+  it('asks for confirmation before ending a turn where none of the rolled dice were used (#285)', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve();
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    expandDiceRoller();
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
+
+    // None of the rolled dice were used yet.
+    window.confirm.mockReturnValue(false);
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+
+    expect(window.confirm).toHaveBeenCalledWith(
+      "End your turn without using any of your dice? You still have dice you haven't used.",
+    );
+    // Declining the prompt keeps the turn active.
+    expect(screen.queryByText(/Player 1 ended their turn/)).toBeNull();
+
+    // Accepting the prompt actually ends the turn.
+    window.confirm.mockReturnValue(true);
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+    expect(screen.getByText('Player 1 ended their turn')).toBeDefined();
+  });
+
+  it('does not ask for confirmation when ending a turn after a die was actually used (#285)', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve(['  Movement: Chicken Legs']);
+    fireEvent.click(screen.getByRole('button', { name: 'A10' }));
+    endDeploymentPhase();
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
+    fireEvent.click(screen.getByTestId('hex-5,5'));
+
+    // Deploying only after ending the phase rolls an empty pool the first
+    // time (#140), so roll manually to guarantee a Move die is on hand.
+    expandDiceRoller();
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
+
+    fireEvent.click(screen.getByRole('button', { name: /^Move/ }));
+    fireEvent.click(screen.getByTestId('hex-6,5'));
+
+    // The move's own log line carries a pool summary alongside it (#286).
+    expect(screen.getByText(/Used a .+ die: Move/)).toBeDefined();
+    expect(screen.getByText(/Dice Pool:/)).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+    expect(window.confirm).not.toHaveBeenCalled();
+    expect(screen.getByText('Player 1 ended their turn')).toBeDefined();
+  });
+
   it("automatically rolls the Dice Pool at the start of a player's turn, without a manual click (#164)", () => {
     render(<BattlePage />);
     startDeploymentPhase();
@@ -1613,13 +1674,6 @@ describe('BattlePage', () => {
     // Row 1 is inside p1's deployment zone (#262).
     fireEvent.click(screen.getByTestId('hex-5,1'));
 
-    // A reposition still spends a Move die (#162); mock so red's "Move" face
-    // wins. Rolling is available during deployment the same as any other
-    // time (the DiceRoller panel isn't itself phase-gated).
-    vi.spyOn(Math, 'random').mockReturnValue(0.5);
-    expandDiceRoller();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Dice Pool' }));
-
     const tokenMarker = container.querySelector('[data-testid^="token-"]');
     const targetHex = screen.getByTestId('hex-8,1');
     const originalElementFromPoint = document.elementFromPoint;
@@ -1641,6 +1695,25 @@ describe('BattlePage', () => {
     expect(
       Object.values(token.weaponState).every((s) => (s?.heat ?? 0) === 0),
     ).toBe(true);
+  });
+
+  it('lets an already-deployed token be repositioned via click-select during deployment without needing a rolled Move die (#284)', () => {
+    render(<BattlePage />);
+    startDeploymentPhase();
+
+    importA10ToReserve(['  Movement: Chicken Legs']);
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy to board' }));
+    fireEvent.click(screen.getByTestId('hex-5,1'));
+
+    fireEvent.click(screen.getByTestId('hex-5,1'));
+    fireEvent.click(screen.getByRole('button', { name: /^Move/ }));
+    fireEvent.click(screen.getByTestId('hex-8,1'));
+
+    expect(screen.getByText('Player 1 moved A10 to (8, 1)')).toBeDefined();
+    const [token] = JSON.parse(
+      window.localStorage.getItem('dropshipsimulator:battle:tokens'),
+    );
+    expect(token.position).toEqual({ col: 8, row: 1 });
   });
 
   it('runs the automated attack workflow: arc target, side pick, roll, and damage application (#103)', () => {
@@ -2270,6 +2343,9 @@ describe('BattlePage', () => {
     expect(
       screen.getByText(/Exchanged a blue die to change Blue's roll from/),
     ).toBeDefined();
+    // The pool summary rides along with the exchange's own log line (#286)
+    // instead of needing a trip to the Dice tab to see what's left.
+    expect(screen.getByText(/Dice Pool: 1 .+ left unused/)).toBeDefined();
   });
 
   it('rolls excess left/right attack damage onto another item on that side, then the chassis (#122)', () => {

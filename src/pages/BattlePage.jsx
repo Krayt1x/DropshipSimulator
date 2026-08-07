@@ -7,6 +7,7 @@ import {
 import { backgroundContainerStyle } from '../lib/mapBackground.js';
 import {
   formatRollLogMessage,
+  summarizeDicePoolLine,
   parseHitDice,
   DIE_TYPES,
   DICE_COLORS,
@@ -497,6 +498,23 @@ function BattlePage() {
     setActionHistory([]);
   }
 
+  // Asks for confirmation before ending a turn where none of the rolled dice
+  // got used at all (#285) — an empty pool (nothing rolled yet) isn't worth
+  // asking about, only a pool that's sitting there entirely untouched.
+  function confirmEndTurn() {
+    const rolledButUnused =
+      dicePool.length > 0 && dicePool.every((d) => !d.used);
+    if (
+      rolledButUnused &&
+      !window.confirm(
+        "End your turn without using any of your dice? You still have dice you haven't used.",
+      )
+    ) {
+      return;
+    }
+    endTurn();
+  }
+
   function handleDiceRoll(rolled) {
     appendLog(formatRollLogMessage(rolled));
   }
@@ -512,7 +530,16 @@ function BattlePage() {
       current.map((d) => (d.id === dieId ? { ...d, used: true } : d)),
     );
     pushHistory({ type: 'useDie', dieId });
-    if (die) appendLog(`Used a ${die.label.toLowerCase()} die: ${die.value}`);
+    // Summarizes what's left in the pool alongside the used-die line (#286)
+    // so the log stays a full record without switching to the Dice tab.
+    if (die) {
+      const remaining = dicePool.map((d) =>
+        d.id === dieId ? { ...d, used: true } : d,
+      );
+      appendLog(
+        `Used a ${die.label.toLowerCase()} die: ${die.value}\n${summarizeDicePoolLine(remaining)}`,
+      );
+    }
   }
 
   // Picks an unused die matching `preferredValue` ('Move'/'Attack') exactly —
@@ -555,8 +582,14 @@ function BattlePage() {
       }),
     );
     pushHistory({ type: 'exchange', spendId, targetId, previousValue });
+    // Same pool summary as useDicePoolDie (#286).
+    const remaining = dicePool.map((d) => {
+      if (d.id === spendId) return { ...d, used: true };
+      if (d.id === targetId) return { ...d, value: newValue };
+      return d;
+    });
     appendLog(
-      `Exchanged a ${spendDie.label.toLowerCase()} die to change ${targetDie.label}'s roll from ${previousValue} to ${newValue}`,
+      `Exchanged a ${spendDie.label.toLowerCase()} die to change ${targetDie.label}'s roll from ${previousValue} to ${newValue}\n${summarizeDicePoolLine(remaining)}`,
     );
   }
 
@@ -1582,15 +1615,27 @@ function BattlePage() {
           // points, which blocked a move that had plenty of movement to
           // spare to go around an obstacle (#214).
           const blocked = !isHexReachableFor(movingToken, col, row);
-          const die = !blocked && pickActionDie('Move');
-          if (die) {
-            // Order matters: both calls set lastAction, and a short move
-            // finishes synchronously inside animateMove while a longer one
-            // completes later on a timeout — calling useDicePoolDie first
-            // guarantees moveTokenTo's own 'move' record (carrying dieId)
-            // is always the one left standing either way (#168).
-            useDicePoolDie(die.id);
-            animateMove(movingToken, col, row, die.id);
+          // During deployment, repositioning an already-placed token is free
+          // (like initial placement) instead of needing a rolled Move die —
+          // deployment gives no natural reason to have rolled one yet (#284).
+          if (deploymentPhase) {
+            if (
+              !blocked &&
+              isInOwnDeploymentZone(movingToken.owner, row)
+            ) {
+              animateMove(movingToken, col, row);
+            }
+          } else {
+            const die = !blocked && pickActionDie('Move');
+            if (die) {
+              // Order matters: both calls set lastAction, and a short move
+              // finishes synchronously inside animateMove while a longer one
+              // completes later on a timeout — calling useDicePoolDie first
+              // guarantees moveTokenTo's own 'move' record (carrying dieId)
+              // is always the one left standing either way (#168).
+              useDicePoolDie(die.id);
+              animateMove(movingToken, col, row, die.id);
+            }
           }
         } else if (
           !tokenAt(key) &&
@@ -1639,12 +1684,18 @@ function BattlePage() {
       if (!isHexReachableFor(token, col, row)) {
         return;
       }
-      const die = pickActionDie('Move');
-      if (!die) return;
-      // See handleHexClick's identical comment on why useDicePoolDie runs
-      // first (#168).
-      useDicePoolDie(die.id);
-      animateMove(token, col, row, die.id);
+      // Same deployment-is-free exception as handleHexClick (#284).
+      if (deploymentPhase) {
+        if (!isInOwnDeploymentZone(token.owner, row)) return;
+        animateMove(token, col, row);
+      } else {
+        const die = pickActionDie('Move');
+        if (!die) return;
+        // See handleHexClick's identical comment on why useDicePoolDie runs
+        // first (#168).
+        useDicePoolDie(die.id);
+        animateMove(token, col, row, die.id);
+      }
     } else {
       if (deploymentPhase && !isInOwnDeploymentZone(token.owner, row)) return;
       animateMove(token, col, row);
@@ -2733,6 +2784,7 @@ function BattlePage() {
                         disabled={
                           movingTokenId !== selectedToken.id &&
                           selectedToken.position &&
+                          !deploymentPhase &&
                           !hasMoveDie
                         }
                         onClick={() =>
@@ -2844,6 +2896,7 @@ function BattlePage() {
                       disabled={
                         movingTokenId !== selectedToken.id &&
                         selectedToken.position &&
+                        !deploymentPhase &&
                         !hasMoveDie
                       }
                       onClick={() =>
@@ -3060,7 +3113,7 @@ function BattlePage() {
           <TurnTracker
             turn={turn}
             onEndTurn={
-              deploymentPhase ? () => setDeploymentPhase(false) : endTurn
+              deploymentPhase ? () => setDeploymentPhase(false) : confirmEndTurn
             }
             endTurnLabel={
               deploymentPhase ? 'End deployment phase' : 'End Turn'
@@ -3121,7 +3174,9 @@ function BattlePage() {
               <TurnTracker
                 turn={turn}
                 onEndTurn={
-                  deploymentPhase ? () => setDeploymentPhase(false) : endTurn
+                  deploymentPhase
+                    ? () => setDeploymentPhase(false)
+                    : confirmEndTurn
                 }
                 endTurnLabel={
                   deploymentPhase ? 'End deployment phase' : 'End Turn'

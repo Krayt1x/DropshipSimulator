@@ -224,6 +224,64 @@ describe('hex', () => {
         expect(sides).not.toContain(opposite[sides[0]]);
       });
     });
+
+    // #300: the tests above only ever place `from` at an immediate neighbor
+    // of `target` (hex-distance 1), where the relative angle can only ever
+    // land exactly on a quadrant center (a tie) or safely inside the
+    // left/right quadrants — never in the interior band explored here.
+    // Farther-out attackers can land at angles a plain "tie at dead-center
+    // only" rule mishandles: front and rear are each a single physical hex
+    // edge, so both of their flanking edges stay genuinely in view across a
+    // whole band around center, not just the exact middle.
+    describe('at longer range (#300)', () => {
+      const farTarget = { col: 10, row: 10 };
+
+      it('shows all 3 sides for an off-center-but-still-interior front angle, not just 2', () => {
+        // hex-distance 3, ~19.1° off dead-center-front — still well inside
+        // the ~±30° band where both flanking edges remain visible.
+        expect([...visibleSides(farTarget, facing, { col: 11, row: 7 })].sort()).toEqual(
+          ['front', 'left', 'right'],
+        );
+        expect([...visibleSides(farTarget, facing, { col: 9, row: 7 })].sort()).toEqual(
+          ['front', 'left', 'right'],
+        );
+      });
+
+      it('shows all 3 sides for an off-center-but-still-interior rear angle, not just 2', () => {
+        expect([...visibleSides(farTarget, facing, { col: 11, row: 12 })].sort()).toEqual(
+          ['left', 'rear', 'right'],
+        );
+        expect([...visibleSides(farTarget, facing, { col: 9, row: 12 })].sort()).toEqual(
+          ['left', 'rear', 'right'],
+        );
+      });
+
+      it('still leans to exactly 2 sides once far enough from center (~41°)', () => {
+        expect(visibleSides(farTarget, facing, { col: 12, row: 8 })).toEqual([
+          'front',
+          'right',
+        ]);
+        expect(visibleSides(farTarget, facing, { col: 8, row: 8 })).toEqual([
+          'front',
+          'left',
+        ]);
+      });
+
+      it('treats exactly 30° off center as the 2-side boundary, not a tie', () => {
+        // At precisely 30° off dead-center-front, the far flanking edge
+        // (left) sits exactly at its own 90°-visibility cutoff — a
+        // one-sided dropout, not a symmetric tie like dead-center is — so
+        // this resolves to 2 sides the same way it did before #300.
+        expect(visibleSides(farTarget, facing, { col: 11, row: 8 })).toEqual([
+          'front',
+          'right',
+        ]);
+        expect(visibleSides(farTarget, facing, { col: 9, row: 8 })).toEqual([
+          'front',
+          'left',
+        ]);
+      });
+    });
   });
 
   it('walks a straight hex-by-hex line between two points, including both ends', () => {

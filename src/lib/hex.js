@@ -285,6 +285,25 @@ export function nearestSide(target, facing, from, size = hexSize()) {
 // both neighbors, so both count as visible instead of arbitrarily picking
 // one (#276 — this used to always resolve the tie toward the same neighbor,
 // so a dead-center attacker could never see the side on the other side).
+//
+// Front and rear are each a single physical hex edge (this is a flat-top
+// hex, so "straight ahead"/"straight behind" land on an edge, not a
+// corner — see the file-top comment). Left and right, on the other hand,
+// are two physical edges apiece, fused into one named side. That split
+// means a viewer doesn't just glimpse front's two flanking edges at the
+// exact dead-center angle — each of those edges independently stays in
+// view (its outward normal within 90°) across a whole ~60°-wide band
+// straddling center, not only the single point where the two are
+// perfectly symmetric. So for front/rear the "3 sides visible" case is a
+// range, not just the exact tie: any attacker within 30° of dead center
+// sees the nearest side plus BOTH neighbors, not merely the tie point
+// (#300 — this used to only widen to 3 sides on an exact center tie,
+// silently dropping a genuinely visible side for any nearby-but-not-exact
+// angle, which only distance-1 neighbors — the only cases the original
+// tests covered — can never land on). Left/right have no such band: each
+// of their two edges is already fully "inside" that named side, so the
+// handoff to a neighboring side really is instantaneous at the exact
+// quadrant-center tie, same as before.
 export function visibleSides(target, facing, from, size = hexSize()) {
   const t = hexToPixel(target.col, target.row, size);
   const f = hexToPixel(from.col, from.row, size);
@@ -298,7 +317,19 @@ export function visibleSides(target, facing, from, size = hexSize()) {
   const cwNeighbor = SIDES_CW[(idx + 1) % 4];
   const distLo = r - quadrant.lo;
   const distHi = quadrant.hi - r;
-  if (distLo === distHi) return [quadrant.side, ccwNeighbor, cwNeighbor];
+  const isSingleEdgeSide = quadrant.side === 'front' || quadrant.side === 'rear';
+  // |distLo - distHi| === 2 * |r - center|, so < 60 here means "strictly
+  // within 30° of dead center" — see the geometric derivation above. The
+  // boundary at exactly 30° is where one flanking edge hits precisely its
+  // own 90°-visibility cutoff (not a symmetric tie like dead-center is), so
+  // it resolves to 2 sides, not 3 — same "boundary belongs to neither side"
+  // convention isInWeaponArc uses, and for the same float-noise-safety
+  // reason we shrink the threshold by EPSILON_DEG rather than compare
+  // against a bare 60.
+  const tie = isSingleEdgeSide
+    ? Math.abs(distLo - distHi) < 60 - EPSILON_DEG
+    : distLo === distHi;
+  if (tie) return [quadrant.side, ccwNeighbor, cwNeighbor];
   const leaning = distLo < distHi ? ccwNeighbor : cwNeighbor;
   return [quadrant.side, leaning];
 }

@@ -878,13 +878,13 @@ export function pickDeploymentHexes({ count, rows, cols, occupied }) {
     }
   });
   if (candidates.length === 0 || count <= 0) return [];
-  const step = Math.max(1, Math.floor(candidates.length / count));
-  const picked = [];
-  for (let i = 0; i < candidates.length && picked.length < count; i += step) {
-    picked.push(candidates[i]);
+  // Shuffled (Fisher-Yates) rather than a fixed even-spacing walk (#303) —
+  // the old approach divided the zone into `count` equal steps starting
+  // from index 0 every time, so for a given board size and roster count the
+  // bot deployed into the exact same hexes every single game.
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
   }
-  for (let i = 0; picked.length < count && i < candidates.length; i++) {
-    if (!picked.includes(candidates[i])) picked.push(candidates[i]);
-  }
-  return picked.slice(0, count);
+  return candidates.slice(0, count);
 }

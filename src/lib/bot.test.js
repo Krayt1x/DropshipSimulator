@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   isWeaponUsable,
   isSplashWeapon,
@@ -9,6 +9,8 @@ import {
 } from './bot.js';
 import { hexDistance } from './hex.js';
 import { DEFAULT_TERRAIN_TYPES } from './terrain.js';
+
+afterEach(() => vi.restoreAllMocks());
 
 const terrainTypes = DEFAULT_TERRAIN_TYPES;
 
@@ -349,6 +351,23 @@ describe('pickDeploymentHexes', () => {
     });
     expect(hexes).toHaveLength(1);
     expect(occupied.has(`${hexes[0].col},${hexes[0].row}`)).toBe(false);
+  });
+
+  it('varies the layout from one call to the next instead of always picking the same evenly-spaced hexes (#303)', () => {
+    const args = {
+      count: 3,
+      rows: [0, 1, 2, 3, 4, 5],
+      cols: 10,
+      occupied: new Set(),
+    };
+
+    vi.spyOn(Math, 'random').mockReturnValue(0.1);
+    const layoutA = pickDeploymentHexes(args);
+
+    vi.spyOn(Math, 'random').mockReturnValue(0.9);
+    const layoutB = pickDeploymentHexes(args);
+
+    expect(layoutA).not.toEqual(layoutB);
   });
 });
 

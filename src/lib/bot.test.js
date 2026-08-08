@@ -1700,4 +1700,143 @@ describe('chooseBotAction', () => {
       },
     );
   });
+
+  describe('rotates for free to reach an arc-restricted better weapon (#302 pt2)', () => {
+    // Bot at (5,5) facing 0 (north). Enemy at (7,5) sits at a 90° relative
+    // angle from the bot's facing (verified directly against hex.js). The
+    // right-mounted arc is (-30,150), so Flame Thrower (right) is in arc;
+    // the left-mounted arc is (-150,30), so Light Assault (left) is NOT in
+    // arc at this facing — it never even appears in the option set, which is
+    // the actual root cause the earlier #302 fix (Simple's `viable.reduce`
+    // ranking) could not address: that fix only helps when both weapons are
+    // already candidates and merely ranked wrong. Facing 2 is the only other
+    // facing that puts Light Assault in arc (also verified directly against
+    // hex.js), so a fixed bot should rotate there instead of settling for
+    // the arc-limited Flame Thrower.
+    function buildScenario(facing) {
+      const bot = makeToken({
+        id: 'bot1',
+        unitId: 2,
+        owner: 'p2',
+        position: { col: 5, row: 5 },
+        facing,
+        equippedIds: [20, 21],
+        weaponState: {
+          0: { side: 'left', heat: 0, broken: false },
+          1: { side: 'right', heat: 0, broken: false },
+        },
+      });
+      const enemy = makeToken({
+        id: 'enemy1',
+        unitId: 2,
+        owner: 'p1',
+        position: { col: 7, row: 5 },
+        facing: 0,
+        currentHp: 100,
+      });
+      return { bot, enemy };
+    }
+
+    it.each(['simple', 'tactical', 'expert'])(
+      'rotates to facing 2 instead of firing the arc-limited Flame Thrower (%s)',
+      (difficulty) => {
+        const { bot, enemy } = buildScenario(0);
+        const result = chooseBotAction({
+          tokens: [bot, enemy],
+          units,
+          equipment,
+          botOwner: 'p2',
+          dicePool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+          difficulty,
+        });
+        expect(result).toEqual({ type: 'rotate', tokenId: 'bot1', facing: 2 });
+      },
+    );
+
+    it.each(['simple', 'tactical', 'expert'])(
+      'fires the now-unlocked Light Assault once already facing the direction the rotate picked (%s)',
+      (difficulty) => {
+        // Simulates the very next chooseBotAction call within the same bot
+        // turn, after runBotTurn applied the rotate above — proves the loop
+        // actually proceeds to attack with the better weapon instead of
+        // rotating forever or never firing.
+        const { bot, enemy } = buildScenario(2);
+        const result = chooseBotAction({
+          tokens: [bot, enemy],
+          units,
+          equipment,
+          botOwner: 'p2',
+          dicePool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+          difficulty,
+        });
+        expect(result).toMatchObject({ type: 'attack', attackerId: 'bot1' });
+        expect(result.item.name).toBe('Light Assault');
+      },
+    );
+
+    it.each(['simple', 'tactical', 'expert'])(
+      'does not rotate when the current facing already offers the best available option (%s)',
+      (difficulty) => {
+        const { bot, enemy } = buildScenario(2);
+        const result = chooseBotAction({
+          tokens: [bot, enemy],
+          units,
+          equipment,
+          botOwner: 'p2',
+          dicePool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+          difficulty,
+        });
+        expect(result.type).not.toBe('rotate');
+      },
+    );
+
+    it.each(['simple', 'tactical', 'expert'])(
+      'does not rotate when no other facing offers a better option (single arc-restricted weapon) (%s)',
+      (difficulty) => {
+        // Only Flame Thrower is equipped — whichever facing puts it in arc,
+        // its EV is identical (EV never depends on the attacker's own
+        // facing, only on the fixed target/side/weapon), so there is no
+        // "better" facing to rotate toward, and the bot should just fire.
+        const bot = makeToken({
+          id: 'bot1',
+          unitId: 2,
+          owner: 'p2',
+          position: { col: 5, row: 5 },
+          facing: 0,
+          equippedIds: [21],
+          weaponState: { 0: { side: 'right', heat: 0, broken: false } },
+        });
+        const enemy = makeToken({
+          id: 'enemy1',
+          unitId: 2,
+          owner: 'p1',
+          position: { col: 7, row: 5 },
+          facing: 0,
+          currentHp: 100,
+        });
+        const result = chooseBotAction({
+          tokens: [bot, enemy],
+          units,
+          equipment,
+          botOwner: 'p2',
+          dicePool: [{ id: 'd1', label: 'Red', value: 'Attack', used: false }],
+          difficulty,
+        });
+        expect(result).toMatchObject({ type: 'attack', item: { name: 'Flame Thrower' } });
+      },
+    );
+
+    it('does not rotate without an Attack die available (nothing to fire with this iteration anyway)', () => {
+      const { bot, enemy } = buildScenario(0);
+      const result = chooseBotAction({
+        tokens: [bot, enemy],
+        units,
+        equipment,
+        botOwner: 'p2',
+        dicePool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+        difficulty: 'tactical',
+      });
+      expect(result?.type).not.toBe('rotate');
+    });
+  });
 });

@@ -2212,6 +2212,28 @@ function BattlePage() {
     );
   }
 
+  // Mirrors rotate() above, but off `action.tokenId`/`action.facing`
+  // (stateRef-fresh arguments) instead of `selectedTokenId`/a delta, for the
+  // same stale-closure reason performBotAttack/performBotDropPod do (#157,
+  // #158) — runBotTurn's own closure never has (or needs) a human selection.
+  // Free, like the human rotate buttons: no die spent, no cooldown (#302
+  // pt2 — lets a bot token turn to bring a better arc-restricted weapon to
+  // bear instead of being stuck firing whatever its facing happened to
+  // already allow).
+  function performBotRotate(action) {
+    const freshTokens = stateRef.current.tokens;
+    const token = freshTokens.find((t) => t.id === action.tokenId);
+    if (!token) return;
+    appendLog(
+      `${ownerLabel(token.owner)}'s ${unitName(token)} rotated to bring a better weapon to bear`,
+    );
+    setTokens((current) =>
+      current.map((t) =>
+        t.id === action.tokenId ? { ...t, facing: action.facing } : t,
+      ),
+    );
+  }
+
   // Mirrors resolveDropPodDrop(), but off `action.tokenId`/`action.aim`
   // (stateRef-fresh arguments) instead of the render closure, for the same
   // stale-closure reason performBotAttack/performBotDestroy do (#157, #158).
@@ -2305,6 +2327,9 @@ function BattlePage() {
         performBotAttack(action);
         useDicePoolDie(action.dieId);
         await sleep(700);
+      } else if (action.type === 'rotate') {
+        performBotRotate(action);
+        await sleep(400);
       } else if (action.type === 'dropPod') {
         performBotDropPod(action);
         useDicePoolDie(action.dieId);

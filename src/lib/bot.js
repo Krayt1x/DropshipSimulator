@@ -314,6 +314,92 @@ function findAttackOptions({
   return options;
 }
 
+// The best expected damage among `options` that belong to `attackerId` —
+// used to compare "what this token can do at its current facing" against
+// "what it could do at some other facing" below. Mirrors the same
+// overheat-safety preference chooseBotAction itself applies to the options
+// it's willing to fire (expert only) so a facing isn't chosen just because it
+// exposes a shot that difficulty would refuse to take anyway; simple/tactical
+// judge purely on raw EV, same as their own `chosen` reduce below.
+function bestOptionEv(options, attackerId, difficulty) {
+  const mine = options.filter((o) => o.attackerId === attackerId);
+  if (mine.length === 0) return -Infinity;
+  const safe =
+    difficulty === 'expert'
+      ? mine.filter(
+          (o) => !o.overheats || (o.targetHp != null && o.ev >= o.targetHp),
+        )
+      : mine;
+  const beforePodFilter = safe.length > 0 ? safe : mine;
+  // Same pod-deprioritization as chooseBotAction's own `viable` below — a
+  // facing that merely trades a reachable real unit for a higher-EV drop pod
+  // isn't actually the better facing chooseBotAction would settle on once it
+  // gets there.
+  const nonPod = beforePodFilter.filter((o) => !o.isDropPodTarget);
+  const pool = nonPod.length > 0 ? nonPod : beforePodFilter;
+  return pool.reduce((max, o) => Math.max(max, o.ev), -Infinity);
+}
+
+// Facing is free to change (matching the human rotate buttons in
+// BattlePage.jsx: no die, no cooldown), but `findAttackOptions` only ever
+// looks at a token's *current* facing — a side-mounted weapon whose arc
+// doesn't happen to cover the nearest enemy right now simply never appears
+// as an option at all, regardless of how much better it is than whatever
+// does happen to be in arc (#302 pt2). This checks, for each of the bot's
+// own tokens, whether spinning in place (same hex, no move) to a different
+// facing would put a strictly better attack option into arc than anything
+// available at the current facing — and if so, returns a free rotate action
+// to take that facing instead of settling for the weaker in-arc option.
+//
+// Returns null once every token's current facing already offers its best
+// possible option, so this can't oscillate: a token that just rotated to its
+// best facing has nothing better left to rotate toward on the very next
+// call, and the loop in chooseBotAction below falls through to actually
+// firing instead.
+function findRotateAction({
+  tokens,
+  units,
+  equipment,
+  botOwner,
+  difficulty,
+  tiles,
+  terrainTypes,
+  currentOptions,
+}) {
+  const myTokens = tokens.filter(
+    (t) => t.owner === botOwner && t.position && !t.destroyed,
+  );
+  for (const attacker of myTokens) {
+    const currentBest = bestOptionEv(currentOptions, attacker.id, difficulty);
+    let bestFacing = null;
+    let bestEv = currentBest;
+    for (let facing = 0; facing < 6; facing++) {
+      if (facing === attacker.facing) continue;
+      const rotatedTokens = tokens.map((t) =>
+        t.id === attacker.id ? { ...t, facing } : t,
+      );
+      const hypotheticalOptions = findAttackOptions({
+        tokens: rotatedTokens,
+        units,
+        equipment,
+        botOwner,
+        difficulty,
+        tiles,
+        terrainTypes,
+      });
+      const ev = bestOptionEv(hypotheticalOptions, attacker.id, difficulty);
+      if (ev > bestEv) {
+        bestEv = ev;
+        bestFacing = facing;
+      }
+    }
+    if (bestFacing !== null) {
+      return { type: 'rotate', tokenId: attacker.id, facing: bestFacing };
+    }
+  }
+  return null;
+}
+
 function movementForToken(token, equipment) {
   const movementIndex = token.equippedIds.findIndex((id) => {
     const item = equipment.find((e) => Number(e.id) === Number(id));
@@ -659,6 +745,27 @@ export function chooseBotAction({
     terrainTypes,
   });
   if (attackDie) {
+    // Free (no die spent, matching the human rotate buttons) — checked
+    // before committing to fire whatever's already in arc at the current
+    // facing, so a token whose facing merely hides its best weapon spins to
+    // expose it first instead of resignedly firing a strictly worse one just
+    // because that's what its current facing happens to allow (#302 pt2).
+    // Only returns a facing when it's genuinely better than every option
+    // reachable at the current one; a token already facing its best option
+    // returns null here every time, so this can never oscillate turn over
+    // turn or loop forever within a single turn (see findRotateAction).
+    const rotateAction = findRotateAction({
+      tokens,
+      units,
+      equipment,
+      botOwner,
+      difficulty,
+      tiles,
+      terrainTypes,
+      currentOptions: options,
+    });
+    if (rotateAction) return rotateAction;
+
     // Expert avoids breaking a weapon on a shot that isn't worth the risk —
     // it only considers an overheating option when nothing safer is on the
     // table, or when that shot is itself the one that finishes the target.

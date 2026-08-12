@@ -225,6 +225,12 @@ function BattlePage() {
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const panStateRef = useRef(null);
+  // Pinch-to-zoom (#308): tracks every currently-down touch point by pointer
+  // id so a second finger landing can be recognized as a pinch rather than a
+  // pan. pinchStateRef holds the spread distance and zoom level the pinch
+  // started from, once two touches are down.
+  const activeTouchesRef = useRef(new Map());
+  const pinchStateRef = useRef(null);
   // A drag that crossed the pan threshold shouldn't also fire the hex click
   // that lands under the cursor on release.
   const suppressNextHexClickRef = useRef(false);
@@ -1377,21 +1383,44 @@ function BattlePage() {
   const fitSize = Math.min(fitWidth, fitHeight);
   const boardSize = fitSize * zoom;
 
+  function clampZoom(value) {
+    return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Number(value.toFixed(2))));
+  }
+
   function adjustZoom(delta) {
-    setZoom((current) =>
-      Math.min(
-        ZOOM_MAX,
-        Math.max(ZOOM_MIN, Number((current + delta).toFixed(2))),
-      ),
-    );
+    setZoom((current) => clampZoom(current + delta));
+  }
+
+  function pinchDistance() {
+    const points = [...activeTouchesRef.current.values()];
+    if (points.length < 2) return null;
+    return Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
   }
 
   // Panning (#187): a plain click still needs to reach handleHexClick
   // untouched, so only a drag past PAN_DRAG_THRESHOLD engages it — token
   // markers own their own pointer-drag gesture (repositioning), so a
   // pointerdown starting on one never starts a pan.
+  //
+  // Pinch-to-zoom (#308): a second touch landing mid-gesture cancels
+  // whatever the first touch started (a pan, or nothing yet) and switches
+  // to tracking the distance between both touches instead — same idea as
+  // desktop's +/- zoom buttons, just driven by finger spread instead of
+  // clicks.
   function handleBoardPointerDown(e) {
     if (e.target.closest?.('.token-marker')) return;
+    if (e.pointerType === 'touch') {
+      activeTouchesRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (activeTouchesRef.current.size >= 2) {
+        panStateRef.current = null;
+        setIsPanning(false);
+        pinchStateRef.current = {
+          initialDistance: pinchDistance(),
+          initialZoom: zoom,
+        };
+        return;
+      }
+    }
     panStateRef.current = {
       pointerId: e.pointerId,
       pointerType: e.pointerType,
@@ -1403,6 +1432,17 @@ function BattlePage() {
   }
 
   function handleBoardPointerMove(e) {
+    if (e.pointerType === 'touch' && activeTouchesRef.current.has(e.pointerId)) {
+      activeTouchesRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+    const pinch = pinchStateRef.current;
+    if (pinch) {
+      const distance = pinchDistance();
+      if (distance && pinch.initialDistance > 0) {
+        setZoom(clampZoom(pinch.initialZoom * (distance / pinch.initialDistance)));
+      }
+      return;
+    }
     const state = panStateRef.current;
     if (!state || state.pointerId !== e.pointerId) return;
     const dx = e.clientX - state.startX;
@@ -1420,6 +1460,12 @@ function BattlePage() {
   }
 
   function endBoardPan(e) {
+    if (e.pointerType === 'touch') {
+      activeTouchesRef.current.delete(e.pointerId);
+      if (activeTouchesRef.current.size < 2) {
+        pinchStateRef.current = null;
+      }
+    }
     const state = panStateRef.current;
     if (!state || state.pointerId !== e.pointerId) return;
     if (state.dragging) suppressNextHexClickRef.current = true;
@@ -2746,6 +2792,7 @@ function BattlePage() {
             onPointerMove={handleBoardPointerMove}
             onPointerUp={endBoardPan}
             onPointerLeave={endBoardPan}
+            onPointerCancel={endBoardPan}
           >
             {/* Overlaid on the map itself (#268) instead of sitting in its
                 own row above it, so it reads as a control on the map rather

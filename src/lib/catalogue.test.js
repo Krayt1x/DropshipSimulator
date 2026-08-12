@@ -42,6 +42,64 @@ describe('useCatalogue (#199)', () => {
       ),
     ).toContain('Homebrew Corp');
   });
+
+  it('migrates a cached catalogue still carrying the pre-rename Corp A/B names (#312)', () => {
+    window.localStorage.setItem(
+      'dropshipsimulator:catalogue:manufacturers',
+      JSON.stringify(['Corp A', 'Corp B', 'Homebrew Corp']),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:catalogue:units',
+      JSON.stringify([
+        { id: 1, name: 'A10', manufacturer: 'Corp A' },
+        { id: 7, name: 'Drone', manufacturer: 'Corp B' },
+        // A user's own custom unit for a manufacturer that was never
+        // renamed — must survive the migration untouched.
+        { id: 999, name: 'Homebrew Mech', manufacturer: 'Homebrew Corp' },
+      ]),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:catalogue:equipment',
+      JSON.stringify([
+        {
+          id: 17,
+          name: 'Corp A Heat Management Module',
+          manufacturer: 'Corp A',
+        },
+        { id: 999, name: 'Homebrew Gun', manufacturer: 'Homebrew Corp' },
+      ]),
+    );
+
+    const { result, rerender } = renderHook(() => useCatalogue());
+    rerender();
+
+    expect(result.current.manufacturers).toEqual([
+      'Central Order',
+      'The Hive',
+      'Homebrew Corp',
+    ]);
+    expect(result.current.units).toEqual([
+      { id: 1, name: 'A10', manufacturer: 'Central Order' },
+      { id: 7, name: 'Drone', manufacturer: 'The Hive' },
+      { id: 999, name: 'Homebrew Mech', manufacturer: 'Homebrew Corp' },
+    ]);
+    expect(result.current.equipment).toEqual([
+      {
+        id: 17,
+        name: 'Central Order Heat Management Module',
+        manufacturer: 'Central Order',
+      },
+      { id: 999, name: 'Homebrew Gun', manufacturer: 'Homebrew Corp' },
+    ]);
+  });
+
+  it('does nothing when the cached catalogue has no pre-rename names left', () => {
+    const { result, rerender } = renderHook(() => useCatalogue());
+    rerender();
+    expect(result.current.manufacturers).toEqual(manufacturersSeed);
+    expect(result.current.units).toEqual(unitsSeed);
+    expect(result.current.equipment).toEqual(equipmentSeed);
+  });
 });
 
 describe('purgeCatalogueCache', () => {

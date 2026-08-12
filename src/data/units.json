@@ -2,7 +2,7 @@
   {
     "id": 1,
     "name": "A10",
-    "manufacturer": "Corp A",
+    "manufacturer": "Central Order",
     "size": "Small",
     "weight": 10,
     "armor": "2/1/1/0",
@@ -19,7 +19,7 @@
   {
     "id": 2,
     "name": "A20",
-    "manufacturer": "Corp A",
+    "manufacturer": "Central Order",
     "size": "Medium",
     "weight": 20,
     "armor": "3/2/2/1",
@@ -36,7 +36,7 @@
   {
     "id": 3,
     "name": "A30",
-    "manufacturer": "Corp A",
+    "manufacturer": "Central Order",
     "size": "Large",
     "weight": 30,
     "armor": "4/3/3/2",
@@ -53,7 +53,7 @@
   {
     "id": 7,
     "name": "Drone",
-    "manufacturer": "Corp B",
+    "manufacturer": "The Hive",
     "size": "Small",
     "weight": 10,
     "armor": "1/1/1/1",
@@ -70,7 +70,7 @@
   {
     "id": 9,
     "name": "Queen",
-    "manufacturer": "Corp B",
+    "manufacturer": "The Hive",
     "size": "Large",
     "weight": 40,
     "armor": "4/3/3/3",
@@ -87,7 +87,7 @@
   {
     "id": 11,
     "name": "Delivery Capsule",
-    "manufacturer": "Corp A",
+    "manufacturer": "Central Order",
     "size": "Drop Pod",
     "weight": 2,
     "armor": "0/0/0/0",

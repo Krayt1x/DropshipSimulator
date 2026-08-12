@@ -142,7 +142,7 @@ describe('applyHeatSinkTransfers (#245)', () => {
   const ARTILLERY = { id: 50, name: 'Artillery', type: 'Weapon' };
   const HEAT_SINK = {
     id: 51,
-    name: 'Corp A Heat Management Module',
+    name: 'Central Order Heat Management Module',
     type: 'Weapon',
     heat_rating: '0/4',
     effect_stats: [{ stat: 'tags', amount: 'heat_sink' }],

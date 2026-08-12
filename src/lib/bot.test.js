@@ -18,7 +18,7 @@ const units = [
   {
     id: 1,
     name: 'A10',
-    manufacturer: 'Corp A',
+    manufacturer: 'Central Order',
     size: 'Small',
     hp: 5,
     armor: '2/2/2/1',
@@ -27,7 +27,7 @@ const units = [
   {
     id: 2,
     name: 'A20',
-    manufacturer: 'Corp A',
+    manufacturer: 'Central Order',
     size: 'Medium',
     hp: 8,
     armor: '3/3/3/2',
@@ -35,7 +35,7 @@ const units = [
   {
     id: 3,
     name: 'A30',
-    manufacturer: 'Corp A',
+    manufacturer: 'Central Order',
     size: 'Small',
     hp: 10,
     armor: '0/0/0/0',
@@ -43,7 +43,7 @@ const units = [
   {
     id: 4,
     name: 'Delivery Capsule',
-    manufacturer: 'Corp A',
+    manufacturer: 'Central Order',
     size: 'Drop Pod',
     hp: 5,
     armor: '0/0/0/0',
@@ -51,7 +51,7 @@ const units = [
   {
     id: 5,
     name: 'A15',
-    manufacturer: 'Corp A',
+    manufacturer: 'Central Order',
     size: 'Small',
     hp: 6,
     // Uniform armor on every side so a test can ignore which side a splash

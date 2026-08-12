@@ -49,7 +49,7 @@ describe('App', () => {
     );
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
-        value: ['Test List (Corp A)', 'Weight: 6t / 100t', '', 'A10 - 6t'].join(
+        value: ['Test List (Central Order)', 'Weight: 6t / 100t', '', 'A10 - 6t'].join(
           '\n',
         ),
       },
@@ -86,7 +86,7 @@ describe('App', () => {
     );
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
-        value: ['Test List (Corp A)', 'Weight: 6t / 100t', '', 'A10 - 6t'].join(
+        value: ['Test List (Central Order)', 'Weight: 6t / 100t', '', 'A10 - 6t'].join(
           '\n',
         ),
       },

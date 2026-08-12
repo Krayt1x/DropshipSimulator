@@ -5,7 +5,7 @@ import UnitCardHeader from './UnitCardHeader.jsx';
 describe('UnitCardHeader', () => {
   it("shows each equipped weapon's hit dice", () => {
     const unit = {
-      manufacturer: 'Corp A',
+      manufacturer: 'Central Order',
       size: 'Medium',
       armor: '2/2/2/1',
       hp: 10,
@@ -34,7 +34,7 @@ describe('UnitCardHeader', () => {
 
   it("shows an equipped item's current (damaged) HP, not its max, on hover (#175)", () => {
     const unit = {
-      manufacturer: 'Corp A',
+      manufacturer: 'Central Order',
       size: 'Medium',
       armor: '2/2/2/1',
       hp: 10,
@@ -60,7 +60,7 @@ describe('UnitCardHeader', () => {
 
   it("shows a weapon's current heat, not just its static generate/max rating (#295)", () => {
     const unit = {
-      manufacturer: 'Corp A',
+      manufacturer: 'Central Order',
       size: 'Medium',
       armor: '2/2/2/1',
       hp: 10,

@@ -2,14 +2,14 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import BuilderPage from './BuilderPage.jsx';
 
-const manufacturers = ['Corp A'];
+const manufacturers = ['Central Order'];
 const units = [
-  { id: 1, name: 'A10', manufacturer: 'Corp A', size: 'Medium', weight: 10 },
+  { id: 1, name: 'A10', manufacturer: 'Central Order', size: 'Medium', weight: 10 },
 ];
 const movementItem = {
   id: 1,
   name: 'Heavy Legs',
-  manufacturer: 'Corp A',
+  manufacturer: 'Central Order',
   type: 'Movement',
   weight: 2,
   movement: 5,
@@ -17,7 +17,7 @@ const movementItem = {
 const weaponItem = {
   id: 2,
   name: 'Long Range Bolt',
-  manufacturer: 'Corp A',
+  manufacturer: 'Central Order',
   type: 'Weapon',
   weight: 4,
   size: 'Large',
@@ -93,7 +93,7 @@ describe('BuilderPage', () => {
     const handoff = JSON.parse(
       window.localStorage.getItem('dropshipsimulator:builder:handoff'),
     );
-    expect(handoff.manufacturer).toBe('Corp A');
+    expect(handoff.manufacturer).toBe('Central Order');
     expect(handoff.entries).toHaveLength(1);
     expect(handoff.entries[0].unit.name).toBe('A10');
     // The unit's cheapest Movement item auto-equips on Add (mirroring
@@ -126,7 +126,7 @@ describe('BuilderPage', () => {
     const armorPlate = {
       id: 3,
       name: 'Armor Plate',
-      manufacturer: 'Corp A',
+      manufacturer: 'Central Order',
       type: 'Weapon',
       size: 'Small',
       weight: 1,

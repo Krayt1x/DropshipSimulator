@@ -2,7 +2,7 @@
   {
     "id": 1,
     "name": "Chicken Legs",
-    "manufacturer": "Corp A",
+    "manufacturer": "Central Order",
     "type": "Movement",
     "effects": "",
     "weight": 2,
@@ -15,7 +15,7 @@
   {
     "id": 2,
     "name": "Long Range Bolt",
-    "manufacturer": "Corp A",
+    "manufacturer": "Central Order",
     "type": "Weapon",
     "effects": "",
     "weight": 4,
@@ -29,7 +29,7 @@
   {
     "id": 3,
     "name": "Quad Legs",
-    "manufacturer": "Corp A",
+    "manufacturer": "Central Order",
     "type": "Movement",
     "effects": "+1 to attack rolls. +1 hit dice to weapons.",
     "weight": 4,
@@ -42,7 +42,7 @@
   {
     "id": 4,
     "name": "Artillery",
-    "manufacturer": "Corp A",
+    "manufacturer": "Central Order",
     "type": "Weapon",
     "effects": "",
     "effect_stats": [
@@ -60,7 +60,7 @@
   {
     "id": 5,
     "name": "Legs",
-    "manufacturer": "Corp B",
+    "manufacturer": "The Hive",
     "type": "Movement",
     "effects": "",
     "weight": 0,
@@ -73,7 +73,7 @@
   {
     "id": 6,
     "name": "Legs",
-    "manufacturer": "Corp A",
+    "manufacturer": "Central Order",
     "type": "Movement",
     "effects": "",
     "weight": 0,
@@ -86,7 +86,7 @@
   {
     "id": 7,
     "name": "Heavy Assault",
-    "manufacturer": "Corp A",
+    "manufacturer": "Central Order",
     "type": "Weapon",
     "effects": "",
     "weight": 3,
@@ -100,7 +100,7 @@
   {
     "id": 8,
     "name": "Mid range assault",
-    "manufacturer": "Corp A",
+    "manufacturer": "Central Order",
     "type": "Weapon",
     "effects": "",
     "weight": 2,
@@ -114,7 +114,7 @@
   {
     "id": 9,
     "name": "Light Assault",
-    "manufacturer": "Corp A",
+    "manufacturer": "Central Order",
     "type": "Weapon",
     "effects": "",
     "weight": 1,
@@ -128,7 +128,7 @@
   {
     "id": 10,
     "name": "Flame Thrower",
-    "manufacturer": "Corp A",
+    "manufacturer": "Central Order",
     "type": "Weapon",
     "effects": "",
     "effect_stats": [{ "stat": "tags", "amount": "Fire" }],
@@ -143,7 +143,7 @@
   {
     "id": 11,
     "name": "Weapon Slot Recalibration",
-    "manufacturer": "Corp A",
+    "manufacturer": "Central Order",
     "type": "Augment",
     "effects": "",
     "effect_stats": [
@@ -156,7 +156,7 @@
   {
     "id": 12,
     "name": "Synchronized Firing Pattern",
-    "manufacturer": "Corp A",
+    "manufacturer": "Central Order",
     "type": "Augment",
     "effects": "Artillery weapons can target models in either the left or right arcs.",
     "weight": 1,
@@ -165,7 +165,7 @@
   {
     "id": 13,
     "name": "Repair Module",
-    "manufacturer": "Corp A",
+    "manufacturer": "Central Order",
     "type": "Augment",
     "effects": "Spend an Action die to repair 2d4 HP to this model's chassis or a weapon, or to an adjacent friendly model's chassis or weapon.",
     "weight": 1,
@@ -175,7 +175,7 @@
   {
     "id": 14,
     "name": "Drop Pod Buff",
-    "manufacturer": "Corp A",
+    "manufacturer": "Central Order",
     "type": "Augment",
     "effects": "When dropping a drop pod, a player may select the deviation direction and halve the deviation distance.",
     "weight": 1,
@@ -184,7 +184,7 @@
   {
     "id": 15,
     "name": "A-Corp Heat Management Upgrade",
-    "manufacturer": "Corp A",
+    "manufacturer": "Central Order",
     "type": "Augment",
     "effects": "Only apply the Heat Effect that you rolled on the table.",
     "weight": 1,
@@ -193,7 +193,7 @@
   {
     "id": 16,
     "name": "Armor Plate",
-    "manufacturer": "Corp A",
+    "manufacturer": "Central Order",
     "type": "Weapon",
     "size": "Small",
     "effect_stats": [{ "stat": "tags", "amount": "armor_plate" }],
@@ -206,8 +206,8 @@
   },
   {
     "id": 17,
-    "name": "Corp A Heat Management Module",
-    "manufacturer": "Corp A",
+    "name": "Central Order Heat Management Module",
+    "manufacturer": "Central Order",
     "type": "Weapon",
     "size": "Small",
     "effects": "After the end-of-turn heat cooldown, pulls 1 point of heat from another piece of equipment in the same slot that still has heat on it, up to its own 4-point capacity. Cannot pull heat from another Heat Sink.",

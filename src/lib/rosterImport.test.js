@@ -5,20 +5,20 @@ import realUnits from '../data/units.json';
 import realEquipment from '../data/equipment.json';
 import realManufacturers from '../data/manufacturers.json';
 
-const manufacturers = ['Corp A'];
+const manufacturers = ['Central Order'];
 const units = [
-  { id: 1, name: 'A10', manufacturer: 'Corp A', hp: 10 },
-  { id: 2, name: 'A20', manufacturer: 'Corp A', hp: 20 },
+  { id: 1, name: 'A10', manufacturer: 'Central Order', hp: 10 },
+  { id: 2, name: 'A20', manufacturer: 'Central Order', hp: 20 },
 ];
 const equipment = [
-  { id: 5, name: 'Long Range Bolt', manufacturer: 'Corp A' },
-  { id: 6, name: 'Chicken Legs', manufacturer: 'Corp A' },
+  { id: 5, name: 'Long Range Bolt', manufacturer: 'Central Order' },
+  { id: 6, name: 'Chicken Legs', manufacturer: 'Central Order' },
 ];
 
 describe('parseRosterExport', () => {
   it('parses a DropshipBuilder share export into units + equipped ids', () => {
     const text = [
-      'Test List (Corp A)',
+      'Test List (Central Order)',
       'Weight: 16t / 100t',
       '',
       'A10 - 6t',
@@ -32,7 +32,7 @@ describe('parseRosterExport', () => {
     const result = parseRosterExport(text, { units, manufacturers, equipment });
 
     expect(result.listName).toBe('Test List');
-    expect(result.manufacturer).toBe('Corp A');
+    expect(result.manufacturer).toBe('Central Order');
     expect(result.warnings).toEqual([]);
     expect(result.entries).toHaveLength(2);
     expect(result.entries[0].unit.name).toBe('A10');
@@ -45,7 +45,7 @@ describe('parseRosterExport', () => {
 
   it('matches units against the unit list even with a "(N)" duplicate-copy suffix, keeping it as a label (#151)', () => {
     const text = [
-      'Test List (Corp A)',
+      'Test List (Central Order)',
       'Weight: 12t / 100t',
       '',
       'A10 (1) - 6t',
@@ -67,7 +67,7 @@ describe('parseRosterExport', () => {
 
   it("captures Left/Right slot labels as each weapon's mounted side", () => {
     const text = [
-      'Test List (Corp A)',
+      'Test List (Central Order)',
       'Weight: 6t / 100t',
       '',
       'A10 - 6t',
@@ -83,7 +83,7 @@ describe('parseRosterExport', () => {
 
   it('also captures the raw slot label (including Head) separately for Heat Sink grouping (#245)', () => {
     const text = [
-      'Test List (Corp A)',
+      'Test List (Central Order)',
       'Weight: 6t / 100t',
       '',
       'A10 - 6t',

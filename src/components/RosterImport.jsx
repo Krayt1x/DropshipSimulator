@@ -8,9 +8,9 @@ import { useLocalStorageState } from '../lib/storage.js';
 export const DEFAULT_ROSTERS = [
   {
     name: 'Default A Corp List',
-    manufacturer: 'Corp A',
+    manufacturer: 'Central Order',
     text: [
-      'Default A Corp List (Corp A)',
+      'Default A Corp List (Central Order)',
       'Weight: 99t / 100t',
       '',
       'A30 - 41t',
@@ -42,9 +42,9 @@ export const DEFAULT_ROSTERS = [
   },
   {
     name: 'Flame Chicken Spam',
-    manufacturer: 'Corp A',
+    manufacturer: 'Central Order',
     text: [
-      'Flame Chicken Spam (Corp A)',
+      'Flame Chicken Spam (Central Order)',
       'Weight: 100t / 100t',
       '',
       'A10 (1) - 14t',

@@ -102,7 +102,7 @@ function importA10ToReserve(extraLines = []) {
   fireEvent.change(screen.getByLabelText('Roster export'), {
     target: {
       value: [
-        'Test List (Corp A)',
+        'Test List (Central Order)',
         'Weight: 6t / 100t',
         '',
         'A10 - 6t',
@@ -201,7 +201,7 @@ describe('BattlePage', () => {
       JSON.stringify({
         id: 'handoff-1',
         listName: 'My Built List',
-        manufacturer: 'Corp A',
+        manufacturer: 'Central Order',
         entries: [
           {
             unit: a10,
@@ -217,7 +217,7 @@ describe('BattlePage', () => {
     startDeploymentPhase();
 
     expect(
-      screen.getByText('My Built List (Corp A) — 1 unit'),
+      screen.getByText('My Built List (Central Order) — 1 unit'),
     ).toBeDefined();
     fireEvent.click(
       screen.getByRole('button', { name: 'Import 1 unit to reserve' }),
@@ -371,7 +371,7 @@ describe('BattlePage', () => {
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
-          'Test List (Corp A)',
+          'Test List (Central Order)',
           'Weight: 26t / 100t',
           '',
           'A10 - 6t',
@@ -416,7 +416,7 @@ describe('BattlePage', () => {
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
-          'Test List (Corp A)',
+          'Test List (Central Order)',
           'Weight: 26t / 100t',
           '',
           'A10 - 6t',
@@ -471,7 +471,7 @@ describe('BattlePage', () => {
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
-          'Test List (Corp A)',
+          'Test List (Central Order)',
           'Weight: 24t / 100t',
           '',
           'A10 - 6t',
@@ -1196,7 +1196,7 @@ describe('BattlePage', () => {
     expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
-        value: ['Test List (Corp A)', 'Weight: 6t / 100t', '', 'A10 - 6t'].join(
+        value: ['Test List (Central Order)', 'Weight: 6t / 100t', '', 'A10 - 6t'].join(
           '\n',
         ),
       },
@@ -1248,7 +1248,7 @@ describe('BattlePage', () => {
     expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
-        value: ['Test List (Corp A)', 'Weight: 6t / 100t', '', 'A10 - 6t'].join(
+        value: ['Test List (Central Order)', 'Weight: 6t / 100t', '', 'A10 - 6t'].join(
           '\n',
         ),
       },
@@ -1802,7 +1802,7 @@ describe('BattlePage', () => {
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
-          'Test List (Corp A)',
+          'Test List (Central Order)',
           'Weight: 20t / 100t',
           '',
           'A20 - 20t',
@@ -1920,7 +1920,7 @@ describe('BattlePage', () => {
     expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
-        value: ['Test List (Corp A)', 'Weight: 20t / 100t', '', 'A20 - 20t'].join(
+        value: ['Test List (Central Order)', 'Weight: 20t / 100t', '', 'A20 - 20t'].join(
           '\n',
         ),
       },
@@ -2003,7 +2003,7 @@ describe('BattlePage', () => {
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
-          'Test List (Corp A)',
+          'Test List (Central Order)',
           'Weight: 21t / 100t',
           '',
           'A20 - 20t',
@@ -2063,7 +2063,7 @@ describe('BattlePage', () => {
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
-          'Test List (Corp A)',
+          'Test List (Central Order)',
           'Weight: 20t / 100t',
           '',
           'A20 - 20t',
@@ -2120,7 +2120,7 @@ describe('BattlePage', () => {
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
-          'Test List (Corp A)',
+          'Test List (Central Order)',
           'Weight: 20t / 100t',
           '',
           'A20 - 20t',
@@ -2169,7 +2169,7 @@ describe('BattlePage', () => {
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
-          'Test List (Corp A)',
+          'Test List (Central Order)',
           'Weight: 20t / 100t',
           '',
           'A20 - 20t',
@@ -2277,7 +2277,7 @@ describe('BattlePage', () => {
 
     importA10ToReserve([
       '  Right: Long Range Bolt',
-      '  Right: Corp A Heat Management Module',
+      '  Right: Central Order Heat Management Module',
     ]);
     fireEvent.click(screen.getByRole('button', { name: 'A10' }));
     endDeploymentPhase();
@@ -2286,7 +2286,7 @@ describe('BattlePage', () => {
 
     const boltRow = screen.getByText('Long Range Bolt').closest('.token-weapon-row');
     const sinkRow = screen
-      .getByText('Corp A Heat Management Module')
+      .getByText('Central Order Heat Management Module')
       .closest('.token-weapon-row');
     // The weapon row has both a Heat "+" and an HP "+" — heat's is first.
     const boltPlus = () =>
@@ -2429,7 +2429,7 @@ describe('BattlePage', () => {
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
-          'Test List (Corp A)',
+          'Test List (Central Order)',
           'Weight: 20t / 100t',
           '',
           'A20 - 20t',
@@ -2518,7 +2518,7 @@ describe('BattlePage', () => {
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
-          'Test List (Corp A)',
+          'Test List (Central Order)',
           'Weight: 20t / 100t',
           '',
           'A20 - 20t',
@@ -2728,7 +2728,7 @@ describe('BattlePage', () => {
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
-          'Test List (Corp A)',
+          'Test List (Central Order)',
           'Weight: 20t / 100t',
           '',
           'A20 - 20t',
@@ -2791,7 +2791,7 @@ describe('BattlePage', () => {
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
-          'Test List (Corp A)',
+          'Test List (Central Order)',
           'Weight: 40t / 100t',
           '',
           'A20 - 20t',
@@ -2909,7 +2909,7 @@ describe('BattlePage', () => {
     expandRosterImport();
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
-        value: ['Test List (Corp A)', 'Weight: 20t / 100t', '', 'A20 - 20t'].join(
+        value: ['Test List (Central Order)', 'Weight: 20t / 100t', '', 'A20 - 20t'].join(
           '\n',
         ),
       },
@@ -3007,7 +3007,7 @@ describe('BattlePage', () => {
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
-          'Test List (Corp A)',
+          'Test List (Central Order)',
           'Weight: 20t / 100t',
           '',
           'A20 - 20t',
@@ -3269,7 +3269,7 @@ describe('BattlePage', () => {
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
-          'Test List (Corp A)',
+          'Test List (Central Order)',
           'Weight: 26t / 100t',
           '',
           'A10 - 6t',
@@ -3430,7 +3430,7 @@ describe('BattlePage', () => {
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
-          'Test List (Corp A)',
+          'Test List (Central Order)',
           'Weight: 12t / 100t',
           '',
           'A10 (1) - 6t',
@@ -3469,7 +3469,7 @@ describe('BattlePage', () => {
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
-          'Test List (Corp A)',
+          'Test List (Central Order)',
           'Weight: 20t / 100t',
           '',
           'A20 - 20t',
@@ -3608,7 +3608,7 @@ describe('BattlePage', () => {
     fireEvent.change(screen.getByLabelText('Roster export'), {
       target: {
         value: [
-          'Test List (Corp A)',
+          'Test List (Central Order)',
           'Weight: 20t / 100t',
           '',
           'A20 - 20t',
@@ -4241,7 +4241,7 @@ describe('BattlePage', () => {
       fireEvent.change(screen.getByLabelText('Roster export'), {
         target: {
           value: [
-            'Test List (Corp A)',
+            'Test List (Central Order)',
             'Weight: 12t / 100t',
             '',
             'A10 (1) - 6t',

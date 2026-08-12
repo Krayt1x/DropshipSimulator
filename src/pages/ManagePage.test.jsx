@@ -6,7 +6,7 @@ beforeEach(() => {
   window.localStorage.clear();
   window.localStorage.setItem(
     'dropshipsimulator:catalogue:manufacturers',
-    JSON.stringify(['Corp A']),
+    JSON.stringify(['Central Order']),
   );
   window.localStorage.setItem(
     'dropshipsimulator:catalogue:units',
@@ -14,7 +14,7 @@ beforeEach(() => {
       {
         id: 1,
         name: 'A10',
-        manufacturer: 'Corp A',
+        manufacturer: 'Central Order',
         size: 'Small',
         weight: 6,
         armor: '2/2/2/1',

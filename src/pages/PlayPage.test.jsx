@@ -94,8 +94,8 @@ function pickCurrentMap() {
 function reachMapStageCpu(difficultyName = 'Simple') {
   reachRostersStage(difficultyName);
   const { cpuColumn, playerColumn } = rosterColumns();
-  pickRoster(cpuColumn, 'Corp A', 'Random');
-  pickRoster(playerColumn, 'Corp A', 'Random');
+  pickRoster(cpuColumn, 'Central Order', 'Random');
+  pickRoster(playerColumn, 'Central Order', 'Random');
 }
 
 // Reaches the First player stage of a Vs CPU game, explicitly picking
@@ -185,13 +185,13 @@ describe('PlayPage', () => {
     // (#241).
     expect(window.location.hash).toBe('');
     const { cpuColumn, playerColumn } = rosterColumns();
-    pickRoster(cpuColumn, 'Corp A', 'Random');
+    pickRoster(cpuColumn, 'Central Order', 'Random');
 
     // Picking only one side doesn't advance yet.
     expect(
       screen.getByText("Choose your list and the computer's"),
     ).toBeDefined();
-    pickRoster(playerColumn, 'Corp A', 'Random');
+    pickRoster(playerColumn, 'Central Order', 'Random');
 
     expect(window.location.hash).toBe('');
     expect(screen.getByText('Which map do you want to play?')).toBeDefined();
@@ -222,10 +222,10 @@ describe('PlayPage', () => {
       JSON.stringify('p1'),
     );
     expect(window.localStorage.getItem('dropshipsimulator:botRoster')).toBe(
-      JSON.stringify({ type: 'random', manufacturer: 'Corp A' }),
+      JSON.stringify({ type: 'random', manufacturer: 'Central Order' }),
     );
     expect(window.localStorage.getItem('dropshipsimulator:playerRoster')).toBe(
-      JSON.stringify({ type: 'random', manufacturer: 'Corp A' }),
+      JSON.stringify({ type: 'random', manufacturer: 'Central Order' }),
     );
     expect(
       JSON.parse(window.localStorage.getItem('dropshipsimulator:battle:turn')),
@@ -311,23 +311,23 @@ describe('PlayPage', () => {
     reachRostersStage();
     const { cpuColumn } = rosterColumns();
 
-    expect(within(cpuColumn).getByRole('button', { name: 'Corp A' })).toBeDefined();
-    expect(within(cpuColumn).getByRole('button', { name: 'Corp B' })).toBeDefined();
+    expect(within(cpuColumn).getByRole('button', { name: 'Central Order' })).toBeDefined();
+    expect(within(cpuColumn).getByRole('button', { name: 'The Hive' })).toBeDefined();
     // The roster list doesn't appear until a manufacturer is chosen.
     expect(within(cpuColumn).queryByText('Default A Corp List')).toBeNull();
 
-    // Corp B has no default rosters in this catalogue — only Random and
+    // The Hive has no default rosters in this catalogue — only Random and
     // Import should be on offer, with a note explaining why.
-    click(within(cpuColumn).getByRole('button', { name: 'Corp B' }));
+    click(within(cpuColumn).getByRole('button', { name: 'The Hive' }));
     expect(within(cpuColumn).getByRole('button', { name: 'Random' })).toBeDefined();
     expect(within(cpuColumn).getByRole('button', { name: 'Import…' })).toBeDefined();
     expect(within(cpuColumn).queryByText('Default A Corp List')).toBeNull();
     expect(
-      within(cpuColumn).getByText(/No default lists for Corp B yet/),
+      within(cpuColumn).getByText(/No default lists for The Hive yet/),
     ).toBeDefined();
 
-    // Switching to Corp A shows its own default rosters instead.
-    click(within(cpuColumn).getByRole('button', { name: 'Corp A' }));
+    // Switching to Central Order shows its own default rosters instead.
+    click(within(cpuColumn).getByRole('button', { name: 'Central Order' }));
     expect(
       within(cpuColumn).getByRole('button', { name: 'Default A Corp List' }),
     ).toBeDefined();
@@ -340,7 +340,7 @@ describe('PlayPage', () => {
     render(<PlayPage />);
     reachRostersStage();
     const { cpuColumn, playerColumn } = rosterColumns();
-    click(within(cpuColumn).getByRole('button', { name: 'Corp A' }));
+    click(within(cpuColumn).getByRole('button', { name: 'Central Order' }));
 
     click(
       within(cpuColumn).getByRole('button', { name: 'Flame Chicken Spam' }),
@@ -350,7 +350,7 @@ describe('PlayPage', () => {
         .className,
     ).toContain('selected');
 
-    pickRoster(playerColumn, 'Corp A', 'Default A Corp List');
+    pickRoster(playerColumn, 'Central Order', 'Default A Corp List');
 
     pickCurrentMap();
     click(screen.getByRole('button', { name: /Destruction/ }));
@@ -370,11 +370,11 @@ describe('PlayPage', () => {
     render(<PlayPage />);
     reachRostersStage();
     const { cpuColumn, playerColumn } = rosterColumns();
-    click(within(cpuColumn).getByRole('button', { name: 'Corp A' }));
+    click(within(cpuColumn).getByRole('button', { name: 'Central Order' }));
     click(within(cpuColumn).getByRole('button', { name: 'Import…' }));
 
     const rosterText = [
-      'Test List (Corp A)',
+      'Test List (Central Order)',
       'Weight: 6t / 100t',
       '',
       'A10 - 6t',
@@ -392,7 +392,7 @@ describe('PlayPage', () => {
 
     click(screen.getByRole('button', { name: 'Use this list' }));
 
-    pickRoster(playerColumn, 'Corp A', 'Random');
+    pickRoster(playerColumn, 'Central Order', 'Random');
 
     pickCurrentMap();
     click(screen.getByRole('button', { name: /Destruction/ }));
@@ -517,10 +517,10 @@ describe('PlayPage roster picker (#224, #241)', () => {
     const { cpuColumn, playerColumn } = rosterColumns();
 
     // Pick the player's list first...
-    pickRoster(playerColumn, 'Corp A', 'Default A Corp List');
+    pickRoster(playerColumn, 'Central Order', 'Default A Corp List');
     // ...then the CPU's — picking the CPU's list afterward shouldn't wipe
     // out the player's already-finalized choice (#224).
-    pickRoster(cpuColumn, 'Corp A', 'Random');
+    pickRoster(cpuColumn, 'Central Order', 'Random');
 
     expect(
       within(playerColumn).getByRole('button', { name: 'Default A Corp List' })
@@ -536,7 +536,7 @@ describe('PlayPage roster picker (#224, #241)', () => {
     reachRostersStage('Tactical');
     const { cpuColumn } = rosterColumns();
 
-    click(within(cpuColumn).getByRole('button', { name: 'Corp A' }));
+    click(within(cpuColumn).getByRole('button', { name: 'Central Order' }));
     expect(within(cpuColumn).queryByText(/Weight:/)).toBeNull();
 
     click(
@@ -581,7 +581,7 @@ describe('PlayPage grid layout (#231)', () => {
     render(<PlayPage />);
     reachRostersStage('Tactical');
 
-    const [corpABtn] = screen.getAllByRole('button', { name: 'Corp A' });
+    const [corpABtn] = screen.getAllByRole('button', { name: 'Central Order' });
     expect(corpABtn.className).toContain('manufacturer-tile');
     expect(corpABtn.closest('.manufacturer-tile-list')).not.toBeNull();
   });
@@ -590,7 +590,7 @@ describe('PlayPage grid layout (#231)', () => {
     render(<PlayPage />);
     reachRostersStage('Tactical');
     const { cpuColumn } = rosterColumns();
-    pickRoster(cpuColumn, 'Corp A', 'Random');
+    pickRoster(cpuColumn, 'Central Order', 'Random');
 
     expect(document.body.textContent).not.toMatch(/\(#\d+\)/);
   });

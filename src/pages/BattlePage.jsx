@@ -88,12 +88,13 @@ const DEFAULT_DIMENSIONS = { cols: 24, rows: 24 };
 // How many steps "Undo last move" can step back through (#186).
 const MAX_UNDO_HISTORY = 10;
 // Winner-modal label for the vs-computer difficulty (#169, extended for the
-// Expert tier) — a lookup instead of a chained ternary now that there are
-// three tiers.
+// Expert and Ruthless tiers) — a lookup instead of a chained ternary now
+// that there are four tiers.
 const BOT_DIFFICULTY_LABELS = {
   simple: 'Simple',
   tactical: 'Tactical',
   expert: 'Expert',
+  ruthless: 'Ruthless',
 };
 // .battle-board-viewport's own padding (1rem each side) + border (1px each
 // side) — subtracted so the board fits inside it without an unwanted

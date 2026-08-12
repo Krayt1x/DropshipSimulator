@@ -477,6 +477,7 @@ describe('PlayPage', () => {
     expect(screen.getByRole('button', { name: 'Simple' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Tactical' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Expert' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Ruthless' })).toBeDefined();
   });
 
   it('Cancel resets the picker all the way back to the Platform stage', () => {

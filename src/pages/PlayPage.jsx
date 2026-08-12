@@ -13,6 +13,7 @@ const DIFFICULTIES = [
   { id: 'simple', label: 'Simple' },
   { id: 'tactical', label: 'Tactical' },
   { id: 'expert', label: 'Expert' },
+  { id: 'ruthless', label: 'Ruthless' },
 ];
 
 // Alternative win conditions (#232) — 'annihilation' is the game's original,

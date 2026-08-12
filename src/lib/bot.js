@@ -27,6 +27,14 @@ import {
 import { parseArmor } from './combat.js';
 import { parseHitDice, DICE_COLORS, DIE_TYPES } from './dice.js';
 
+// Ruthless is expert's kill-preference/overheat-safety/target-selection
+// logic plus one extra edge (flanking-aware movement, see
+// computeMoveCandidate below) — every place that gates "smart" behavior on
+// difficulty === 'expert' gets it too, rather than duplicating each branch.
+function isExpertTier(difficulty) {
+  return difficulty === 'expert' || difficulty === 'ruthless';
+}
+
 export function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -250,7 +258,7 @@ function findAttackOptions({
           const rejects =
             difficulty === 'simple'
               ? enemyHit.length === 0
-              : difficulty === 'expert'
+              : isExpertTier(difficulty)
                 ? enemyEv <= friendlyEv * 1.5
                 : enemyEv <= friendlyEv;
           if (rejects) return;
@@ -325,7 +333,7 @@ function bestOptionEv(options, attackerId, difficulty) {
   const mine = options.filter((o) => o.attackerId === attackerId);
   if (mine.length === 0) return -Infinity;
   const safe =
-    difficulty === 'expert'
+    isExpertTier(difficulty)
       ? mine.filter(
           (o) => !o.overheats || (o.targetHp != null && o.ev >= o.targetHp),
         )
@@ -447,7 +455,7 @@ function closestToken(position, candidates) {
 // nearest.
 function chooseMoveTarget(position, enemyTokens, difficulty) {
   const nearest = closestToken(position, enemyTokens);
-  if (difficulty !== 'expert' || !nearest) return nearest;
+  if (!isExpertTier(difficulty) || !nearest) return nearest;
   const nearestDist = hexDistance(position, nearest.position);
   const nearbyWounded = enemyTokens.filter(
     (t) => hexDistance(position, t.position) <= nearestDist + 2,
@@ -501,7 +509,14 @@ function findDropPodAction({ tokens, units, botOwner, dicePool, enemyTokens }) {
 // either — the case a naive greedy single-step lookahead can never escape,
 // since it only ever compares this step's immediate neighbors and gives up
 // the moment none of them individually improve on the current hex (#299).
-export function stepToward(from, to, maxSteps, stopDistance, isBlocked) {
+export function stepToward(
+  from,
+  to,
+  maxSteps,
+  stopDistance,
+  isBlocked,
+  scoreHex,
+) {
   const startDist = hexDistance(from, to);
   if (startDist <= stopDistance) return from;
 
@@ -516,6 +531,7 @@ export function stepToward(from, to, maxSteps, stopDistance, isBlocked) {
     // range band the bot is trying to hold — rather than the first one
     // found, so kiting behavior doesn't depend on direction-scan order.
     let reachedStop = null;
+    const stopCandidates = [];
     for (const hex of frontier) {
       for (let dir = 0; dir < 6; dir++) {
         const candidate = neighborHex(hex.col, hex.row, dir);
@@ -525,10 +541,24 @@ export function stepToward(from, to, maxSteps, stopDistance, isBlocked) {
         next.push(candidate);
         const d = hexDistance(candidate, to);
         if (d < closest.dist) closest = { hex: candidate, dist: d };
-        if (d <= stopDistance && (!reachedStop || d > reachedStop.dist)) {
-          reachedStop = { hex: candidate, dist: d };
+        if (d <= stopDistance) {
+          if (scoreHex) stopCandidates.push(candidate);
+          if (!reachedStop || d > reachedStop.dist) {
+            reachedStop = { hex: candidate, dist: d };
+          }
         }
       }
+    }
+    // When several hexes reach the stop band at the same depth, scoreHex
+    // breaks the tie by something other than "closest to the boundary of
+    // stopDistance" — the ruthless tier uses this to prefer a hex that lines
+    // up a shot on the target's weaker side/rear armor instead of its front
+    // (#309), rather than settling for whichever one happened to hold
+    // maximum range.
+    if (scoreHex && stopCandidates.length > 0) {
+      return stopCandidates.reduce((best, hex) =>
+        scoreHex(hex) > scoreHex(best) ? hex : best,
+      );
     }
     if (reachedStop) return reachedStop.hex;
     frontier = next;
@@ -563,6 +593,7 @@ function uncoveredObjectiveHexes({ objectiveHexes, myTokens, enemyTokens }) {
 // yes but the pool has no Move (or Action) die to spend on it yet.
 function computeMoveCandidate({
   tokens,
+  units,
   equipment,
   botOwner,
   difficulty,
@@ -648,6 +679,7 @@ function computeMoveCandidate({
     // repositioning, never whether an in-range shot gets taken.
     let moveTarget;
     let stopDistance;
+    let scoreHex;
     if (uncovered.length > 0) {
       const nearestObjective = uncovered.reduce((best, hex) => {
         const dist = hexDistance(token.position, hex);
@@ -667,6 +699,20 @@ function computeMoveCandidate({
       const hasValidShot = attackOptions?.some((o) => o.attackerId === token.id);
       if (hasValidShot) continue;
       stopDistance = difficulty !== 'simple' && bestRange > 0 ? bestRange : 0;
+      // Ruthless doesn't just close to its weapon's range band like expert
+      // does — among the hexes that reach it, it prefers one that lines up
+      // next turn's shot on the target's side or rear (weaker armor, see
+      // parseArmor) instead of its front (#309). Only applies while actually
+      // holding a range band; melee's "get as close as possible" fallback
+      // hex is already forced by whatever's reachable, not chosen among
+      // options this can meaningfully rank.
+      if (difficulty === 'ruthless' && stopDistance > 0) {
+        const targetUnit = unitFor(moveTarget, units);
+        scoreHex = (hex) => {
+          const side = visibleSides(moveTarget.position, moveTarget.facing, hex)[0];
+          return -(parseArmor(targetUnit?.armor)?.[side] ?? 0);
+        };
+      }
     }
 
     const destination = stepToward(
@@ -675,6 +721,7 @@ function computeMoveCandidate({
       maxMove,
       stopDistance,
       isBlocked,
+      scoreHex,
     );
     if (
       destination.col === token.position.col &&
@@ -770,7 +817,7 @@ export function chooseBotAction({
     // it only considers an overheating option when nothing safer is on the
     // table, or when that shot is itself the one that finishes the target.
     const safeOptions =
-      difficulty === 'expert'
+      isExpertTier(difficulty)
         ? options.filter(
             (o) => !o.overheats || (o.targetHp != null && o.ev >= o.targetHp),
           )
@@ -805,7 +852,7 @@ export function chooseBotAction({
               // death, to actually secure a kill on a future shot instead
               // of spreading damage evenly across the enemy line.
               if (
-                difficulty === 'expert' &&
+                isExpertTier(difficulty) &&
                 o.targetHp != null &&
                 best.targetHp != null
               ) {
@@ -824,6 +871,7 @@ export function chooseBotAction({
   // still waiting in reserve (#157, #158, #230).
   const moveArgs = {
     tokens,
+    units,
     equipment,
     botOwner,
     dicePool,

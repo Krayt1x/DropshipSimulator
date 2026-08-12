@@ -1614,11 +1614,11 @@ button.danger:hover {
 }
 
 /* The wizard body is narrower than the full home page, so the difficulty
-   grid's three tiles fall under auto-fit's 220px minimum and wrap onto two
-   rows (#255) — force them onto one row instead. */
+   grid's tiles fall under auto-fit's 220px minimum and wrap onto extra rows
+   (#255) — force them onto one row instead. */
 @media (min-width: 701px) {
   .wizard-body .home-tile-grid.play-difficulty-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
@@ -2054,17 +2054,15 @@ button.danger:hover {
    .home-tile-grid's own breakpoint below — this modifier keeps it 2 across
    instead of stacking (#231, reused on the home page for #235 and the map
    picker modals for #234, which are 3-across on desktop but too narrow for
-   that on a phone). The difficulty grid gets its own 3-across modifier
-   alongside it. */
+   that on a phone). The difficulty grid's four tiers fit this same 2-across
+   layout as an even 2x2 (#309 added the 4th tier; 3-across only fit while
+   there were exactly 3, so that modifier is gone rather than fighting an
+   uneven 3+1 split). */
 @media (max-width: 700px) {
   .home-tile-grid.two-col-mobile-grid,
   .home-tile-grid.play-difficulty-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
-  }
-
-  .home-tile-grid.play-difficulty-grid {
-    grid-template-columns: repeat(3, 1fr);
   }
 
   .two-col-mobile-grid .home-tile,

@@ -7,7 +7,7 @@ import {
   chooseBotAction,
   pickDeploymentHexes,
 } from './bot.js';
-import { hexDistance } from './hex.js';
+import { hexDistance, neighborHex, visibleSides } from './hex.js';
 import { DEFAULT_TERRAIN_TYPES } from './terrain.js';
 
 afterEach(() => vi.restoreAllMocks());
@@ -319,6 +319,41 @@ describe('stepToward', () => {
     const to = { col: 0, row: 2 };
     const result = stepToward(from, to, 10, 5, () => false);
     expect(result).toEqual(from);
+  });
+
+  // The ruthless tier's flanking positioning (#309) relies on this: when
+  // several hexes reach the stop band at the same step, scoreHex should be
+  // able to pick a specific one instead of always the "closest to the
+  // stopDistance boundary" default.
+  it('lets scoreHex break a tie among equally-valid stopping hexes', () => {
+    const from = { col: 0, row: 0 };
+    const to = { col: 5, row: 5 };
+    const stopDistance = 7;
+    const neighbors = [0, 1, 2, 3, 4, 5].map((dir) =>
+      neighborHex(from.col, from.row, dir),
+    );
+    const withinStop = neighbors.filter(
+      (n) => hexDistance(n, to) <= stopDistance,
+    );
+    // Sanity check that this setup actually produces more than one equally
+    // valid hex for scoreHex to choose between — otherwise the test would
+    // pass without ever exercising the tie-break at all.
+    expect(withinStop.length).toBeGreaterThan(1);
+
+    const target = withinStop[1];
+    const scoreHex = (hex) =>
+      hex.col === target.col && hex.row === target.row ? 1 : 0;
+    const result = stepToward(from, to, 1, stopDistance, () => false, scoreHex);
+    expect(result).toEqual(target);
+
+    // Without scoreHex, the default tie-break picks by distance-to-boundary
+    // alone and isn't guaranteed to land on the same hex.
+    const defaultResult = stepToward(from, to, 1, stopDistance, () => false);
+    expect(defaultResult).toEqual(
+      withinStop.reduce((best, hex) =>
+        hexDistance(hex, to) > hexDistance(best, to) ? hex : best,
+      ),
+    );
   });
 });
 
@@ -1017,6 +1052,12 @@ describe('chooseBotAction', () => {
     expect(
       chooseBotAction({ ...base, difficulty: 'expert' }).instanceIndex,
     ).toBe(1);
+
+    // Ruthless inherits expert's overheat-safety judgment (#309) — it isn't
+    // "expert but reckless", it's expert plus a sharper edge elsewhere.
+    expect(
+      chooseBotAction({ ...base, difficulty: 'ruthless' }).instanceIndex,
+    ).toBe(1);
   });
 
   it('the expert bot requires a bigger safety margin before a splash shot near its own tokens', () => {
@@ -1060,6 +1101,9 @@ describe('chooseBotAction', () => {
     // Expert wants a clearer margin before risking a blast near its own
     // model, so the same nominally-favorable trade isn't enough.
     expect(chooseBotAction({ ...base, difficulty: 'expert' })).toBeNull();
+
+    // Ruthless holds the same safety margin as expert (#309).
+    expect(chooseBotAction({ ...base, difficulty: 'ruthless' })).toBeNull();
   });
 
   it('the expert bot moves toward the most wounded nearby enemy instead of just the nearest one', () => {
@@ -1105,6 +1149,55 @@ describe('chooseBotAction', () => {
     ).toBeLessThan(
       hexDistance(expertResult.destination, nearestHealthy.position),
     );
+
+    // Ruthless keeps expert's target-picking too (#309).
+    const ruthlessResult = chooseBotAction({ ...base, difficulty: 'ruthless' });
+    expect(
+      hexDistance(ruthlessResult.destination, fartherWounded.position),
+    ).toBeLessThan(
+      hexDistance(ruthlessResult.destination, nearestHealthy.position),
+    );
+  });
+
+  it('the ruthless bot moves to a hex exposing weaker armor instead of just holding max range like expert (#309)', () => {
+    const bot = makeToken({
+      id: 'bot1',
+      unitId: 1,
+      owner: 'p2',
+      position: { col: 4, row: 16 },
+      equippedIds: [11, 10], // Chicken Legs (movement 3), Long Range Bolt (range 6)
+    });
+    const enemy = makeToken({
+      id: 'enemy1',
+      unitId: 1, // A10, armor 2/2/2/1 — rear is its weakest side
+      owner: 'p1',
+      position: { col: 10, row: 10 },
+      facing: 0,
+    });
+    const base = {
+      tokens: [bot, enemy],
+      units,
+      equipment,
+      botOwner: 'p2',
+      dicePool: [{ id: 'd1', label: 'Blue', value: 'Move', used: false }],
+    };
+
+    // Expert holds the same range band as tactical (it just picks a smarter
+    // target when there's a choice) — no preference for which hex within
+    // that band it lands on.
+    const expertResult = chooseBotAction({ ...base, difficulty: 'expert' });
+    expect(expertResult.destination).toEqual({ col: 4, row: 13 });
+    expect(
+      visibleSides(enemy.position, enemy.facing, expertResult.destination)[0],
+    ).toBe('left');
+
+    // Ruthless reaches the same range band but lands on the hex that exposes
+    // the enemy's weaker rear armor instead (#309).
+    const ruthlessResult = chooseBotAction({ ...base, difficulty: 'ruthless' });
+    expect(ruthlessResult.destination).toEqual({ col: 6, row: 14 });
+    expect(
+      visibleSides(enemy.position, enemy.facing, ruthlessResult.destination)[0],
+    ).toBe('rear');
   });
 
   it('blocking terrain between attacker and target stops a shot (#178, #268)', () => {

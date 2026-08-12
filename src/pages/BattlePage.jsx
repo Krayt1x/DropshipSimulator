@@ -117,8 +117,14 @@ const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 4;
 const ZOOM_STEP = 0.25;
 // A pointer has to move at least this many pixels before a drag counts as
-// panning the board rather than a click on whatever's underneath (#187).
+// panning the board rather than a click on whatever's underneath (#187). A
+// mouse click barely moves at all, but a real fingertip tap routinely drifts
+// 5-10px from touchstart to touchend — at the same threshold as a mouse,
+// that jitter got misread as the start of a pan, which suppressed the tap's
+// hex click entirely and made deployment/movement feel broken on touch
+// devices (#306).
 const PAN_DRAG_THRESHOLD = 5;
+const TOUCH_PAN_DRAG_THRESHOLD = 14;
 
 function BattlePage() {
   // Manufacturers/units/equipment now live in an editable local catalogue
@@ -1388,6 +1394,7 @@ function BattlePage() {
     if (e.target.closest?.('.token-marker')) return;
     panStateRef.current = {
       pointerId: e.pointerId,
+      pointerType: e.pointerType,
       startX: e.clientX,
       startY: e.clientY,
       startOffset: panOffset,
@@ -1401,7 +1408,11 @@ function BattlePage() {
     const dx = e.clientX - state.startX;
     const dy = e.clientY - state.startY;
     if (!state.dragging) {
-      if (Math.hypot(dx, dy) < PAN_DRAG_THRESHOLD) return;
+      const threshold =
+        state.pointerType === 'touch'
+          ? TOUCH_PAN_DRAG_THRESHOLD
+          : PAN_DRAG_THRESHOLD;
+      if (Math.hypot(dx, dy) < threshold) return;
       state.dragging = true;
       setIsPanning(true);
     }

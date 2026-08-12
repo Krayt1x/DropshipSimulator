@@ -79,6 +79,7 @@ import TurnTracker from '../components/TurnTracker.jsx';
 import TurnOrder from '../components/TurnOrder.jsx';
 import MobileTabBar from '../components/MobileTabBar.jsx';
 import TurnNotificationToast from '../components/TurnNotificationToast.jsx';
+import DestroyedModelPrompt from '../components/DestroyedModelPrompt.jsx';
 import DiceRoller from '../components/DiceRoller.jsx';
 import GameLog from '../components/GameLog.jsx';
 import { useCatalogue } from '../lib/catalogue.js';
@@ -2052,14 +2053,19 @@ function BattlePage() {
     }));
   }
 
-  function destroySelected(keptDiceColor) {
-    if (selectedToken) {
+  // Shared by destroySelected (the side panel's own destroy button) and the
+  // start-of-turn "a model has been destroyed" prompt (#307), which needs to
+  // destroy a specific wrecked token that isn't necessarily the one
+  // currently selected on the board.
+  function destroyToken(tokenId, keptDiceColor) {
+    const token = tokens.find((t) => t.id === tokenId);
+    if (token) {
       appendLog(
-        `${ownerLabel(selectedToken.owner)}'s ${unitName(selectedToken)} was destroyed` +
+        `${ownerLabel(token.owner)}'s ${unitName(token)} was destroyed` +
           (keptDiceColor ? ` (kept a ${keptDiceColor} die)` : ''),
       );
       if (keptDiceColor) {
-        const owner = selectedToken.owner;
+        const owner = token.owner;
         setBankedDice((current) => ({
           ...current,
           [owner]: {
@@ -2069,12 +2075,24 @@ function BattlePage() {
         }));
       }
     }
-    updateSelected(() => ({
-      destroyed: true,
-      position: null,
-      bankedDieColor: keptDiceColor ?? null,
-    }));
-    setMovingTokenId(null);
+    setTokens((current) =>
+      current.map((t) =>
+        t.id === tokenId
+          ? {
+              ...t,
+              destroyed: true,
+              position: null,
+              bankedDieColor: keptDiceColor ?? null,
+            }
+          : t,
+      ),
+    );
+    if (movingTokenId === tokenId) setMovingTokenId(null);
+  }
+
+  function destroySelected(keptDiceColor) {
+    if (!selectedTokenId) return;
+    destroyToken(selectedTokenId, keptDiceColor);
   }
 
   // Reverses the die banked at destruction time (if any) so redeploying a
@@ -2450,6 +2468,44 @@ function BattlePage() {
       handleDiceRoll(rolled);
     }
   }, [turn, deploymentPhase, myPlayer]);
+
+  // Surfaces the "a model has been destroyed" prompt (#307) once per turn
+  // for any of the active player's models that reached 0 HP but were never
+  // confirmed destroyed — otherwise it's easy to miss a wreck sitting on the
+  // board and forget it can't act (#160) until its player happens to select
+  // it. Skipped for the bot's own turn — the bot resolves its own wrecks as
+  // a 'destroy' action inside runBotTurn instead of needing a prompt.
+  const [destroyPromptQueue, setDestroyPromptQueue] = useState([]);
+  const destroyPromptKeyRef = useRef(null);
+  useEffect(() => {
+    if (deploymentPhase) return;
+    if (myPlayer && myPlayer !== turn.active) return;
+    if (gameMode === 'vs-computer' && turn.active === botOwner) return;
+    const key = `${turn.active}:${turn.number}`;
+    if (destroyPromptKeyRef.current === key) return;
+    destroyPromptKeyRef.current = key;
+    const wrecked = tokens.filter(
+      (t) => t.owner === turn.active && t.position && t.currentHp <= 0 && !t.destroyed,
+    );
+    if (wrecked.length > 0) setDestroyPromptQueue(wrecked.map((t) => t.id));
+  }, [turn, deploymentPhase, myPlayer, gameMode, botOwner, tokens]);
+
+  const destroyPromptTokenId = destroyPromptQueue[0] ?? null;
+  const destroyPromptToken = destroyPromptTokenId
+    ? tokens.find((t) => t.id === destroyPromptTokenId)
+    : null;
+  const destroyPromptUnit = destroyPromptToken
+    ? units.find((u) => Number(u.id) === Number(destroyPromptToken.unitId))
+    : null;
+
+  function dismissDestroyPrompt() {
+    setDestroyPromptQueue((current) => current.slice(1));
+  }
+
+  function confirmDestroyPrompt(dieColor) {
+    if (destroyPromptTokenId) destroyToken(destroyPromptTokenId, dieColor);
+    dismissDestroyPrompt();
+  }
 
   // 1 VP per own model adjacent to an uncontested objective (#178, #179),
   // scored the moment the owning player's turn starts rather than when it
@@ -3181,6 +3237,14 @@ function BattlePage() {
   return (
     <div className="container-wide battle-page">
       <TurnNotificationToast notice={turnNotice} myPlayer={myPlayer} />
+      {destroyPromptToken && destroyPromptUnit && !winner && (
+        <DestroyedModelPrompt
+          unitLabel={`${ownerLabel(destroyPromptToken.owner)}'s ${unitName(destroyPromptToken)}`}
+          unit={destroyPromptUnit}
+          onConfirm={confirmDestroyPrompt}
+          onDismiss={dismissDestroyPrompt}
+        />
+      )}
       {winner && !dismissedWinner && (
         <div className="winner-overlay">
           <div className="card winner-modal">

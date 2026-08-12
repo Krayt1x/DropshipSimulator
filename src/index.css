@@ -1099,6 +1099,36 @@ button.danger:hover {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
 }
 
+/* Own backdrop (not .attack-modal-backdrop's) so it can sit lower — the
+   turn-change toast (.turn-toast, top: 72px) fires at the exact same
+   moment this prompt can, and the default 10vh padding put them right on
+   top of each other. */
+.destroy-prompt-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 51;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 22vh;
+}
+
+.destroy-prompt-modal {
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+.destroy-prompt-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 6px;
+}
+
 /* Map selector modal on the new-game screen (#222) */
 .map-picker-overlay {
   position: fixed;

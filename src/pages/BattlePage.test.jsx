@@ -1376,6 +1376,59 @@ describe('BattlePage', () => {
     expect(screen.getByText(/Keep which die/)).toBeDefined();
   });
 
+  it("prompts at the start of the owning player's turn for a wrecked model that was never confirmed destroyed (#307)", () => {
+    const a10 = units.find((u) => u.name === 'A10');
+    const token = {
+      id: 'token-1',
+      unitId: a10.id,
+      manufacturer: a10.manufacturer,
+      owner: 'p1',
+      position: { col: 0, row: 0 },
+      facing: 0,
+      currentHp: 0,
+      equippedIds: [],
+      weaponState: {},
+      destroyed: false,
+      label: null,
+    };
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:tokens',
+      JSON.stringify([token]),
+    );
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:deploymentPhase',
+      JSON.stringify(false),
+    );
+    // Starts on Player 2's turn — the prompt is Player 1's to see, not
+    // Player 2's, even though Player 1's wrecked model is already on the
+    // board this whole time.
+    window.localStorage.setItem(
+      'dropshipsimulator:battle:turn',
+      JSON.stringify({ number: 1, active: 'p2' }),
+    );
+
+    render(<BattlePage />);
+
+    expect(screen.queryByText('A model has been destroyed')).toBeNull();
+
+    // Player 2 ends their turn — Player 1's turn starts, and their wrecked
+    // model is still sitting undestroyed on the board.
+    fireEvent.click(screen.getByRole('button', { name: 'End Turn' }));
+
+    expect(screen.getByText('A model has been destroyed')).toBeDefined();
+    expect(screen.getByText(/Keep which die/)).toBeDefined();
+    // A10 only carries Red dice, so that's the only color offered.
+    expect(screen.getByRole('button', { name: 'Red' })).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Model Destroyed' }));
+
+    expect(screen.queryByText('A model has been destroyed')).toBeNull();
+    const stored = JSON.parse(
+      window.localStorage.getItem('dropshipsimulator:battle:tokens'),
+    );
+    expect(stored[0].destroyed).toBe(true);
+  });
+
   it('returns a deployed token directly to reserve', () => {
     render(<BattlePage />);
     startDeploymentPhase();

@@ -21,7 +21,7 @@ export function parseRosterExport(text, { units, manufacturers, equipment }) {
       manufacturer: '',
       entries: [],
       warnings: [
-        'Could not find a "List Name (Manufacturer)" header line — is this a DropshipBuilder share export?',
+        'Could not find a "List Name (Faction)" header line — is this a DropshipBuilder share export?',
       ],
     };
   }
@@ -32,7 +32,7 @@ export function parseRosterExport(text, { units, manufacturers, equipment }) {
 
   if (!manufacturers.includes(manufacturer)) {
     warnings.push(
-      `Unrecognized manufacturer "${manufacturer}" — no units will match.`,
+      `Unrecognized faction "${manufacturer}" — no units will match.`,
     );
   }
 

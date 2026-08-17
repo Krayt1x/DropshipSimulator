@@ -60,7 +60,7 @@ function EquipmentForm({ manufacturers, editing, onSubmit, onCancel }) {
           />
         </div>
         <div className="field">
-          <label htmlFor="equipment_manufacturer">Manufacturer</label>
+          <label htmlFor="equipment_manufacturer">Faction</label>
           <select
             id="equipment_manufacturer"
             name="manufacturer"

@@ -33,14 +33,14 @@ describe('ManagePage (#199)', () => {
   it('adds a new manufacturer and a free Standard Movement item for it', () => {
     render(<ManagePage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add manufacturer' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add faction' }));
     fireEvent.change(screen.getByLabelText('Name'), {
       target: { value: 'Homebrew Corp' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Add manufacturer' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add faction' }));
 
     expect(
-      screen.getByText('Added manufacturer "Homebrew Corp".'),
+      screen.getByText('Added faction "Homebrew Corp".'),
     ).toBeDefined();
     expect(
       JSON.parse(

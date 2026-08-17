@@ -124,7 +124,7 @@ describe('parseRosterExport', () => {
 
     expect(result.entries).toHaveLength(0);
     expect(result.warnings).toContain(
-      'Unrecognized manufacturer "Corp Z" — no units will match.',
+      'Unrecognized faction "Corp Z" — no units will match.',
     );
     expect(result.warnings).toContain('Unknown unit "Mystery Mech" — skipped.');
   });

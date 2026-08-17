@@ -210,7 +210,7 @@ function BuilderPage(props) {
 
     if (nextManufacturer !== manufacturer && roster.length > 0) {
       const confirmed = window.confirm(
-        'Changing manufacturers will start a new list and clear your current roster. Continue?',
+        'Changing factions will start a new list and clear your current roster. Continue?',
       );
       if (!confirmed) return;
       setRoster([]);
@@ -321,7 +321,7 @@ function BuilderPage(props) {
             />
           </div>
           <div className="field">
-            <label>Manufacturer</label>
+            <label>Faction</label>
             <div className="manufacturer-tile-grid">
               {manufacturers.map((m) => (
                 <button
@@ -414,7 +414,7 @@ function BuilderPage(props) {
         >
           <h2 style={{ fontSize: 15 }}>Unit catalogue — {manufacturer}</h2>
           {catalog.length === 0 ? (
-            <p className="empty">No units available for this manufacturer.</p>
+            <p className="empty">No units available for this faction.</p>
           ) : (
             catalog.map((unit) => (
               <div className="unit-row" key={unit.id}>

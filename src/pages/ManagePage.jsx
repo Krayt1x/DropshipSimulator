@@ -139,11 +139,11 @@ function ManagePage() {
     e.preventDefault();
     const name = (new FormData(e.target).get('name') || '').toString().trim();
     if (name === '') {
-      showFlash('Manufacturer name cannot be empty.', true);
+      showFlash('Faction name cannot be empty.', true);
       return;
     }
     if (manufacturers.includes(name)) {
-      showFlash(`A manufacturer named "${name}" already exists.`, true);
+      showFlash(`A faction named "${name}" already exists.`, true);
       return;
     }
     setManufacturers((m) => [...m, name]);
@@ -163,7 +163,7 @@ function ManagePage() {
         no_drop_pod: false,
       },
     ]);
-    showFlash(`Added manufacturer "${name}".`);
+    showFlash(`Added faction "${name}".`);
     setActiveManufacturer(name);
     e.target.reset();
   }
@@ -171,11 +171,11 @@ function ManagePage() {
   function renameManufacturer(oldName, newNameRaw) {
     const newName = newNameRaw.trim();
     if (newName === '') {
-      showFlash('Manufacturer name cannot be empty.', true);
+      showFlash('Faction name cannot be empty.', true);
       return;
     }
     if (newName !== oldName && manufacturers.includes(newName)) {
-      showFlash(`A manufacturer named "${newName}" already exists.`, true);
+      showFlash(`A faction named "${newName}" already exists.`, true);
       return;
     }
     setManufacturers((m) =>
@@ -361,7 +361,7 @@ function ManagePage() {
   function purgeCache() {
     if (
       !window.confirm(
-        'This clears your saved manufacturers, units, and equipment and reloads the app’s bundled defaults. Your list and roster are not affected. Continue?',
+        'This clears your saved factions, units, and equipment and reloads the app’s bundled defaults. Your list and roster are not affected. Continue?',
       )
     ) {
       return;
@@ -386,7 +386,7 @@ function ManagePage() {
             className="ghost"
             onClick={() => setShowManufacturerForm((v) => !v)}
           >
-            {showManufacturerForm ? 'Cancel' : 'Add manufacturer'}
+            {showManufacturerForm ? 'Cancel' : 'Add faction'}
           </button>
           <button
             type="button"
@@ -394,7 +394,7 @@ function ManagePage() {
             disabled={manufacturers.length === 0}
             title={
               manufacturers.length === 0
-                ? 'Add a manufacturer first'
+                ? 'Add a faction first'
                 : undefined
             }
             onClick={() => {
@@ -410,7 +410,7 @@ function ManagePage() {
             disabled={manufacturers.length === 0}
             title={
               manufacturers.length === 0
-                ? 'Add a manufacturer first'
+                ? 'Add a faction first'
                 : undefined
             }
             onClick={() => {
@@ -425,7 +425,7 @@ function ManagePage() {
 
       {showManufacturerForm && (
         <div className="card">
-          <h2 style={{ fontSize: 15, marginTop: 0 }}>Add a manufacturer</h2>
+          <h2 style={{ fontSize: 15, marginTop: 0 }}>Add a faction</h2>
           <form
             style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}
             onSubmit={addManufacturer}
@@ -436,11 +436,11 @@ function ManagePage() {
                 type="text"
                 id="manufacturer_name"
                 name="name"
-                placeholder="New Manufacturer"
+                placeholder="New Faction"
                 required
               />
             </div>
-            <button type="submit">Add manufacturer</button>
+            <button type="submit">Add faction</button>
           </form>
         </div>
       )}
@@ -614,7 +614,7 @@ function ManagePage() {
               </h3>
               {manufacturerUnits.length === 0 ? (
                 <p className="empty">
-                  No units for this manufacturer yet. Add one above.
+                  No units for this faction yet. Add one above.
                 </p>
               ) : (
                 <div className="table-scroll">
@@ -773,7 +773,7 @@ function ManagePage() {
               </h4>
               {movementItems.length === 0 ? (
                 <p className="empty">
-                  No movement equipment for this manufacturer yet.
+                  No movement equipment for this faction yet.
                 </p>
               ) : (
                 <div className="table-scroll">
@@ -881,7 +881,7 @@ function ManagePage() {
                 Weapons
               </h4>
               {weaponItems.length === 0 ? (
-                <p className="empty">No weapons for this manufacturer yet.</p>
+                <p className="empty">No weapons for this faction yet.</p>
               ) : (
                 <div className="table-scroll">
                   <table>
@@ -1010,7 +1010,7 @@ function ManagePage() {
               </h4>
               {augmentItems.length === 0 ? (
                 <p className="empty">
-                  No augmentation chips for this manufacturer yet.
+                  No augmentation chips for this faction yet.
                 </p>
               ) : (
                 <div className="table-scroll">
@@ -1106,7 +1106,7 @@ function ManagePage() {
       <div className="card">
         <h2 style={{ fontSize: 15, marginTop: 0 }}>Reset catalogue</h2>
         <p className="unit-meta" style={{ marginBottom: 10 }}>
-          Clears your saved manufacturers, units, and equipment and reloads
+          Clears your saved factions, units, and equipment and reloads
           the app&apos;s bundled defaults. Your list and roster are not
           affected.
         </p>

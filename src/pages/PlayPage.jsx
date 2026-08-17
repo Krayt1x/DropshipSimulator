@@ -789,7 +789,7 @@ function PlayPage() {
                 ) && (
                   <p className="unit-meta" style={{ marginTop: 8 }}>
                     No default lists for {playerRosterManufacturer} yet —
-                    Random will pull from another manufacturer, or import a
+                    Random will pull from another faction, or import a
                     list instead.
                   </p>
                 )}
@@ -912,7 +912,7 @@ function PlayPage() {
                 ) && (
                   <p className="unit-meta" style={{ marginTop: 8 }}>
                     No default lists for {rosterManufacturer} yet — Random
-                    will pull from another manufacturer, or import a list
+                    will pull from another faction, or import a list
                     instead.
                   </p>
                 )}

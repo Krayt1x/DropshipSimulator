@@ -22,7 +22,7 @@ function UnitForm({ manufacturers, editing, onSubmit, onCancel }) {
           />
         </div>
         <div className="field">
-          <label htmlFor="manufacturer">Manufacturer</label>
+          <label htmlFor="manufacturer">Faction</label>
           <select
             id="manufacturer"
             name="manufacturer"

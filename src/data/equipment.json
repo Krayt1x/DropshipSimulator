@@ -218,5 +218,32 @@
     "hit_dice": "1/0",
     "hp": 5,
     "no_drop_pod": true
+  },
+  {
+    "id": 18,
+    "name": "Treads",
+    "manufacturer": "Machines",
+    "type": "Movement",
+    "effects": "",
+    "weight": 3,
+    "movement": 4,
+    "range": "",
+    "heat_rating": "1/1",
+    "hit_dice": "",
+    "no_drop_pod": true
+  },
+  {
+    "id": 19,
+    "name": "Rail Cannon",
+    "manufacturer": "Machines",
+    "type": "Weapon",
+    "effects": "",
+    "weight": 3,
+    "size": "Medium",
+    "range": "9",
+    "heat_rating": "3/6",
+    "hit_dice": "2d6",
+    "hp": 5,
+    "no_drop_pod": false
   }
 ]

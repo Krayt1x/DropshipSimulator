@@ -4,9 +4,14 @@ import ManagePage from './ManagePage.jsx';
 
 beforeEach(() => {
   window.localStorage.clear();
+  // Every current manufacturer, not just the one these tests exercise —
+  // otherwise the #314 new-manufacturer-sync migration in useCatalogue()
+  // would treat the others as newly added to this fixture's cache and pull
+  // their units/equipment in too, polluting assertions that expect an exact,
+  // minimal catalogue.
   window.localStorage.setItem(
     'dropshipsimulator:catalogue:manufacturers',
-    JSON.stringify(['Central Order']),
+    JSON.stringify(['Central Order', 'The Hive', 'Machines']),
   );
   window.localStorage.setItem(
     'dropshipsimulator:catalogue:units',

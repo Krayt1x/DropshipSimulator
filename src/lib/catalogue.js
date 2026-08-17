@@ -54,23 +54,60 @@ export function useCatalogue() {
     equipmentSeed,
   );
 
+  // Combines two migrations into one pass so they can never race against
+  // each other's still-stale closure of `manufacturers` (they did, when
+  // written as two separate effects — the new-manufacturer check needs to
+  // run against the *renamed* list, not the raw cached one, or it also
+  // re-adds Central Order/The Hive as if they were new alongside whatever
+  // manufacturer actually is).
   useEffect(() => {
-    if (!manufacturers.some((m) => m in MANUFACTURER_RENAMES)) return;
-    setManufacturers((current) => current.map(renameManufacturer));
-    setUnits((current) =>
-      current.map((u) => ({
-        ...u,
-        manufacturer: renameManufacturer(u.manufacturer),
-      })),
+    const needsRename = manufacturers.some((m) => m in MANUFACTURER_RENAMES);
+    const renamedManufacturers = needsRename
+      ? manufacturers.map(renameManufacturer)
+      : manufacturers;
+
+    // A brand-new manufacturer added to the bundled seed after this
+    // browser's catalogue was already cached (e.g. Machines, #314) would
+    // otherwise never show up — same root cause as the Corp A/B rename
+    // above, just for wholly new content instead of a rename. Existing
+    // manufacturers are left alone even if the seed later adds more to
+    // them — merging those could silently resurrect something a player
+    // deliberately deleted via the Manage page, which a manufacturer that
+    // never existed in their cache before now couldn't have had happen to it.
+    const newManufacturers = manufacturersSeed.filter(
+      (m) => !renamedManufacturers.includes(m),
     );
-    setEquipment((current) =>
-      current.map((e) => ({
-        ...e,
-        manufacturer: renameManufacturer(e.manufacturer),
-        name: renameManufacturerMentions(e.name),
-      })),
-    );
-  }, [manufacturers, setManufacturers, setUnits, setEquipment]);
+
+    if (!needsRename && newManufacturers.length === 0) return;
+
+    setManufacturers([...renamedManufacturers, ...newManufacturers]);
+    setUnits([
+      ...(needsRename
+        ? units.map((u) => ({
+            ...u,
+            manufacturer: renameManufacturer(u.manufacturer),
+          }))
+        : units),
+      ...unitsSeed.filter((u) => newManufacturers.includes(u.manufacturer)),
+    ]);
+    setEquipment([
+      ...(needsRename
+        ? equipment.map((e) => ({
+            ...e,
+            manufacturer: renameManufacturer(e.manufacturer),
+            name: renameManufacturerMentions(e.name),
+          }))
+        : equipment),
+      ...equipmentSeed.filter((e) => newManufacturers.includes(e.manufacturer)),
+    ]);
+  }, [
+    manufacturers,
+    units,
+    equipment,
+    setManufacturers,
+    setUnits,
+    setEquipment,
+  ]);
 
   return {
     manufacturers,
